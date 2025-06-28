@@ -1,0 +1,27 @@
+{
+  "name": "market-research-system",
+  "version": "1.0.0",
+  "description": "市場調査自動化システム - Gemini 2.5とNotionを活用したフルスタック市場調査アプリケーション",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "ts-node src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "keywords": ["market-research", "gemini", "notion", "automation"],
+  "author": "Market Research System",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.0",
+    "@google/generative-ai": "^0.2.0",
+    "@notionhq/client": "^2.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.0",
+    "@types/cors": "^2.8.0",
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.0"
+  }
+} 

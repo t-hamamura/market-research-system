@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>市場調査自動化システム | Gemini 2.5 + Notion</title>
+    <meta name="description" content="Gemini 2.5とNotionを活用した16種類の市場調査自動実行システム">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ヘッダー -->
+    <header class="header">
+        <div class="container">
+            <h1 class="header-title">
+                <span class="icon">🔍</span>
+                市場調査自動化システム
+            </h1>
+            <p class="header-subtitle">Gemini 2.5とNotionを活用した16種類の詳細市場調査</p>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="main">
+        <div class="container">
+            <!-- システム情報パネル -->
+            <div class="info-panel" id="systemInfo">
+                <div class="info-item">
+                    <span class="info-label">調査種類</span>
+                    <span class="info-value">16種類</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">AI エンジン</span>
+                    <span class="info-value">Gemini 2.5 Flash</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">レポート</span>
+                    <span class="info-value">Notion統合</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">ステータス</span>
+                    <span class="info-value status-indicator" id="systemStatus">
+                        <span class="status-dot pending"></span>
+                        接続確認中...
+                    </span>
+                </div>
+            </div>
+
+            <!-- 入力フォームセクション -->
+            <section class="form-section" id="formSection">
+                <div class="form-card">
+                    <h2 class="section-title">
+                        <span class="section-icon">📝</span>
+                        サービス仮説入力
+                    </h2>
+                    
+                    <form id="researchForm" class="research-form">
+                        <!-- 事業名 -->
+                        <div class="form-group">
+                            <label for="businessName" class="form-label required">
+                                事業名
+                                <span class="label-description">Notionレポートのタイトルになります</span>
+                            </label>
+                            <input 
+                                type="text" 
+                                id="businessName" 
+                                name="businessName" 
+                                class="form-input" 
+                                placeholder="例：AIを活用した健康管理アプリ"
+                                required
+                            >
+                        </div>
+
+                        <!-- サービス仮説フィールド -->
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="concept" class="form-label required">
+                                    コンセプト
+                                </label>
+                                <textarea 
+                                    id="concept" 
+                                    name="concept" 
+                                    class="form-textarea" 
+                                    rows="4"
+                                    placeholder="サービスの核となるコンセプトを詳しく説明してください"
+                                    required
+                                ></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="customerProblem" class="form-label required">
+                                    解決したい顧客課題
+                                </label>
+                                <textarea 
+                                    id="customerProblem" 
+                                    name="customerProblem" 
+                                    class="form-textarea" 
+                                    rows="4"
+                                    placeholder="どのような顧客の課題を解決するサービスか詳しく説明してください"
+                                    required
+                                ></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="targetIndustry" class="form-label required">
+                                    狙っている業種・業界
+                                </label>
+                                <textarea 
+                                    id="targetIndustry" 
+                                    name="targetIndustry" 
+                                    class="form-textarea" 
+                                    rows="3"
+                                    placeholder="例：ヘルスケア業界、中小企業向けSaaS市場など"
+                                    required
+                                ></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="targetUsers" class="form-label required">
+                                    想定される利用者層
+                                </label>
+                                <textarea 
+                                    id="targetUsers" 
+                                    name="targetUsers" 
+                                    class="form-textarea" 
+                                    rows="3"
+                                    placeholder="年齢、職業、属性、行動特性など詳しく説明してください"
+                                    required
+                                ></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="competitors" class="form-label required">
+                                    直接競合・間接競合
+                                </label>
+                                <textarea 
+                                    id="competitors" 
+                                    name="competitors" 
+                                    class="form-textarea" 
+                                    rows="3"
+                                    placeholder="既存の競合サービスや代替手段について説明してください"
+                                    required
+                                ></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="revenueModel" class="form-label required">
+                                    課金モデル
+                                </label>
+                                <textarea 
+                                    id="revenueModel" 
+                                    name="revenueModel" 
+                                    class="form-textarea" 
+                                    rows="3"
+                                    placeholder="月額課金、従量課金、広告収益など収益構造を説明してください"
+                                    required
+                                ></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="pricingDirection" class="form-label required">
+                                    価格帯・価格設定の方向性
+                                </label>
+                                <textarea 
+                                    id="pricingDirection" 
+                                    name="pricingDirection" 
+                                    class="form-textarea" 
+                                    rows="3"
+                                    placeholder="価格レンジ、価格戦略の考え方を説明してください"
+                                    required
+                                ></textarea>
+                            </div>
+                        </div>
+
+                        <!-- バリデーションエラー表示 -->
+                        <div id="validationErrors" class="validation-errors hidden"></div>
+
+                        <!-- 送信ボタン -->
+                        <div class="form-submit">
+                            <button type="submit" id="submitButton" class="btn-primary">
+                                <span class="btn-icon">🚀</span>
+                                <span class="btn-text">調査開始</span>
+                                <span class="btn-subtext">16種類の市場調査を実行します</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- 進行状況セクション -->
+            <section class="progress-section hidden" id="progressSection">
+                <div class="progress-card">
+                    <h2 class="section-title">
+                        <span class="section-icon">⏳</span>
+                        市場調査進行状況
+                    </h2>
+                    
+                    <!-- プログレスバー -->
+                    <div class="progress-container">
+                        <div class="progress-info">
+                            <span id="progressText">調査を開始しています...</span>
+                            <span id="progressCounter">0/18</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div id="progressFill" class="progress-fill"></div>
+                        </div>
+                        <div class="progress-percentage" id="progressPercentage">0%</div>
+                    </div>
+
+                    <!-- 現在の調査表示 -->
+                    <div class="current-research">
+                        <h3 class="current-research-title">現在の調査</h3>
+                        <div id="currentResearchType" class="current-research-content">
+                            <span class="research-icon">🔄</span>
+                            <span class="research-text">準備中...</span>
+                        </div>
+                    </div>
+
+                    <!-- 調査完了リスト -->
+                    <div class="research-list">
+                        <h3 class="research-list-title">調査項目</h3>
+                        <div id="researchItems" class="research-items">
+                            <!-- 動的に生成される -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 結果セクション -->
+            <section class="result-section hidden" id="resultSection">
+                <div class="result-card">
+                    <h2 class="section-title">
+                        <span class="section-icon">✅</span>
+                        調査完了
+                    </h2>
+                    
+                    <div class="result-content">
+                        <div class="result-message">
+                            <h3 id="resultTitle">市場調査が完了しました！</h3>
+                            <p id="resultDescription">16種類の詳細な市場調査が完了し、統合レポートがNotionに保存されました。</p>
+                        </div>
+                        
+                        <div class="result-actions">
+                            <a id="notionLink" href="#" target="_blank" class="btn-notion">
+                                <span class="btn-icon">📝</span>
+                                <span class="btn-text">Notionレポートを開く</span>
+                            </a>
+                            
+                            <button id="newResearchButton" class="btn-secondary">
+                                <span class="btn-icon">🔄</span>
+                                <span class="btn-text">新しい調査を開始</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- エラーセクション -->
+            <section class="error-section hidden" id="errorSection">
+                <div class="error-card">
+                    <h2 class="section-title error">
+                        <span class="section-icon">❌</span>
+                        エラーが発生しました
+                    </h2>
+                    
+                    <div class="error-content">
+                        <div class="error-message">
+                            <p id="errorMessage">予期しないエラーが発生しました。</p>
+                        </div>
+                        
+                        <div class="error-actions">
+                            <button id="retryButton" class="btn-primary">
+                                <span class="btn-icon">🔄</span>
+                                <span class="btn-text">再試行</span>
+                            </button>
+                            
+                            <button id="resetButton" class="btn-secondary">
+                                <span class="btn-icon">🏠</span>
+                                <span class="btn-text">最初に戻る</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- フッター -->
+    <footer class="footer">
+        <div class="container">
+            <p class="footer-text">
+                © 2024 市場調査自動化システム | 
+                <a href="#" class="footer-link">GitHub</a> | 
+                <a href="#" class="footer-link">ドキュメント</a>
+            </p>
+            <p class="footer-tech">
+                Powered by <strong>Gemini 2.5</strong> & <strong>Notion API</strong>
+            </p>
+        </div>
+    </footer>
+
+    <!-- ローディングオーバーレイ -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">システム情報を取得中...</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 
