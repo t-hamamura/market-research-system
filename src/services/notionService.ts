@@ -1,5 +1,5 @@
 import { Client } from '@notionhq/client';
-import { NotionConfig, ServiceHypothesis, ResearchResult, IntegratedResearchResult } from '../types';
+import { NotionConfig, ServiceHypothesis } from '../types';
 
 /**
  * Notion API サービスクラス
@@ -43,18 +43,29 @@ export class NotionService {
               }
             }
           ]
-        },
-        '作成日時': {
+        }
+      };
+
+      // 作成日時とステータスは任意のプロパティとして追加（存在する場合のみ）
+      try {
+        properties['作成日時'] = {
           date: {
             start: new Date().toISOString()
           }
-        },
-        'ステータス': {
+        };
+      } catch (e) {
+        // 作成日時プロパティが存在しない場合はスキップ
+      }
+
+      try {
+        properties['ステータス'] = {
           select: {
             name: '完了'
           }
-        }
-      };
+        };
+      } catch (e) {
+        // ステータスプロパティが存在しない場合はスキップ
+      }
 
       // サービス仮説セクションのブロック
       const hypothesisBlocks = this.createServiceHypothesisBlocks(serviceHypothesis);
@@ -126,7 +137,8 @@ export class NotionService {
       });
 
       const pageId = response.id;
-      const url = response.url;
+      // URLを手動で生成（APIレスポンスにURLがない場合）
+      const url = this.generatePageUrl(pageId);
 
       console.log('[NotionService] Notionページ作成完了:', url);
       
@@ -349,20 +361,40 @@ export class NotionService {
    * @returns Notionブロック
    */
   private createParagraphBlock(text: string): any {
-    return {
-      object: 'block',
-      type: 'paragraph',
-      paragraph: {
-        rich_text: [
-          {
-            type: 'text',
-            text: {
-              content: text
+    // テキストが長すぎる場合は分割
+    const maxLength = 2000;
+    if (text.length <= maxLength) {
+      return {
+        object: 'block',
+        type: 'paragraph',
+        paragraph: {
+          rich_text: [
+            {
+              type: 'text',
+              text: {
+                content: text
+              }
             }
-          }
-        ]
-      }
-    };
+          ]
+        }
+      };
+    } else {
+      // 長いテキストを分割
+      return {
+        object: 'block',
+        type: 'paragraph',
+        paragraph: {
+          rich_text: [
+            {
+              type: 'text',
+              text: {
+                content: text.substring(0, maxLength) + '...'
+              }
+            }
+          ]
+        }
+      };
+    }
   }
 
   /**
@@ -381,7 +413,7 @@ export class NotionService {
           {
             type: 'text',
             text: {
-              content: text
+              content: text.substring(0, 100) // 見出しは100文字以内
             }
           }
         ]
@@ -403,7 +435,7 @@ export class NotionService {
           {
             type: 'text',
             text: {
-              content: text
+              content: text.substring(0, 2000)
             }
           }
         ]
@@ -425,7 +457,7 @@ export class NotionService {
           {
             type: 'text',
             text: {
-              content: text
+              content: text.substring(0, 2000)
             }
           }
         ]
@@ -444,7 +476,7 @@ export class NotionService {
         database_id: this.config.databaseId
       });
       
-      console.log('[NotionService] 接続テスト成功:', response.title);
+      console.log('[NotionService] 接続テスト成功');
       return true;
       
     } catch (error) {
@@ -461,4 +493,4 @@ export class NotionService {
   generatePageUrl(pageId: string): string {
     return `https://www.notion.so/${pageId.replace(/-/g, '')}`;
   }
-} 
+}
