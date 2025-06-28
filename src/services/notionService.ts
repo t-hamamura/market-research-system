@@ -398,28 +398,57 @@ export class NotionService {
   }
 
   /**
-   * 見出しブロックを作成
-   * @param level 見出しレベル（1-3）
-   * @param text テキスト
-   * @returns Notionブロック
-   */
-  private createHeadingBlock(level: number, text: string): any {
-    const type = `heading_${level}`;
-    return {
-      object: 'block',
-      type,
-      [type]: {
-        rich_text: [
-          {
-            type: 'text',
-            text: {
-              content: text.substring(0, 100) // 見出しは100文字以内
-            }
-          }
-        ]
+ * 見出しブロックを作成
+ * @param level 見出しレベル（1-3）
+ * @param text テキスト
+ * @returns Notionブロック
+ */
+private createHeadingBlock(level: number, text: string): any {
+  const content = text.substring(0, 100);
+  const richText = [
+    {
+      type: 'text',
+      text: {
+        content: content
       }
-    };
+    }
+  ];
+
+  switch (level) {
+    case 1:
+      return {
+        object: 'block',
+        type: 'heading_1',
+        heading_1: {
+          rich_text: richText
+        }
+      };
+    case 2:
+      return {
+        object: 'block',
+        type: 'heading_2',
+        heading_2: {
+          rich_text: richText
+        }
+      };
+    case 3:
+      return {
+        object: 'block',
+        type: 'heading_3',
+        heading_3: {
+          rich_text: richText
+        }
+      };
+    default:
+      return {
+        object: 'block',
+        type: 'heading_2',
+        heading_2: {
+          rich_text: richText
+        }
+      };
   }
+}
 
   /**
    * 箇条書きリストアイテムブロックを作成
