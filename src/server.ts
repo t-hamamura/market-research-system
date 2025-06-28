@@ -69,7 +69,7 @@ async function initializeServices(config: ServerConfig) {
   const researchService = new ResearchService(
     geminiService, 
     notionService, 
-    deepResearchService
+    deepResearchService || undefined
   );
 
   // 接続テスト
