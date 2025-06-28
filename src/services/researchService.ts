@@ -1,5 +1,6 @@
 import { GeminiService } from './geminiService';
 import { NotionService } from './notionService';
+import { DeepResearchService } from './deepResearchService';
 import { 
   ResearchRequest, 
   ProgressEvent, 
@@ -16,26 +17,17 @@ import {
 export class ResearchService {
   private geminiService: GeminiService;
   private notionService: NotionService;
+  private deepResearchService?: DeepResearchService;
   private researchPrompts: ResearchPrompt[];
 
   constructor(
-  geminiService: GeminiService, 
-  notionService: NotionService,
-  deepResearchService?: DeepResearchService
-) {
-  this.geminiService = geminiService;
-  this.notionService = notionService;
-  this.deepResearchService = deepResearchService;
-  this.researchPrompts = this.initializeResearchPrompts();
-}
-
-// 調査実行部分も修正
-// Gemini APIで調査実行
-const result = this.deepResearchService 
-  ? await this.deepResearchService.conductEnhancedResearch(prompt.prompt, request.serviceHypothesis)
-  : await this.geminiService.conductResearch(prompt.prompt, request.serviceHypothesis);
+    geminiService: GeminiService, 
+    notionService: NotionService,
+    deepResearchService?: DeepResearchService
+  ) {
     this.geminiService = geminiService;
     this.notionService = notionService;
+    this.deepResearchService = deepResearchService;
     this.researchPrompts = this.initializeResearchPrompts();
   }
 
@@ -170,11 +162,10 @@ const result = this.deepResearchService
 
           console.log(`[ResearchService] 調査${i + 1}/16: ${prompt.title}`);
           
-          // Gemini APIで調査実行
-          const result = await this.geminiService.conductResearch(
-            prompt.prompt,
-            request.serviceHypothesis
-          );
+          // Deep Research機能があれば使用、なければ通常の調査
+          const result = this.deepResearchService 
+            ? await this.deepResearchService.conductEnhancedResearch(prompt.prompt, request.serviceHypothesis)
+            : await this.geminiService.conductResearch(prompt.prompt, request.serviceHypothesis);
 
           researchResults.push({
             id: prompt.id,
@@ -372,4 +363,4 @@ const result = this.deepResearchService
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
-} 
+}
