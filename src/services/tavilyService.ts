@@ -70,7 +70,7 @@ export class TavilyService {
         throw new Error(`Tavily API Error: ${response.status} ${response.statusText}`);
       }
 
-      const result = await response.json();
+      const result = await response.json() as TavilyResponse;
       console.log(`[TavilyService] Web検索完了: ${result.results?.length || 0}件の結果`);
       
       return result;
