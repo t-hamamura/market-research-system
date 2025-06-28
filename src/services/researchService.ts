@@ -18,7 +18,22 @@ export class ResearchService {
   private notionService: NotionService;
   private researchPrompts: ResearchPrompt[];
 
-  constructor(geminiService: GeminiService, notionService: NotionService) {
+  constructor(
+  geminiService: GeminiService, 
+  notionService: NotionService,
+  deepResearchService?: DeepResearchService
+) {
+  this.geminiService = geminiService;
+  this.notionService = notionService;
+  this.deepResearchService = deepResearchService;
+  this.researchPrompts = this.initializeResearchPrompts();
+}
+
+// 調査実行部分も修正
+// Gemini APIで調査実行
+const result = this.deepResearchService 
+  ? await this.deepResearchService.conductEnhancedResearch(prompt.prompt, request.serviceHypothesis)
+  : await this.geminiService.conductResearch(prompt.prompt, request.serviceHypothesis);
     this.geminiService = geminiService;
     this.notionService = notionService;
     this.researchPrompts = this.initializeResearchPrompts();
