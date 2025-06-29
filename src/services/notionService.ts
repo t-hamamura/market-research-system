@@ -311,21 +311,21 @@ export class NotionService {
           blocks.push(this.createParagraphBlock(currentParagraph.trim()));
           currentParagraph = '';
         }
-        blocks.push(this.createHeadingBlock(1, trimmedLine.substring(2)));
+        blocks.push(this.createHeading1Block(trimmedLine.substring(2)));
       } else if (trimmedLine.startsWith('## ')) {
         // H2見出し
         if (currentParagraph.trim()) {
           blocks.push(this.createParagraphBlock(currentParagraph.trim()));
           currentParagraph = '';
         }
-        blocks.push(this.createHeadingBlock(2, trimmedLine.substring(3)));
+        blocks.push(this.createHeading2Block(trimmedLine.substring(3)));
       } else if (trimmedLine.startsWith('### ')) {
         // H3見出し
         if (currentParagraph.trim()) {
           blocks.push(this.createParagraphBlock(currentParagraph.trim()));
           currentParagraph = '';
         }
-        blocks.push(this.createHeadingBlock(3, trimmedLine.substring(4)));
+        blocks.push(this.createHeading3Block(trimmedLine.substring(4)));
       } else if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
         // リスト項目
         if (currentParagraph.trim()) {
@@ -398,49 +398,73 @@ export class NotionService {
   }
 
   /**
- * 見出しブロックを作成
- * @param level 見出しレベル（1-3）
- * @param text テキスト
- * @returns Notionブロック
- */
-private createHeadingBlock(level: number, text: string): any {
-  const content = text.substring(0, 100);
-  const richText = [
-    {
-      type: 'text',
-      text: {
-        content: content
-      }
-    }
-  ];
-
-  if (level === 1) {
+   * H1見出しブロックを作成
+   * @param text テキスト
+   * @returns Notionブロック
+   */
+  private createHeading1Block(text: string): any {
+    const content = text.substring(0, 100);
     return {
       object: 'block',
       type: 'heading_1',
       heading_1: {
-        rich_text: richText
+        rich_text: [
+          {
+            type: 'text',
+            text: {
+              content: content
+            }
+          }
+        ]
       }
     };
-  } else if (level === 3) {
-    return {
-      object: 'block',
-      type: 'heading_3',
-      heading_3: {
-        rich_text: richText
-      }
-    };
-  } else {
-    // デフォルトはheading_2
+  }
+
+  /**
+   * H2見出しブロックを作成
+   * @param text テキスト
+   * @returns Notionブロック
+   */
+  private createHeading2Block(text: string): any {
+    const content = text.substring(0, 100);
     return {
       object: 'block',
       type: 'heading_2',
       heading_2: {
-        rich_text: richText
+        rich_text: [
+          {
+            type: 'text',
+            text: {
+              content: content
+            }
+          }
+        ]
       }
     };
   }
-}
+
+  /**
+   * H3見出しブロックを作成
+   * @param text テキスト
+   * @returns Notionブロック
+   */
+  private createHeading3Block(text: string): any {
+    const content = text.substring(0, 100);
+    return {
+      object: 'block',
+      type: 'heading_3',
+      heading_3: {
+        rich_text: [
+          {
+            type: 'text',
+            text: {
+              content: content
+            }
+          }
+        ]
+      }
+    };
+  }
 
   /**
    * 箇条書きリストアイテムブロックを作成
