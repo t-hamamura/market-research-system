@@ -135,6 +135,76 @@ body {
   z-index: 1;
 }
 
+/* ===== 事業名入力セクション ===== */
+.business-name-section {
+  margin-bottom: 32px;
+}
+
+.business-name-card {
+  background: linear-gradient(135deg, var(--spirits-white) 0%, #F8FAFC 100%);
+  border-radius: var(--border-radius-lg);
+  padding: 32px;
+  box-shadow: var(--shadow-lg);
+  border: 2px solid var(--spirits-blue);
+  position: relative;
+  overflow: hidden;
+}
+
+.business-name-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--spirits-navy) 0%, var(--spirits-blue) 100%);
+}
+
+.business-name-description {
+  background: rgba(74, 144, 194, 0.1);
+  border: 1px solid rgba(74, 144, 194, 0.2);
+  border-radius: var(--border-radius);
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.business-name-description p {
+  margin: 0;
+  color: var(--spirits-navy);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.business-name-label {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--spirits-navy);
+  margin-bottom: 12px;
+}
+
+.business-name-input {
+  font-size: 16px;
+  padding: 16px 20px;
+  border: 2px solid var(--spirits-blue);
+  border-radius: var(--border-radius);
+  background: var(--spirits-white);
+  font-weight: 500;
+  text-align: center;
+}
+
+.business-name-input:focus {
+  outline: none;
+  border-color: var(--spirits-navy);
+  box-shadow: 0 0 0 4px rgba(27, 54, 93, 0.1);
+  transform: translateY(-1px);
+}
+
+.business-name-input::placeholder {
+  color: var(--text-light);
+  font-weight: 400;
+}
+
 /* ===== フォームセクション ===== */
 .form-section {
   margin-bottom: 32px;
@@ -380,48 +450,235 @@ body {
   margin-top: 16px;
 }
 
-/* ===== プログレスバー ===== */
+/* ===== 進行状況表示の新デザイン ===== */
+
+/* 全体の進行状況 */
+.overall-progress {
+  background: var(--spirits-bg-gray);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  padding: 24px;
+  margin-bottom: 32px;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.progress-stats {
+  display: flex;
+  gap: 32px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--spirits-navy);
+}
+
+.progress-percentage {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--spirits-blue);
+}
+
 .progress-bar {
   width: 100%;
-  height: 8px;
+  height: 12px;
   background: var(--border-color);
-  border-radius: 4px;
+  border-radius: 6px;
   overflow: hidden;
-  margin: 16px 0;
 }
 
 .progress-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--spirits-blue) 0%, var(--spirits-navy) 100%);
   transition: width 0.3s ease;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
-.research-item {
+/* 現在のフェーズ表示 */
+.current-phase {
+  background: linear-gradient(135deg, var(--spirits-blue) 0%, var(--spirits-navy) 100%);
+  color: var(--spirits-white);
+  border-radius: var(--border-radius-lg);
+  padding: 24px;
+  margin-bottom: 32px;
+}
+
+.phase-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.phase-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
+}
+
+.phase-icon {
+  font-size: 24px;
+  animation: spin 2s linear infinite;
+}
+
+.phase-progress {
+  background: rgba(255, 255, 255, 0.2);
   border-radius: var(--border-radius);
-  margin-bottom: 8px;
-  background: var(--spirits-bg-gray);
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.phase-description {
+  font-size: 16px;
+  opacity: 0.9;
+  line-height: 1.5;
+}
+
+/* 調査フェーズ一覧 */
+.research-phases {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.phase-group {
   border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  overflow: hidden;
   transition: all 0.3s ease;
 }
 
-.research-item.in-progress {
-  background: rgba(74, 144, 194, 0.1);
+.phase-group.active {
   border-color: var(--spirits-blue);
+  box-shadow: var(--shadow-md);
+}
+
+.phase-group.completed {
+  border-color: var(--success-color);
+  background: rgba(16, 185, 129, 0.02);
+}
+
+.phase-group-header {
+  background: var(--spirits-bg-gray);
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.phase-group.active .phase-group-header {
+  background: rgba(74, 144, 194, 0.1);
+}
+
+.phase-group.completed .phase-group-header {
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.phase-group-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--spirits-navy);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.phase-status-icon {
+  font-size: 18px;
+}
+
+.phase-time {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  background: var(--spirits-white);
+  padding: 4px 12px;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+}
+
+.research-batch {
+  padding: 20px;
+  display: grid;
+  gap: 16px;
+}
+
+.research-item {
+  background: var(--spirits-white);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 16px;
+  transition: all 0.3s ease;
+}
+
+.research-item:hover {
+  border-color: var(--spirits-light-blue);
+  box-shadow: var(--shadow-sm);
+}
+
+.research-item.in-progress {
+  background: rgba(74, 144, 194, 0.05);
+  border-color: var(--spirits-blue);
+  box-shadow: var(--shadow-sm);
 }
 
 .research-item.completed {
-  background: rgba(16, 185, 129, 0.1);
+  background: rgba(16, 185, 129, 0.05);
   border-color: var(--success-color);
 }
 
 .research-item.failed {
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba(239, 68, 68, 0.05);
   border-color: var(--error-color);
+}
+
+.research-item-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.research-item-icon {
+  font-size: 16px;
+  min-width: 20px;
+}
+
+.research-item-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--spirits-navy);
+}
+
+.research-item-description {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin-left: 32px;
 }
 
 /* ===== メッセージスタイル ===== */
@@ -486,7 +743,8 @@ body {
   .form-card,
   .progress-card,
   .result-card,
-  .error-card {
+  .error-card,
+  .business-name-card {
     padding: 24px 16px;
   }
   
@@ -496,6 +754,68 @@ body {
   
   .hero-title {
     font-size: 24px;
+  }
+  
+  .business-name-input {
+    font-size: 16px;
+    padding: 14px 16px;
+    text-align: left;
+  }
+  
+  /* 進行状況表示のモバイル対応 */
+  .progress-stats {
+    gap: 16px;
+  }
+  
+  .stat-value {
+    font-size: 16px;
+  }
+  
+  .progress-percentage {
+    font-size: 20px;
+  }
+  
+  .current-phase {
+    padding: 20px 16px;
+  }
+  
+  .phase-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .phase-title {
+    font-size: 18px;
+  }
+  
+  .phase-group-header {
+    padding: 12px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .phase-group-title {
+    font-size: 15px;
+  }
+  
+  .research-batch {
+    padding: 16px;
+    gap: 12px;
+  }
+  
+  .research-item {
+    padding: 12px;
+  }
+  
+  .research-item-title {
+    font-size: 14px;
+  }
+  
+  .research-item-description {
+    font-size: 12px;
+    margin-left: 28px;
   }
   
   .bulk-actions {

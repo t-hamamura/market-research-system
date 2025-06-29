@@ -14,7 +14,11 @@ let appState = {
   notionUrl: null,
   eventSource: null,
   isConnected: false,
-  lastEventTime: null
+  lastEventTime: null,
+  startTime: null,
+  currentPhase: 1,
+  completedBatches: 0,
+  estimatedTotalTime: 9 * 60 // 9分（秒単位）
 };
 
 // 調査プロンプト一覧（UI表示用）
@@ -34,12 +38,13 @@ const elements = {
   
   // 進行状況関連
   progressSection: document.getElementById('progressSection'),
-  progressText: document.getElementById('progressText'),
   progressCounter: document.getElementById('progressCounter'),
   progressFill: document.getElementById('progressFill'),
   progressPercentage: document.getElementById('progressPercentage'),
-  currentResearchType: document.getElementById('currentResearchType'),
-  researchItems: document.getElementById('researchItems'),
+  estimatedTime: document.getElementById('estimatedTime'),
+  currentPhaseText: document.getElementById('currentPhaseText'),
+  phaseCounter: document.getElementById('phaseCounter'),
+  phaseDescription: document.getElementById('phaseDescription'),
   
   // 結果関連
   resultSection: document.getElementById('resultSection'),
@@ -146,38 +151,20 @@ async function loadResearchPrompts() {
   }
 }
 
-// ===== 調査項目UIの初期化 =====
+// ===== 調査項目UIの初期化（新UI対応） =====
 function initializeResearchItems() {
-  if (!elements.researchItems || researchPrompts.length === 0) return;
+  // 新しいHTML構造では、調査項目は事前に定義されているため
+  // 初期状態にリセットするのみ
+  const allItems = document.querySelectorAll('.research-item');
   
-  elements.researchItems.innerHTML = '';
-  
-  researchPrompts.forEach((prompt, index) => {
-    const item = document.createElement('div');
-    item.className = 'research-item pending';
-    item.dataset.id = prompt.id;
-    item.innerHTML = `
-      <span class="research-item-icon">⏳</span>
-      <span class="research-item-text">${prompt.title}</span>
-    `;
-    elements.researchItems.appendChild(item);
-  });
-  
-  // 統合レポートとNotion保存の項目も追加
-  const additionalItems = [
-    { id: 'integration', title: '統合レポート生成' },
-    { id: 'notion', title: 'Notion保存' }
-  ];
-  
-  additionalItems.forEach(item => {
-    const element = document.createElement('div');
-    element.className = 'research-item pending';
-    element.dataset.id = item.id;
-    element.innerHTML = `
-      <span class="research-item-icon">⏳</span>
-      <span class="research-item-text">${item.title}</span>
-    `;
-    elements.researchItems.appendChild(element);
+  allItems.forEach(item => {
+    item.classList.remove('in-progress', 'completed', 'failed');
+    item.classList.add('pending');
+    
+    const icon = item.querySelector('.research-item-icon');
+    if (icon) {
+      icon.textContent = '⏳';
+    }
   });
 }
 
@@ -311,9 +298,17 @@ function hideValidationErrors() {
 function startResearch(formData) {
   console.log('[App] 市場調査開始:', formData.businessName);
   
-  // UI状態を更新
+  // 開始時刻を記録
+  appState.startTime = new Date();
   appState.isLoading = true;
+  appState.currentPhase = 1;
+  appState.completedBatches = 0;
+  
+  // UI状態を更新
   updateUIForResearchStart();
+  
+  // 初期フェーズ状態を設定
+  updatePhaseDisplay();
   
   // Server-Sent Events接続
   connectToResearchStream(formData);
@@ -419,60 +414,204 @@ function updateProgress(event) {
   const percentage = Math.round((event.step / event.total) * 100);
   elements.progressFill.style.width = `${percentage}%`;
   elements.progressPercentage.textContent = `${percentage}%`;
-  elements.progressText.textContent = event.message;
   elements.progressCounter.textContent = `${event.step}/${event.total}`;
   
-  // 現在の調査表示の更新
-  if (event.researchType) {
-    updateCurrentResearch(event.researchType);
-  }
+  // フェーズの更新
+  updatePhaseFromStep(event.step);
+  
+  // 時間予測の更新
+  updateTimeEstimate();
   
   // 調査項目の状態更新
-  if (event.step > 0 && event.step <= researchPrompts.length) {
-    updateResearchItemStatus(event.step - 1, 'in-progress');
-    
-    // 前の項目を完了状態に
-    if (event.step > 1) {
-      updateResearchItemStatus(event.step - 2, 'completed');
-    }
-  } else if (event.step === researchPrompts.length + 1) {
-    // 統合レポート生成中
-    updateResearchItemStatus('integration', 'in-progress');
-    if (researchPrompts.length > 0) {
-      updateResearchItemStatus(researchPrompts.length - 1, 'completed');
-    }
-  } else if (event.step === researchPrompts.length + 2) {
-    // Notion保存中
-    updateResearchItemStatus('notion', 'in-progress');
-    updateResearchItemStatus('integration', 'completed');
-  }
+  updateResearchItemsStatus(event.step, event.researchType);
 }
 
-// ===== 現在の調査表示の更新 =====
-function updateCurrentResearch(researchType) {
-  const icon = elements.currentResearchType.querySelector('.research-icon');
-  const text = elements.currentResearchType.querySelector('.research-text');
+// ===== フェーズ表示の更新 =====
+function updatePhaseDisplay() {
+  const phaseData = getPhaseData(appState.currentPhase);
   
-  if (icon && text) {
-    icon.textContent = '🔄';
-    text.textContent = researchType;
+  if (elements.currentPhaseText) {
+    elements.currentPhaseText.textContent = phaseData.title;
   }
+  
+  if (elements.phaseCounter) {
+    elements.phaseCounter.textContent = `${appState.currentPhase}/4`;
+  }
+  
+  if (elements.phaseDescription) {
+    elements.phaseDescription.textContent = phaseData.description;
+  }
+  
+  // フェーズグループの状態更新
+  updatePhaseGroupStatus();
 }
 
-// ===== 調査項目の状態更新 =====
-function updateResearchItemStatus(index, status) {
-  let item;
+// ===== ステップからフェーズを更新 =====
+function updatePhaseFromStep(step) {
+  let newPhase = 1;
   
-  if (typeof index === 'string') {
-    // 特別な項目（integration, notion）
-    item = elements.researchItems.querySelector(`[data-id="${index}"]`);
+  if (step <= 4) {
+    newPhase = 1; // フェーズ1: 基本情報収集
+  } else if (step <= 8) {
+    newPhase = 2; // フェーズ2: 市場機会分析
+  } else if (step <= 12) {
+    newPhase = 3; // フェーズ3: ビジネス戦略分析
+  } else if (step <= 16) {
+    newPhase = 4; // フェーズ4: リスク・機会評価
   } else {
-    // 通常の調査項目
-    const promptId = researchPrompts[index]?.id;
-    if (promptId) {
-      item = elements.researchItems.querySelector(`[data-id="${promptId}"]`);
+    newPhase = 5; // 最終処理
+  }
+  
+  if (newPhase !== appState.currentPhase) {
+    appState.currentPhase = newPhase;
+    updatePhaseDisplay();
+  }
+}
+
+// ===== フェーズデータの取得 =====
+function getPhaseData(phase) {
+  const phases = {
+    1: {
+      title: 'フェーズ1: 基本情報収集',
+      description: '基礎的な市場情報と競合状況を並列で調査しています'
+    },
+    2: {
+      title: 'フェーズ2: 市場機会分析',
+      description: '市場規模とビジネス機会を詳細に分析しています'
+    },
+    3: {
+      title: 'フェーズ3: ビジネス戦略分析',
+      description: '戦略的なアプローチと参入方法を検討しています'
+    },
+    4: {
+      title: 'フェーズ4: リスク・機会評価',
+      description: '包括的なリスク分析と成功要因を特定しています'
+    },
+    5: {
+      title: '最終処理: レポート統合',
+      description: '調査結果の統合とNotionレポートを生成しています'
+    }
+  };
+  
+  return phases[phase] || phases[1];
+}
+
+// ===== フェーズグループの状態更新 =====
+function updatePhaseGroupStatus() {
+  for (let i = 1; i <= 4; i++) {
+    const phaseGroup = document.getElementById(`phase${i}`);
+    const phaseIcon = phaseGroup?.querySelector('.phase-status-icon');
+    
+    if (phaseGroup && phaseIcon) {
+      phaseGroup.classList.remove('active', 'completed');
+      
+      if (i < appState.currentPhase) {
+        // 完了したフェーズ
+        phaseGroup.classList.add('completed');
+        phaseIcon.textContent = '✅';
+      } else if (i === appState.currentPhase) {
+        // 現在のフェーズ
+        phaseGroup.classList.add('active');
+        phaseIcon.textContent = '🔄';
+      } else {
+        // 未開始のフェーズ
+        phaseIcon.textContent = '⏳';
+      }
     }
   }
+  
+  // 最終処理フェーズ
+  const finalPhase = document.getElementById('phase-final');
+  const finalIcon = finalPhase?.querySelector('.phase-status-icon');
+  
+  if (finalPhase && finalIcon) {
+    finalPhase.classList.remove('active', 'completed');
+    
+    if (appState.currentPhase === 5) {
+      finalPhase.classList.add('active');
+      finalIcon.textContent = '🔄';
+    } else if (appState.currentPhase > 5) {
+      finalPhase.classList.add('completed');
+      finalIcon.textContent = '✅';
+    } else {
+      finalIcon.textContent = '⏳';
+    }
+  }
+}
+
+// ===== 時間予測の更新 =====
+function updateTimeEstimate() {
+  if (!appState.startTime || !elements.estimatedTime) return;
+  
+  const currentTime = new Date();
+  const elapsedSeconds = Math.floor((currentTime - appState.startTime) / 1000);
+  const progress = appState.currentStep / appState.totalSteps;
+  
+  if (progress > 0) {
+    const estimatedTotalSeconds = Math.floor(elapsedSeconds / progress);
+    const remainingSeconds = Math.max(0, estimatedTotalSeconds - elapsedSeconds);
+    
+    if (remainingSeconds > 0) {
+      const minutes = Math.floor(remainingSeconds / 60);
+      const seconds = remainingSeconds % 60;
+      
+      if (minutes > 0) {
+        elements.estimatedTime.textContent = `約${minutes}分${seconds > 0 ? seconds + '秒' : ''}`;
+      } else {
+        elements.estimatedTime.textContent = `約${seconds}秒`;
+      }
+    } else {
+      elements.estimatedTime.textContent = 'まもなく完了';
+    }
+  } else {
+    elements.estimatedTime.textContent = '計算中...';
+  }
+}
+
+// ===== 調査項目の状態更新（新UI対応） =====
+function updateResearchItemsStatus(step, researchType) {
+  // 各調査項目の状態を更新
+  const researchItems = {
+    1: 'basic_market_research',
+    2: 'competitor_analysis', 
+    3: 'target_customer_analysis',
+    4: 'industry_trends',
+    5: 'market_size_research',
+    6: 'pricing_research',
+    7: 'technology_trends',
+    8: 'customer_behavior_analysis',
+    9: 'go_to_market_strategy',
+    10: 'regulatory_analysis',
+    11: 'partnership_opportunities',
+    12: 'business_model_analysis',
+    13: 'risk_analysis',
+    14: 'success_factors',
+    15: 'market_entry_barriers',
+    16: 'swot_analysis',
+    17: 'integration',
+    18: 'notion'
+  };
+  
+  const currentItemId = researchItems[step];
+  
+  // 現在の項目を進行中に
+  if (currentItemId) {
+    updateResearchItemStatus(currentItemId, 'in-progress');
+  }
+  
+  // 前の項目を完了に
+  const prevItemId = researchItems[step - 1];
+  if (prevItemId) {
+    updateResearchItemStatus(prevItemId, 'completed');
+  }
+}
+
+
+
+// ===== 調査項目の状態更新（新UI対応） =====
+function updateResearchItemStatus(itemId, status) {
+  // 新しいHTML構造での要素を検索
+  const item = document.querySelector(`[data-id="${itemId}"]`);
   
   if (item) {
     // 既存のステータスクラスを削除
@@ -623,7 +762,11 @@ function resetApplication() {
     notionUrl: null,
     eventSource: null,
     isConnected: false,
-    lastEventTime: null
+    lastEventTime: null,
+    startTime: null,
+    currentPhase: 1,
+    completedBatches: 0,
+    estimatedTotalTime: 9 * 60
   };
   
   // UIをリセット
@@ -646,8 +789,16 @@ function resetApplication() {
   // 進行状況をリセット
   elements.progressFill.style.width = '0%';
   elements.progressPercentage.textContent = '0%';
-  elements.progressText.textContent = '調査を開始しています...';
   elements.progressCounter.textContent = '0/18';
+  
+  // 時間予測をリセット
+  if (elements.estimatedTime) {
+    elements.estimatedTime.textContent = '計算中...';
+  }
+  
+  // フェーズ表示をリセット
+  appState.currentPhase = 1;
+  updatePhaseDisplay();
   
   // 調査項目をリセット
   initializeResearchItems();

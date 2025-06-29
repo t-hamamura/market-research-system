@@ -41,6 +41,32 @@
             <span class="status-text">システム接続確認中...</span>
         </div>
 
+        <!-- 事業名入力セクション -->
+        <section class="business-name-section">
+            <div class="business-name-card">
+                <h2 class="section-title">
+                    <span class="section-icon">🏢</span>
+                    調査対象事業名
+                </h2>
+                <div class="business-name-description">
+                    <p>この事業名がNotionレポートのタイトルになります。まず最初にご入力ください。</p>
+                </div>
+                <div class="form-group">
+                    <label for="businessName" class="form-label required business-name-label">
+                        事業名・サービス名
+                    </label>
+                    <input 
+                        type="text" 
+                        id="businessName" 
+                        name="businessName" 
+                        class="form-input business-name-input" 
+                        placeholder="例：AIを活用した健康管理アプリ「HealthBot」"
+                        required
+                    >
+                </div>
+            </div>
+        </section>
+
         <!-- ローディングオーバーレイ -->
         <div class="loading-overlay hidden" id="loadingOverlay">
             <div class="loading-content">
@@ -53,268 +79,252 @@
         <section id="formSection" class="form-section">
             <!-- 2列レイアウトコンテナ -->
             <div class="two-column-layout">
-            <!-- 左側：サービス仮説入力 -->
-            <section class="left-column">
-                <div class="form-card">
-                    <h2 class="section-title">
-                        <span class="section-icon">📊</span>
-                        サービス仮説入力
-                    </h2>
+                <!-- 左側：サービス仮説入力 -->
+                <section class="left-column">
+                    <div class="form-card">
+                        <h2 class="section-title">
+                            <span class="section-icon">📊</span>
+                            サービス仮説入力
+                        </h2>
 
-                    <form id="researchForm" class="research-form">
-                        <!-- 事業名 -->
-                        <div class="form-group">
-                            <label for="businessName" class="form-label required">
-                                事業名
-                                <span class="label-description">Notionレポートのタイトルになります</span>
-                            </label>
-                            <input 
-                                type="text" 
-                                id="businessName" 
-                                name="businessName" 
-                                class="form-input" 
-                                placeholder="例：AIを活用した健康管理アプリ"
-                                required
-                            >
-                        </div>
+                        <form id="researchForm" class="research-form">
+                            <!-- サービス仮説フィールド -->
+                            <div class="form-group">
+                                <label for="concept" class="form-label required">
+                                    コンセプト
+                                </label>
+                                <textarea 
+                                    id="concept" 
+                                    name="concept" 
+                                    class="form-textarea" 
+                                    rows="4"
+                                    placeholder="サービスの核となるコンセプトを詳しく説明してください"
+                                    required
+                                ></textarea>
+                            </div>
 
-                        <!-- サービス仮説フィールド -->
-                        <div class="form-group">
-                            <label for="concept" class="form-label required">
-                                コンセプト
-                            </label>
-                            <textarea 
-                                id="concept" 
-                                name="concept" 
-                                class="form-textarea" 
-                                rows="4"
-                                placeholder="サービスの核となるコンセプトを詳しく説明してください"
-                                required
-                            ></textarea>
-                        </div>
+                            <div class="form-group">
+                                <label for="customerProblem" class="form-label required">
+                                    解決したい顧客課題
+                                </label>
+                                <textarea 
+                                    id="customerProblem" 
+                                    name="customerProblem" 
+                                    class="form-textarea" 
+                                    rows="4"
+                                    placeholder="どのような顧客の課題を解決するサービスか詳しく説明してください"
+                                    required
+                                ></textarea>
+                            </div>
 
-                        <div class="form-group">
-                            <label for="customerProblem" class="form-label required">
-                                解決したい顧客課題
-                            </label>
-                            <textarea 
-                                id="customerProblem" 
-                                name="customerProblem" 
-                                class="form-textarea" 
-                                rows="4"
-                                placeholder="どのような顧客の課題を解決するサービスか詳しく説明してください"
-                                required
-                            ></textarea>
-                        </div>
+                            <div class="form-group">
+                                <label for="targetIndustry" class="form-label required">
+                                    狙っている業種・業界
+                                </label>
+                                <textarea 
+                                    id="targetIndustry" 
+                                    name="targetIndustry" 
+                                    class="form-textarea" 
+                                    rows="3"
+                                    placeholder="例：ヘルスケア業界、中小企業向けSaaS市場など"
+                                    required
+                                ></textarea>
+                            </div>
 
-                        <div class="form-group">
-                            <label for="targetIndustry" class="form-label required">
-                                狙っている業種・業界
-                            </label>
-                            <textarea 
-                                id="targetIndustry" 
-                                name="targetIndustry" 
-                                class="form-textarea" 
-                                rows="3"
-                                placeholder="例：ヘルスケア業界、中小企業向けSaaS市場など"
-                                required
-                            ></textarea>
-                        </div>
+                            <div class="form-group">
+                                <label for="targetUsers" class="form-label required">
+                                    想定される利用者層
+                                </label>
+                                <textarea 
+                                    id="targetUsers" 
+                                    name="targetUsers" 
+                                    class="form-textarea" 
+                                    rows="3"
+                                    placeholder="年齢、職業、属性、行動特性など詳しく説明してください"
+                                    required
+                                ></textarea>
+                            </div>
 
-                        <div class="form-group">
-                            <label for="targetUsers" class="form-label required">
-                                想定される利用者層
-                            </label>
-                            <textarea 
-                                id="targetUsers" 
-                                name="targetUsers" 
-                                class="form-textarea" 
-                                rows="3"
-                                placeholder="年齢、職業、属性、行動特性など詳しく説明してください"
-                                required
-                            ></textarea>
-                        </div>
+                            <div class="form-group">
+                                <label for="competitors" class="form-label required">
+                                    直接競合・間接競合
+                                </label>
+                                <textarea 
+                                    id="competitors" 
+                                    name="competitors" 
+                                    class="form-textarea" 
+                                    rows="3"
+                                    placeholder="既存の競合サービスや代替手段について説明してください"
+                                    required
+                                ></textarea>
+                            </div>
 
-                        <div class="form-group">
-                            <label for="competitors" class="form-label required">
-                                直接競合・間接競合
-                            </label>
-                            <textarea 
-                                id="competitors" 
-                                name="competitors" 
-                                class="form-textarea" 
-                                rows="3"
-                                placeholder="既存の競合サービスや代替手段について説明してください"
-                                required
-                            ></textarea>
-                        </div>
+                            <div class="form-group">
+                                <label for="revenueModel" class="form-label">
+                                    課金モデル
+                                    <span class="label-optional">（任意）</span>
+                                </label>
+                                <textarea 
+                                    id="revenueModel" 
+                                    name="revenueModel" 
+                                    class="form-textarea" 
+                                    rows="3"
+                                    placeholder="月額課金、従量課金、広告収益など収益構造を説明してください"
+                                ></textarea>
+                            </div>
 
-                        <div class="form-group">
-                            <label for="revenueModel" class="form-label">
-                                課金モデル
-                                <span class="label-optional">（任意）</span>
-                            </label>
-                            <textarea 
-                                id="revenueModel" 
-                                name="revenueModel" 
-                                class="form-textarea" 
-                                rows="3"
-                                placeholder="月額課金、従量課金、広告収益など収益構造を説明してください"
-                            ></textarea>
-                        </div>
+                            <div class="form-group">
+                                <label for="pricingDirection" class="form-label">
+                                    価格帯・価格設定の方向性
+                                    <span class="label-optional">（任意）</span>
+                                </label>
+                                <textarea 
+                                    id="pricingDirection" 
+                                    name="pricingDirection" 
+                                    class="form-textarea" 
+                                    rows="3"
+                                    placeholder="価格レンジ、価格戦略の考え方を説明してください"
+                                ></textarea>
+                            </div>
 
-                        <div class="form-group">
-                            <label for="pricingDirection" class="form-label">
-                                価格帯・価格設定の方向性
-                                <span class="label-optional">（任意）</span>
-                            </label>
-                            <textarea 
-                                id="pricingDirection" 
-                                name="pricingDirection" 
-                                class="form-textarea" 
-                                rows="3"
-                                placeholder="価格レンジ、価格戦略の考え方を説明してください"
-                            ></textarea>
-                        </div>
+                            <div class="form-group">
+                                <label for="uvp" class="form-label">
+                                    暫定UVP（Unique Value Proposition）
+                                    <span class="label-optional">（任意）</span>
+                                </label>
+                                <textarea 
+                                    id="uvp" 
+                                    name="uvp" 
+                                    class="form-textarea" 
+                                    rows="3"
+                                    placeholder="競合との差別化ポイント、独自の価値提案を明確に記述してください"
+                                ></textarea>
+                            </div>
 
-                        <div class="form-group">
-                            <label for="uvp" class="form-label">
-                                暫定UVP（Unique Value Proposition）
-                                <span class="label-optional">（任意）</span>
-                            </label>
-                            <textarea 
-                                id="uvp" 
-                                name="uvp" 
-                                class="form-textarea" 
-                                rows="3"
-                                placeholder="競合との差別化ポイント、独自の価値提案を明確に記述してください"
-                            ></textarea>
-                        </div>
+                            <div class="form-group">
+                                <label for="initialKpi" class="form-label">
+                                    初期KPI
+                                    <span class="label-optional">（任意）</span>
+                                </label>
+                                <textarea 
+                                    id="initialKpi" 
+                                    name="initialKpi" 
+                                    class="form-textarea" 
+                                    rows="3"
+                                    placeholder="継続率、CVR、CAC、LTVなど重要指標の目標値を具体的に記述してください"
+                                ></textarea>
+                            </div>
 
-                        <div class="form-group">
-                            <label for="initialKpi" class="form-label">
-                                初期KPI
-                                <span class="label-optional">（任意）</span>
-                            </label>
-                            <textarea 
-                                id="initialKpi" 
-                                name="initialKpi" 
-                                class="form-textarea" 
-                                rows="3"
-                                placeholder="継続率、CVR、CAC、LTVなど重要指標の目標値を具体的に記述してください"
-                            ></textarea>
-                        </div>
+                            <div class="form-group">
+                                <label for="acquisitionChannels" class="form-label">
+                                    獲得チャネル仮説
+                                    <span class="label-optional">（任意）</span>
+                                </label>
+                                <textarea 
+                                    id="acquisitionChannels" 
+                                    name="acquisitionChannels" 
+                                    class="form-textarea" 
+                                    rows="3"
+                                    placeholder="顧客獲得のチャネル（広告、SEO、紹介など）とその優先順位を説明してください"
+                                ></textarea>
+                            </div>
 
-                        <div class="form-group">
-                            <label for="acquisitionChannels" class="form-label">
-                                獲得チャネル仮説
-                                <span class="label-optional">（任意）</span>
-                            </label>
-                            <textarea 
-                                id="acquisitionChannels" 
-                                name="acquisitionChannels" 
-                                class="form-textarea" 
-                                rows="3"
-                                placeholder="顧客獲得のチャネル（広告、SEO、紹介など）とその優先順位を説明してください"
-                            ></textarea>
-                        </div>
+                            <div class="form-group">
+                                <label for="regulatoryTechPrereqs" class="form-label">
+                                    規制・技術前提
+                                    <span class="label-optional">（任意）</span>
+                                </label>
+                                <textarea 
+                                    id="regulatoryTechPrereqs" 
+                                    name="regulatoryTechPrereqs" 
+                                    class="form-textarea" 
+                                    rows="3"
+                                    placeholder="GDPR対応、API依存性、技術的制約など事業に影響する前提条件があれば記述してください"
+                                ></textarea>
+                            </div>
 
-                        <div class="form-group">
-                            <label for="regulatoryTechPrereqs" class="form-label">
-                                規制・技術前提
-                                <span class="label-optional">（任意）</span>
-                            </label>
-                            <textarea 
-                                id="regulatoryTechPrereqs" 
-                                name="regulatoryTechPrereqs" 
-                                class="form-textarea" 
-                                rows="3"
-                                placeholder="GDPR対応、API依存性、技術的制約など事業に影響する前提条件があれば記述してください"
-                            ></textarea>
-                        </div>
+                            <div class="form-group">
+                                <label for="costStructure" class="form-label">
+                                    想定コスト構造
+                                    <span class="label-optional">（任意）</span>
+                                </label>
+                                <textarea 
+                                    id="costStructure" 
+                                    name="costStructure" 
+                                    class="form-textarea" 
+                                    rows="3"
+                                    placeholder="変動費、固定費、人件費などの想定コスト構造があれば記述してください"
+                                ></textarea>
+                            </div>
+                        </form>
+                    </div>
+                </section>
 
-                        <div class="form-group">
-                            <label for="costStructure" class="form-label">
-                                想定コスト構造
-                                <span class="label-optional">（任意）</span>
-                            </label>
-                            <textarea 
-                                id="costStructure" 
-                                name="costStructure" 
-                                class="form-textarea" 
-                                rows="3"
-                                placeholder="変動費、固定費、人件費などの想定コスト構造があれば記述してください"
-                            ></textarea>
-                        </div>
-                    </form>
-                </div>
-            </section>
-
-            <!-- 右側：テンプレート一括入力 -->
-            <section class="right-column">
-                <div class="form-card">
-                    <h2 class="section-title">
-                        <span class="section-icon">📄</span>
-                        テンプレート一括入力
-                    </h2>
-                    
-                    <div class="bulk-input-container">
-                        <div class="bulk-header">
-                            <button type="button" id="copyTemplateButton" class="btn-copy-template">
-                                <span class="btn-icon">📋</span>
-                                テンプレートをコピー
-                            </button>
-                        </div>
+                <!-- 右側：テンプレート一括入力 -->
+                <section class="right-column">
+                    <div class="form-card">
+                        <h2 class="section-title">
+                            <span class="section-icon">📄</span>
+                            テンプレート一括入力
+                        </h2>
                         
-                        <div class="bulk-description">
+                        <div class="bulk-input-container">
+                            <div class="bulk-header">
+                                <button type="button" id="copyTemplateButton" class="btn-copy-template">
+                                    <span class="btn-icon">📋</span>
+                                    テンプレートをコピー
+                                </button>
+                            </div>
+                            
+                                                    <div class="bulk-description">
                             <p>下のテンプレートをコピーして、各項目を埋めてから貼り付けてください。</p>
-                            <p>「事業名」は左側の個別フィールドに入力してください。</p>
+                            <p>「事業名」は上部の専用セクションに入力してください。</p>
                         </div>
 
-                        <div class="form-group">
-                            <label for="bulkInput" class="form-label">
-                                一括入力エリア
-                                <span class="label-description">テンプレート形式で貼り付けてください</span>
-                            </label>
-                            <textarea 
-                                id="bulkInput" 
-                                name="bulkInput" 
-                                class="form-textarea bulk-textarea" 
-                                rows="20"
-                                placeholder="ここにテンプレートを貼り付けて、各項目を記入してください..."
-                            ></textarea>
-                        </div>
+                            <div class="form-group">
+                                <label for="bulkInput" class="form-label">
+                                    一括入力エリア
+                                    <span class="label-description">テンプレート形式で貼り付けてください</span>
+                                </label>
+                                <textarea 
+                                    id="bulkInput" 
+                                    name="bulkInput" 
+                                    class="form-textarea bulk-textarea" 
+                                    rows="20"
+                                    placeholder="ここにテンプレートを貼り付けて、各項目を記入してください..."
+                                ></textarea>
+                            </div>
 
-                        <div class="bulk-actions">
-                            <button type="button" id="parseBulkButton" class="btn-secondary">
-                                <span class="btn-icon">🔄</span>
-                                テキストを解析して左側に反映
-                            </button>
-                            <button type="button" id="clearBulkButton" class="btn-secondary">
-                                <span class="btn-icon">🗑️</span>
-                                クリア
-                            </button>
+                            <div class="bulk-actions">
+                                <button type="button" id="parseBulkButton" class="btn-secondary">
+                                    <span class="btn-icon">🔄</span>
+                                    テキストを解析して左側に反映
+                                </button>
+                                <button type="button" id="clearBulkButton" class="btn-secondary">
+                                    <span class="btn-icon">🗑️</span>
+                                    クリア
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </section>
-        </div>
-
-        <!-- 共通の送信エリア -->
-        <section class="submit-section">
-            <div class="form-submit text-center">
-                <button type="submit" id="submitButton" class="btn-primary" form="researchForm">
-                    <span class="btn-icon">🚀</span>
-                    <span class="btn-text">AI市場調査を開始</span>
-                </button>
-                <p class="btn-subtext" style="margin-top: 12px; color: var(--text-secondary); font-size: 14px;">
-                    16種類の専門的な市場調査を並列実行します
-                </p>
+                </section>
             </div>
-            
-            <!-- バリデーションエラー表示 -->
-            <div id="validationErrors" class="validation-errors hidden"></div>
-        </section>
+
+            <!-- 共通の送信エリア -->
+            <section class="submit-section">
+                <div class="form-submit text-center">
+                    <button type="submit" id="submitButton" class="btn-primary" form="researchForm">
+                        <span class="btn-icon">🚀</span>
+                        <span class="btn-text">AI市場調査を開始</span>
+                    </button>
+                    <p class="btn-subtext" style="margin-top: 12px; color: var(--text-secondary); font-size: 14px;">
+                        16種類の専門的な市場調査を並列実行します
+                    </p>
+                </div>
+                
+                <!-- バリデーションエラー表示 -->
+                <div id="validationErrors" class="validation-errors hidden"></div>
+            </section>
         </section>
 
         <!-- 進行状況表示セクション -->
@@ -322,34 +332,273 @@
             <div class="progress-card">
                 <h2 class="section-title">
                     <span class="section-icon">⚡</span>
-                    AI調査実行中
+                    AI市場調査実行中
                 </h2>
                 
-                <div class="progress-container">
-                    <div class="progress-info">
-                        <span id="progressText">調査を開始しています...</span>
-                        <span id="progressCounter">0/18</span>
+                <!-- 全体の進行状況 -->
+                <div class="overall-progress">
+                    <div class="progress-header">
+                        <div class="progress-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">進行状況</span>
+                                <span class="stat-value" id="progressCounter">0/18</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">予想残り時間</span>
+                                <span class="stat-value" id="estimatedTime">計算中...</span>
+                            </div>
+                        </div>
+                        <div class="progress-percentage" id="progressPercentage">0%</div>
                     </div>
                     
                     <div class="progress-bar">
                         <div class="progress-fill" id="progressFill" style="width: 0%"></div>
                     </div>
-                    
-                    <div class="progress-percentage" id="progressPercentage">0%</div>
                 </div>
 
-                <div class="current-research">
-                    <div class="current-research-title">現在実行中の調査</div>
-                    <div class="current-research-content" id="currentResearchType">
-                        <span class="research-icon">🔄</span>
-                        <span class="research-text">準備中...</span>
+                <!-- 現在のフェーズ表示 -->
+                <div class="current-phase">
+                    <div class="phase-header">
+                        <h3 class="phase-title">
+                            <span class="phase-icon">🔄</span>
+                            <span id="currentPhaseText">フェーズ1: 基本情報収集</span>
+                        </h3>
+                        <div class="phase-progress">
+                            <span id="phaseCounter">1/4</span>
+                        </div>
+                    </div>
+                    <div class="phase-description" id="phaseDescription">
+                        基礎的な市場情報と競合状況を並列で調査しています
                     </div>
                 </div>
 
-                <div class="research-list">
-                    <div class="research-list-title">調査項目一覧</div>
-                    <div class="research-items" id="researchItems">
-                        <!-- 動的に生成される調査項目 -->
+                <!-- 調査フェーズ一覧 -->
+                <div class="research-phases">
+                    <!-- フェーズ1: 基本情報収集 -->
+                    <div class="phase-group" id="phase1">
+                        <div class="phase-group-header">
+                            <h4 class="phase-group-title">
+                                <span class="phase-status-icon">⏳</span>
+                                フェーズ1: 基本情報収集
+                            </h4>
+                            <span class="phase-time">約2分</span>
+                        </div>
+                        <div class="research-batch">
+                            <div class="research-item" data-id="basic_market_research">
+                                <div class="research-item-header">
+                                    <span class="research-item-icon">⏳</span>
+                                    <span class="research-item-title">基本的な市場調査</span>
+                                </div>
+                                <div class="research-item-description">
+                                    市場規模、成長率、主要プレイヤーの基本情報を収集
+                                </div>
+                            </div>
+                            <div class="research-item" data-id="competitor_analysis">
+                                <div class="research-item-header">
+                                    <span class="research-item-icon">⏳</span>
+                                    <span class="research-item-title">競合分析</span>
+                                </div>
+                                <div class="research-item-description">
+                                    直接・間接競合の詳細分析とポジショニング調査
+                                </div>
+                            </div>
+                            <div class="research-item" data-id="target_customer_analysis">
+                                <div class="research-item-header">
+                                    <span class="research-item-icon">⏳</span>
+                                    <span class="research-item-title">ターゲット顧客分析</span>
+                                </div>
+                                <div class="research-item-description">
+                                    想定顧客層の詳細プロファイルとニーズ分析
+                                </div>
+                            </div>
+                            <div class="research-item" data-id="industry_trends">
+                                <div class="research-item-header">
+                                    <span class="research-item-icon">⏳</span>
+                                    <span class="research-item-title">業界動向調査</span>
+                                </div>
+                                <div class="research-item-description">
+                                    業界全体のトレンドと将来予測の分析
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- フェーズ2: 市場機会分析 -->
+                    <div class="phase-group" id="phase2">
+                        <div class="phase-group-header">
+                            <h4 class="phase-group-title">
+                                <span class="phase-status-icon">⏳</span>
+                                フェーズ2: 市場機会分析
+                            </h4>
+                            <span class="phase-time">約2分</span>
+                        </div>
+                        <div class="research-batch">
+                            <div class="research-item" data-id="market_size_research">
+                                <div class="research-item-header">
+                                    <span class="research-item-icon">⏳</span>
+                                    <span class="research-item-title">市場規模調査</span>
+                                </div>
+                                <div class="research-item-description">
+                                    TAM/SAM/SOMの詳細計算と市場ポテンシャル評価
+                                </div>
+                            </div>
+                            <div class="research-item" data-id="pricing_research">
+                                <div class="research-item-header">
+                                    <span class="research-item-icon">⏳</span>
+                                    <span class="research-item-title">価格調査</span>
+                                </div>
+                                <div class="research-item-description">
+                                    競合価格調査と最適価格戦略の分析
+                                </div>
+                            </div>
+                            <div class="research-item" data-id="technology_trends">
+                                <div class="research-item-header">
+                                    <span class="research-item-icon">⏳</span>
+                                    <span class="research-item-title">技術動向調査</span>
+                                </div>
+                                <div class="research-item-description">
+                                    関連技術の最新動向と技術的優位性の分析
+                                </div>
+                            </div>
+                            <div class="research-item" data-id="customer_behavior_analysis">
+                                <div class="research-item-header">
+                                    <span class="research-item-icon">⏳</span>
+                                    <span class="research-item-title">顧客行動分析</span>
+                                </div>
+                                <div class="research-item-description">
+                                    購買プロセス、利用パターン、満足度要因の調査
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- フェーズ3: ビジネス戦略分析 -->
+                    <div class="phase-group" id="phase3">
+                        <div class="phase-group-header">
+                            <h4 class="phase-group-title">
+                                <span class="phase-status-icon">⏳</span>
+                                フェーズ3: ビジネス戦略分析
+                            </h4>
+                            <span class="phase-time">約2分</span>
+                        </div>
+                        <div class="research-batch">
+                            <div class="research-item" data-id="go_to_market_strategy">
+                                <div class="research-item-header">
+                                    <span class="research-item-icon">⏳</span>
+                                    <span class="research-item-title">Go-to-Market戦略</span>
+                                </div>
+                                <div class="research-item-description">
+                                    市場参入戦略とチャネル戦略の詳細分析
+                                </div>
+                            </div>
+                            <div class="research-item" data-id="regulatory_analysis">
+                                <div class="research-item-header">
+                                    <span class="research-item-icon">⏳</span>
+                                    <span class="research-item-title">規制・法的調査</span>
+                                </div>
+                                <div class="research-item-description">
+                                    関連法規制、コンプライアンス要件の調査
+                                </div>
+                            </div>
+                            <div class="research-item" data-id="partnership_opportunities">
+                                <div class="research-item-header">
+                                    <span class="research-item-icon">⏳</span>
+                                    <span class="research-item-title">パートナーシップ機会</span>
+                                </div>
+                                <div class="research-item-description">
+                                    戦略的提携先の候補とアライアンス機会の調査
+                                </div>
+                            </div>
+                            <div class="research-item" data-id="business_model_analysis">
+                                <div class="research-item-header">
+                                    <span class="research-item-icon">⏳</span>
+                                    <span class="research-item-title">ビジネスモデル分析</span>
+                                </div>
+                                <div class="research-item-description">
+                                    収益モデル、コスト構造、成功要因の詳細分析
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- フェーズ4: リスク・機会評価 -->
+                    <div class="phase-group" id="phase4">
+                        <div class="phase-group-header">
+                            <h4 class="phase-group-title">
+                                <span class="phase-status-icon">⏳</span>
+                                フェーズ4: リスク・機会評価
+                            </h4>
+                            <span class="phase-time">約2分</span>
+                        </div>
+                        <div class="research-batch">
+                            <div class="research-item" data-id="risk_analysis">
+                                <div class="research-item-header">
+                                    <span class="research-item-icon">⏳</span>
+                                    <span class="research-item-title">リスク分析</span>
+                                </div>
+                                <div class="research-item-description">
+                                    市場リスク、技術リスク、競合リスクの詳細評価
+                                </div>
+                            </div>
+                            <div class="research-item" data-id="success_factors">
+                                <div class="research-item-header">
+                                    <span class="research-item-icon">⏳</span>
+                                    <span class="research-item-title">成功要因分析</span>
+                                </div>
+                                <div class="research-item-description">
+                                    成功に必要なKSF（Key Success Factors）の特定
+                                </div>
+                            </div>
+                            <div class="research-item" data-id="market_entry_barriers">
+                                <div class="research-item-header">
+                                    <span class="research-item-icon">⏳</span>
+                                    <span class="research-item-title">参入障壁分析</span>
+                                </div>
+                                <div class="research-item-description">
+                                    市場参入の障壁と参入戦略の詳細分析
+                                </div>
+                            </div>
+                            <div class="research-item" data-id="swot_analysis">
+                                <div class="research-item-header">
+                                    <span class="research-item-icon">⏳</span>
+                                    <span class="research-item-title">SWOT分析</span>
+                                </div>
+                                <div class="research-item-description">
+                                    強み・弱み・機会・脅威の包括的な戦略分析
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 最終処理 -->
+                    <div class="phase-group" id="phase-final">
+                        <div class="phase-group-header">
+                            <h4 class="phase-group-title">
+                                <span class="phase-status-icon">⏳</span>
+                                最終処理: レポート統合
+                            </h4>
+                            <span class="phase-time">約1分</span>
+                        </div>
+                        <div class="research-batch">
+                            <div class="research-item" data-id="integration">
+                                <div class="research-item-header">
+                                    <span class="research-item-icon">⏳</span>
+                                    <span class="research-item-title">調査結果統合</span>
+                                </div>
+                                <div class="research-item-description">
+                                    全調査結果の統合と分析の一貫性チェック
+                                </div>
+                            </div>
+                            <div class="research-item" data-id="notion">
+                                <div class="research-item-header">
+                                    <span class="research-item-icon">⏳</span>
+                                    <span class="research-item-title">Notionレポート生成</span>
+                                </div>
+                                <div class="research-item-description">
+                                    包括的な市場調査レポートの作成とNotion保存
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
