@@ -227,10 +227,11 @@ async function startServer() {
     // 環境変数の存在確認（デバッグ用）
     const envVars = ['GEMINI_API_KEY', 'NOTION_TOKEN', 'NOTION_DATABASE_ID'];
     envVars.forEach(envVar => {
-      if (process.env[envVar]) {
-        console.log(`✅ ${envVar}: 設定済み`);
+      const value = process.env[envVar];
+      if (value && value !== 'dummy-key' && value !== 'dummy-token' && value !== 'dummy-id') {
+        console.log(`✅ ${envVar}: 設定済み (${value.substring(0, 8)}...)`);
       } else {
-        console.error(`❌ ${envVar}: 未設定`);
+        console.error(`❌ ${envVar}: 未設定または無効 (${value})`);
       }
     });
     

@@ -614,16 +614,41 @@ export class NotionService {
    */
   async testConnection(): Promise<boolean> {
     try {
+      // 設定値チェック
+      if (!this.config.token || this.config.token === 'dummy-token') {
+        console.error('[NotionService] Notion Tokenが設定されていません:', this.config.token);
+        return false;
+      }
+
+      if (!this.config.databaseId || this.config.databaseId === 'dummy-id') {
+        console.error('[NotionService] Database IDが設定されていません:', this.config.databaseId);
+        return false;
+      }
+
+      if (!this.config.token.startsWith('ntn_')) {
+        console.error('[NotionService] Notion Tokenの形式が正しくありません:', this.config.token.substring(0, 8) + '...');
+        return false;
+      }
+
+      console.log('[NotionService] API接続テスト開始');
+      console.log('[NotionService] Token:', this.config.token.substring(0, 8) + '...');
+      console.log('[NotionService] Database ID:', this.config.databaseId.substring(0, 8) + '...');
+      
       // データベース情報を取得してテスト
       const response = await this.notion.databases.retrieve({
         database_id: this.config.databaseId
       });
       
-      console.log('[NotionService] 接続テスト成功');
+      console.log('[NotionService] 接続テスト成功, データベース取得OK');
       return true;
       
     } catch (error) {
-      console.error('[NotionService] 接続テストエラー:', error);
+      console.error('[NotionService] 接続テストエラー詳細:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        token: this.config.token ? this.config.token.substring(0, 8) + '...' : 'なし',
+        databaseId: this.config.databaseId ? this.config.databaseId.substring(0, 8) + '...' : 'なし'
+      });
       return false;
     }
   }

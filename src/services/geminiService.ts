@@ -250,16 +250,33 @@ export class GeminiService {
    */
   async testConnection(): Promise<boolean> {
     try {
+      // APIキーの形式チェック
+      if (!this.config.apiKey || this.config.apiKey === 'dummy-key') {
+        console.error('[GeminiService] APIキーが設定されていません:', this.config.apiKey);
+        return false;
+      }
+
+      if (!this.config.apiKey.startsWith('AIza')) {
+        console.error('[GeminiService] Gemini APIキーの形式が正しくありません:', this.config.apiKey.substring(0, 8) + '...');
+        return false;
+      }
+
+      console.log('[GeminiService] API接続テスト開始, APIキー:', this.config.apiKey.substring(0, 8) + '...');
+      
       const testPrompt = "こんにちは。これは接続テストです。「接続成功」と回答してください。";
       const result = await this.model.generateContent(testPrompt);
       const response = await result.response;
       const text = response.text();
       
-      console.log('[GeminiService] 接続テスト結果:', text);
+      console.log('[GeminiService] 接続テスト成功, レスポンス:', text.substring(0, 100) + '...');
       return text.length > 0;
       
     } catch (error) {
-      console.error('[GeminiService] 接続テストエラー:', error);
+      console.error('[GeminiService] 接続テストエラー詳細:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        apiKey: this.config.apiKey ? this.config.apiKey.substring(0, 8) + '...' : 'なし'
+      });
       return false;
     }
   }
