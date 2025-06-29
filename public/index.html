@@ -227,7 +227,7 @@
                 <div class="progress-header">
                     <h2>🔄 市場調査実行中</h2>
                     <div class="progress-stats">
-                        <span id="progressCounter">0/18</span>
+                        <span id="progressCounter">0/19</span>
                         <span id="estimatedTime">予想残り時間: 計算中...</span>
                     </div>
                 </div>
@@ -240,209 +240,264 @@
                     <div class="progress-percentage" id="progressPercentage">0%</div>
                 </div>
 
-                <!-- フェーズ情報 -->
+                <!-- フェーズ情報（3フェーズ構成対応） -->
                 <div class="phase-info">
                     <div class="phase-header">
-                        <h3 id="currentPhaseText">フェーズ1: 基本調査</h3>
-                        <span id="phaseCounter">1/4</span>
+                        <h3 id="currentPhaseText">Phase 1: 事前作成フェーズ</h3>
+                        <span id="phaseCounter">1/3</span>
                     </div>
-                    <p id="phaseDescription">市場規模、競合分析、顧客分析などの基本調査を実行中...</p>
+                    <p id="phaseDescription">16種類の調査項目をNotionに事前作成し、進行状況の可視化を準備しています</p>
                 </div>
 
-                <!-- 調査項目一覧 -->
+                <!-- 調査項目一覧（事前作成→ステータス更新方式対応） -->
                 <div class="research-items">
                     <h4>調査項目の進行状況</h4>
-                    <div class="research-grid">
-                        <div class="research-item pending" data-research-id="1">
-                            <div class="research-item-status">
-                                <div class="research-item-icon">⏳</div>
-                                <div class="research-item-progress-bar">
-                                    <div class="research-progress-fill"></div>
+                    
+                    <!-- Phase 1: 事前作成フェーズ -->
+                    <div class="phase-group" data-phase="1">
+                        <h5 class="phase-group-title">Phase 1: 事前作成フェーズ</h5>
+                        <div class="research-grid">
+                            <div class="research-item pending" data-id="initialization">
+                                <div class="research-item-status">
+                                    <div class="research-item-icon">⏳</div>
+                                    <div class="research-item-progress-bar">
+                                        <div class="research-progress-fill"></div>
+                                    </div>
+                                </div>
+                                <div class="research-item-content">
+                                    <h5>システム初期化</h5>
+                                    <p>調査システムの準備・設定</p>
                                 </div>
                             </div>
-                            <div class="research-item-content">
-                                <h5>市場規模と成長性</h5>
-                                <p>市場規模・成長予測分析</p>
+                            <div class="research-item pending" data-id="pre_creation">
+                                <div class="research-item-status">
+                                    <div class="research-item-icon">⏳</div>
+                                    <div class="research-item-progress-bar">
+                                        <div class="research-progress-fill"></div>
+                                    </div>
+                                </div>
+                                <div class="research-item-content">
+                                    <h5>調査項目事前作成</h5>
+                                    <p>16種類の調査項目をNotionに作成</p>
+                                </div>
                             </div>
                         </div>
-                        <div class="research-item pending" data-research-id="2">
-                            <div class="research-item-status">
-                                <div class="research-item-icon">⏳</div>
-                                <div class="research-item-progress-bar">
-                                    <div class="research-progress-fill"></div>
+                    </div>
+
+                    <!-- Phase 2: 調査実行フェーズ -->
+                    <div class="phase-group" data-phase="2">
+                        <h5 class="phase-group-title">Phase 2: 調査実行フェーズ（16種類の専門調査）</h5>
+                        <div class="research-grid">
+                            <div class="research-item pending" data-id="market_size_research">
+                                <div class="research-item-status">
+                                    <div class="research-item-icon">⏳</div>
+                                    <div class="research-item-progress-bar">
+                                        <div class="research-progress-fill"></div>
+                                    </div>
+                                </div>
+                                <div class="research-item-content">
+                                    <h5>市場規模と成長性</h5>
+                                    <p>市場規模・成長予測分析</p>
                                 </div>
                             </div>
-                            <div class="research-item-content">
-                                <h5>PESTEL分析</h5>
-                                <p>政治・経済・社会・技術・環境・法的要因</p>
+                            <div class="research-item pending" data-id="pestel_analysis">
+                                <div class="research-item-status">
+                                    <div class="research-item-icon">⏳</div>
+                                    <div class="research-item-progress-bar">
+                                        <div class="research-progress-fill"></div>
+                                    </div>
+                                </div>
+                                <div class="research-item-content">
+                                    <h5>PESTEL分析</h5>
+                                    <p>政治・経済・社会・技術・環境・法的要因</p>
+                                </div>
+                            </div>
+                            <div class="research-item pending" data-id="competitor_product_analysis">
+                                <div class="research-item-status">
+                                    <div class="research-item-icon">⏳</div>
+                                    <div class="research-item-progress-bar">
+                                        <div class="research-progress-fill"></div>
+                                    </div>
+                                </div>
+                                <div class="research-item-content">
+                                    <h5>競合製品・戦略分析</h5>
+                                    <p>競合他社の製品特徴・戦略</p>
+                                </div>
+                            </div>
+                            <div class="research-item pending" data-id="competitor_strategy_analysis">
+                                <div class="research-item-status">
+                                    <div class="research-item-icon">⏳</div>
+                                    <div class="research-item-progress-bar">
+                                        <div class="research-progress-fill"></div>
+                                    </div>
+                                </div>
+                                <div class="research-item-content">
+                                    <h5>競合経営戦略・離脱分析</h5>
+                                    <p>競合戦略変遷・顧客離脱理由</p>
+                                </div>
+                            </div>
+                            <div class="research-item pending" data-id="customer_segment_analysis">
+                                <div class="research-item-status">
+                                    <div class="research-item-icon">⏳</div>
+                                    <div class="research-item-progress-bar">
+                                        <div class="research-progress-fill"></div>
+                                    </div>
+                                </div>
+                                <div class="research-item-content">
+                                    <h5>顧客セグメント・意思決定分析</h5>
+                                    <p>ターゲット顧客・購買プロセス</p>
+                                </div>
+                            </div>
+                            <div class="research-item pending" data-id="customer_emotion_analysis">
+                                <div class="research-item-status">
+                                    <div class="research-item-icon">⏳</div>
+                                    <div class="research-item-progress-bar">
+                                        <div class="research-progress-fill"></div>
+                                    </div>
+                                </div>
+                                <div class="research-item-content">
+                                    <h5>顧客感情・潜在ニーズ分析</h5>
+                                    <p>顧客インサイト・情報収集行動</p>
+                                </div>
+                            </div>
+                            <div class="research-item pending" data-id="product_market_fit_analysis">
+                                <div class="research-item-status">
+                                    <div class="research-item-icon">⏳</div>
+                                    <div class="research-item-progress-bar">
+                                        <div class="research-progress-fill"></div>
+                                    </div>
+                                </div>
+                                <div class="research-item-content">
+                                    <h5>プロダクト市場適合性・価格戦略</h5>
+                                    <p>PMF評価・価格設定分析</p>
+                                </div>
+                            </div>
+                            <div class="research-item pending" data-id="marketing_tactics_analysis">
+                                <div class="research-item-status">
+                                    <div class="research-item-icon">⏳</div>
+                                    <div class="research-item-progress-bar">
+                                        <div class="research-progress-fill"></div>
+                                    </div>
+                                </div>
+                                <div class="research-item-content">
+                                    <h5>マーケティング戦術分析</h5>
+                                    <p>最適チャネル・コンテンツ戦略</p>
+                                </div>
+                            </div>
+                            <div class="research-item pending" data-id="brand_positioning_analysis">
+                                <div class="research-item-status">
+                                    <div class="research-item-icon">⏳</div>
+                                    <div class="research-item-progress-bar">
+                                        <div class="research-progress-fill"></div>
+                                    </div>
+                                </div>
+                                <div class="research-item-content">
+                                    <h5>ブランドポジショニング</h5>
+                                    <p>ブランド戦略・コミュニケーション</p>
+                                </div>
+                            </div>
+                            <div class="research-item pending" data-id="technology_security_analysis">
+                                <div class="research-item-status">
+                                    <div class="research-item-icon">⏳</div>
+                                    <div class="research-item-progress-bar">
+                                        <div class="research-progress-fill"></div>
+                                    </div>
+                                </div>
+                                <div class="research-item-content">
+                                    <h5>テクノロジー・セキュリティ分析</h5>
+                                    <p>技術動向・リスク対策</p>
+                                </div>
+                            </div>
+                            <div class="research-item pending" data-id="partnership_strategy_analysis">
+                                <div class="research-item-status">
+                                    <div class="research-item-icon">⏳</div>
+                                    <div class="research-item-progress-bar">
+                                        <div class="research-progress-fill"></div>
+                                    </div>
+                                </div>
+                                <div class="research-item-content">
+                                    <h5>パートナーシップ戦略</h5>
+                                    <p>提携先・エコシステム形成</p>
+                                </div>
+                            </div>
+                            <div class="research-item pending" data-id="risk_scenario_analysis">
+                                <div class="research-item-status">
+                                    <div class="research-item-icon">⏳</div>
+                                    <div class="research-item-progress-bar">
+                                        <div class="research-progress-fill"></div>
+                                    </div>
+                                </div>
+                                <div class="research-item-content">
+                                    <h5>リスク・シナリオ分析</h5>
+                                    <p>リスク評価・対応策設計</p>
+                                </div>
+                            </div>
+                            <div class="research-item pending" data-id="kpi_measurement_design">
+                                <div class="research-item-status">
+                                    <div class="research-item-icon">⏳</div>
+                                    <div class="research-item-progress-bar">
+                                        <div class="research-progress-fill"></div>
+                                    </div>
+                                </div>
+                                <div class="research-item-content">
+                                    <h5>KPI・測定方法設計</h5>
+                                    <p>成功指標・測定体制構築</p>
+                                </div>
+                            </div>
+                            <div class="research-item pending" data-id="legal_compliance_analysis">
+                                <div class="research-item-status">
+                                    <div class="research-item-icon">⏳</div>
+                                    <div class="research-item-progress-bar">
+                                        <div class="research-progress-fill"></div>
+                                    </div>
+                                </div>
+                                <div class="research-item-content">
+                                    <h5>法務・コンプライアンス分析</h5>
+                                    <p>法的リスク・規制対応</p>
+                                </div>
+                            </div>
+                            <div class="research-item pending" data-id="research_method_proposal">
+                                <div class="research-item-status">
+                                    <div class="research-item-icon">⏳</div>
+                                    <div class="research-item-progress-bar">
+                                        <div class="research-progress-fill"></div>
+                                    </div>
+                                </div>
+                                <div class="research-item-content">
+                                    <h5>効果的リサーチ手法提案</h5>
+                                    <p>調査方法論・計画設計</p>
+                                </div>
+                            </div>
+                            <div class="research-item pending" data-id="pmf_research_design">
+                                <div class="research-item-status">
+                                    <div class="research-item-icon">⏳</div>
+                                    <div class="research-item-progress-bar">
+                                        <div class="research-progress-fill"></div>
+                                    </div>
+                                </div>
+                                <div class="research-item-content">
+                                    <h5>PMF前特化リサーチ設計</h5>
+                                    <p>MVP設計・仮説検証手法</p>
+                                </div>
                             </div>
                         </div>
-                        <div class="research-item pending" data-research-id="3">
-                            <div class="research-item-status">
-                                <div class="research-item-icon">⏳</div>
-                                <div class="research-item-progress-bar">
-                                    <div class="research-progress-fill"></div>
+                    </div>
+
+                    <!-- Phase 3: 統合レポート生成フェーズ -->
+                    <div class="phase-group" data-phase="3">
+                        <h5 class="phase-group-title">Phase 3: 統合レポート生成フェーズ</h5>
+                        <div class="research-grid">
+                            <div class="research-item pending" data-id="integration_report">
+                                <div class="research-item-status">
+                                    <div class="research-item-icon">⏳</div>
+                                    <div class="research-item-progress-bar">
+                                        <div class="research-progress-fill"></div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="research-item-content">
-                                <h5>競合製品・戦略分析</h5>
-                                <p>競合他社の製品特徴・戦略</p>
-                            </div>
-                        </div>
-                        <div class="research-item pending" data-research-id="4">
-                            <div class="research-item-status">
-                                <div class="research-item-icon">⏳</div>
-                                <div class="research-item-progress-bar">
-                                    <div class="research-progress-fill"></div>
+                                <div class="research-item-content">
+                                    <h5>統合レポート生成</h5>
+                                    <p>全調査結果の統合・総合分析</p>
                                 </div>
-                            </div>
-                            <div class="research-item-content">
-                                <h5>競合経営戦略・離脱分析</h5>
-                                <p>競合戦略変遷・顧客離脱理由</p>
-                            </div>
-                        </div>
-                        <div class="research-item pending" data-research-id="5">
-                            <div class="research-item-status">
-                                <div class="research-item-icon">⏳</div>
-                                <div class="research-item-progress-bar">
-                                    <div class="research-progress-fill"></div>
-                                </div>
-                            </div>
-                            <div class="research-item-content">
-                                <h5>顧客セグメント・意思決定分析</h5>
-                                <p>ターゲット顧客・購買プロセス</p>
-                            </div>
-                        </div>
-                        <div class="research-item pending" data-research-id="6">
-                            <div class="research-item-status">
-                                <div class="research-item-icon">⏳</div>
-                                <div class="research-item-progress-bar">
-                                    <div class="research-progress-fill"></div>
-                                </div>
-                            </div>
-                            <div class="research-item-content">
-                                <h5>顧客感情・潜在ニーズ分析</h5>
-                                <p>顧客インサイト・情報収集行動</p>
-                            </div>
-                        </div>
-                        <div class="research-item pending" data-research-id="7">
-                            <div class="research-item-status">
-                                <div class="research-item-icon">⏳</div>
-                                <div class="research-item-progress-bar">
-                                    <div class="research-progress-fill"></div>
-                                </div>
-                            </div>
-                            <div class="research-item-content">
-                                <h5>プロダクト市場適合性・価格戦略</h5>
-                                <p>PMF評価・価格設定分析</p>
-                            </div>
-                        </div>
-                        <div class="research-item pending" data-research-id="8">
-                            <div class="research-item-status">
-                                <div class="research-item-icon">⏳</div>
-                                <div class="research-item-progress-bar">
-                                    <div class="research-progress-fill"></div>
-                                </div>
-                            </div>
-                            <div class="research-item-content">
-                                <h5>マーケティング戦術分析</h5>
-                                <p>最適チャネル・コンテンツ戦略</p>
-                            </div>
-                        </div>
-                        <div class="research-item pending" data-research-id="9">
-                            <div class="research-item-status">
-                                <div class="research-item-icon">⏳</div>
-                                <div class="research-item-progress-bar">
-                                    <div class="research-progress-fill"></div>
-                                </div>
-                            </div>
-                            <div class="research-item-content">
-                                <h5>ブランドポジショニング</h5>
-                                <p>ブランド戦略・コミュニケーション</p>
-                            </div>
-                        </div>
-                        <div class="research-item pending" data-research-id="10">
-                            <div class="research-item-status">
-                                <div class="research-item-icon">⏳</div>
-                                <div class="research-item-progress-bar">
-                                    <div class="research-progress-fill"></div>
-                                </div>
-                            </div>
-                            <div class="research-item-content">
-                                <h5>テクノロジー・セキュリティ分析</h5>
-                                <p>技術動向・リスク対策</p>
-                            </div>
-                        </div>
-                        <div class="research-item pending" data-research-id="11">
-                            <div class="research-item-status">
-                                <div class="research-item-icon">⏳</div>
-                                <div class="research-item-progress-bar">
-                                    <div class="research-progress-fill"></div>
-                                </div>
-                            </div>
-                            <div class="research-item-content">
-                                <h5>パートナーシップ戦略</h5>
-                                <p>提携先・エコシステム形成</p>
-                            </div>
-                        </div>
-                        <div class="research-item pending" data-research-id="12">
-                            <div class="research-item-status">
-                                <div class="research-item-icon">⏳</div>
-                                <div class="research-item-progress-bar">
-                                    <div class="research-progress-fill"></div>
-                                </div>
-                            </div>
-                            <div class="research-item-content">
-                                <h5>リスク・シナリオ分析</h5>
-                                <p>リスク評価・対応策設計</p>
-                            </div>
-                        </div>
-                        <div class="research-item pending" data-research-id="13">
-                            <div class="research-item-status">
-                                <div class="research-item-icon">⏳</div>
-                                <div class="research-item-progress-bar">
-                                    <div class="research-progress-fill"></div>
-                                </div>
-                            </div>
-                            <div class="research-item-content">
-                                <h5>KPI・測定方法設計</h5>
-                                <p>成功指標・測定体制構築</p>
-                            </div>
-                        </div>
-                        <div class="research-item pending" data-research-id="14">
-                            <div class="research-item-status">
-                                <div class="research-item-icon">⏳</div>
-                                <div class="research-item-progress-bar">
-                                    <div class="research-progress-fill"></div>
-                                </div>
-                            </div>
-                            <div class="research-item-content">
-                                <h5>法務・コンプライアンス分析</h5>
-                                <p>法的リスク・規制対応</p>
-                            </div>
-                        </div>
-                        <div class="research-item pending" data-research-id="15">
-                            <div class="research-item-status">
-                                <div class="research-item-icon">⏳</div>
-                                <div class="research-item-progress-bar">
-                                    <div class="research-progress-fill"></div>
-                                </div>
-                            </div>
-                            <div class="research-item-content">
-                                <h5>効果的リサーチ手法提案</h5>
-                                <p>調査方法論・計画設計</p>
-                            </div>
-                        </div>
-                        <div class="research-item pending" data-research-id="16">
-                            <div class="research-item-status">
-                                <div class="research-item-icon">⏳</div>
-                                <div class="research-item-progress-bar">
-                                    <div class="research-progress-fill"></div>
-                                </div>
-                            </div>
-                            <div class="research-item-content">
-                                <h5>PMF前特化リサーチ設計</h5>
-                                <p>MVP設計・仮説検証手法</p>
                             </div>
                         </div>
                     </div>

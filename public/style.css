@@ -197,13 +197,50 @@ body {
   display: none;
 }
 
-/* ===== 進行状況の改良版スタイル ===== */
+/* ===== 進行状況の改良版スタイル（3フェーズ構成対応） ===== */
 .research-items h4 {
   font-size: 1.125rem;
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 1.5rem;
   text-align: center;
+}
+
+/* フェーズグループのスタイル */
+.phase-group {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.phase-group-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.phase-group[data-phase="1"] .phase-group-title {
+  color: var(--accent-color);
+  border-bottom-color: var(--accent-color);
+}
+
+.phase-group[data-phase="2"] .phase-group-title {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+
+.phase-group[data-phase="3"] .phase-group-title {
+  color: var(--success-color);
+  border-bottom-color: var(--success-color);
 }
 
 .research-grid {
