@@ -117,15 +117,16 @@ async function checkSystemHealth() {
   try {
     showLoading('システム接続を確認中...');
     
-    const response = await fetch('/api/research/health');
+    const response = await fetch('/health');
     const data = await response.json();
     
-    if (data.success) {
+    // /healthエンドポイントのレスポンス形式に合わせて修正
+    if (data.status === 'ok') {
       updateSystemStatus('success', 'システム正常');
-      console.log('[App] システム健康状態チェック成功:', data.data);
+      console.log('[App] システム健康状態チェック成功:', data);
     } else {
       updateSystemStatus('error', 'システムエラー');
-      console.error('[App] システム健康状態チェック失敗:', data.error);
+      console.error('[App] システム健康状態チェック失敗:', data);
     }
   } catch (error) {
     console.error('[App] システム健康状態チェックエラー:', error);
