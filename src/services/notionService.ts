@@ -1232,46 +1232,66 @@ export class NotionService {
   }
 
   /**
-   * 調査タイトルから調査種別を分類（ナンバー付き）
+   * 調査タイトルから調査種別を分類（スクリーンショット対応）
    * @param researchTitle 調査タイトル
    * @param researchId 調査ID（1-16）
-   * @returns 調査種別（ナンバー付き）
+   * @returns 調査種別（スクリーンショット準拠）
    */
   private categorizeResearchType(researchTitle: string, researchId?: number): string {
-    // 調査タイトルからカテゴリを推定
-    const categoryMap: { [key: string]: string } = {
-      '市場規模': '市場分析',
-      'PESTEL': '環境分析',
-      '競合': '競合分析',
-      '顧客セグメント': '顧客分析',
-      '顧客感情': '顧客分析',
-      'プロダクト市場適合性': '製品分析',
-      'マーケティング': 'マーケティング分析',
-      'ブランドポジショニング': 'ブランド分析',
-      'テクノロジー': '技術分析',
-      'パートナーシップ': '戦略分析',
-      'リスク': 'リスク分析',
-      'KPI': 'KPI分析',
-      '法務': '法的分析',
-      'リサーチ手法': '手法分析',
-      'PMF': '製品分析'
-    };
+    // 調査IDから直接マッピング（スクリーンショットの調査種別に完全対応）
+    if (researchId) {
+      const categoryMap: { [key: number]: string } = {
+        1: '1.市場規模と成長性',
+        2: '2.PESTEL分析',
+        3: '3.競合製品・戦略分析',
+        4: '4.競合経営戦略・離脱分析',
+        5: '5.顧客セグメント・意思決定分析',
+        6: '6.顧客感情・潜在ニーズ分析',
+        7: '7.プロダクト市場適合性・価格戦略',
+        8: '8.マーケティング戦術分析',
+        9: '9.ブランドポジショニング',
+        10: '10.テクノロジー・セキュリティ分析',
+        11: '11.パートナーシップ戦略',
+        12: '12.リスク・シナリオ分析',
+        13: '13.KPI・測定方法設計',
+        14: '14.法務・コンプライアンス分析',
+        15: '15.効果的リサーチ手法提案',
+        16: '16.PMF前特化リサーチ設計'
+      };
 
-    let category = '一般調査'; // デフォルト
-    
-    for (const [keyword, cat] of Object.entries(categoryMap)) {
-      if (researchTitle.includes(keyword)) {
-        category = cat;
-        break;
+      const category = categoryMap[researchId];
+      if (category) {
+        return category;
       }
     }
 
-    // ナンバー付きで返す（調査IDがある場合）
-    if (researchId) {
-      return `${researchId}. ${category}`;
+    // フォールバック: タイトルからキーワード推定
+    const keywordMap: { [key: string]: string } = {
+      '市場規模': '1.市場規模と成長性',
+      'PESTEL': '2.PESTEL分析',
+      '競合の製品': '3.競合製品・戦略分析',
+      '競合の経営': '4.競合経営戦略・離脱分析',
+      '顧客セグメント': '5.顧客セグメント・意思決定分析',
+      '顧客感情': '6.顧客感情・潜在ニーズ分析',
+      'プロダクト市場適合性': '7.プロダクト市場適合性・価格戦略',
+      'マーケティング戦術': '8.マーケティング戦術分析',
+      'ブランドポジショニング': '9.ブランドポジショニング',
+      'テクノロジートレンド': '10.テクノロジー・セキュリティ分析',
+      'パートナーシップ': '11.パートナーシップ戦略',
+      'リスク': '12.リスク・シナリオ分析',
+      'KPI': '13.KPI・測定方法設計',
+      '法務': '14.法務・コンプライアンス分析',
+      'リサーチ手法': '15.効果的リサーチ手法提案',
+      'PMF': '16.PMF前特化リサーチ設計'
+    };
+
+    for (const [keyword, category] of Object.entries(keywordMap)) {
+      if (researchTitle.includes(keyword)) {
+        return category;
+      }
     }
 
-    return category;
+    return '統合調査レポート'; // デフォルト（統合レポート用）
   }
 
   /**
@@ -1929,4 +1949,5 @@ export class NotionService {
     }
   }
 }
+
 
