@@ -1246,20 +1246,24 @@ export class NotionService {
       'ステイタス', 'ステータス（Status）'
     ];
     
-    // 完全一致チェック
+    // 完全一致チェック（select & status対応）
     for (const candidate of statusCandidates) {
-      if (properties[candidate] && properties[candidate].type === 'select') {
-        console.log(`[NotionService] ✅ ステータスプロパティ発見（完全一致）: "${candidate}"`);
-        console.log(`[NotionService] 選択肢: [${properties[candidate].select?.options?.map((o: any) => `"${o.name}"`).join(', ') || 'なし'}]`);
+      const prop = properties[candidate];
+      if (prop && (prop.type === 'select' || prop.type === 'status')) {
+        console.log(`[NotionService] ✅ ステータスプロパティ発見（完全一致）: "${candidate}" (タイプ: ${prop.type})`);
+        
+        // selectとstatusで選択肢の取得方法が異なる
+        const options = prop.type === 'select' ? prop.select?.options : prop.status?.options;
+        console.log(`[NotionService] 選択肢: [${options?.map((o: any) => `"${o.name}"`).join(', ') || 'なし'}]`);
         return candidate;
       }
     }
     
-    // 部分一致チェック（大文字小文字を無視）
+    // 部分一致チェック（大文字小文字を無視、select & status対応）
     const propertyKeys = Object.keys(properties);
     for (const key of propertyKeys) {
       const prop = properties[key];
-      if (prop.type === 'select') {
+      if (prop.type === 'select' || prop.type === 'status') {
         const lowerKey = key.toLowerCase();
         
         // ステータス関連キーワードを含むかチェック
@@ -1269,18 +1273,24 @@ export class NotionService {
         );
         
         if (containsStatusKeyword) {
-          console.log(`[NotionService] ✅ ステータスプロパティ発見（部分一致）: "${key}"`);
-          console.log(`[NotionService] 選択肢: [${prop.select?.options?.map((o: any) => `"${o.name}"`).join(', ') || 'なし'}]`);
+          console.log(`[NotionService] ✅ ステータスプロパティ発見（部分一致）: "${key}" (タイプ: ${prop.type})`);
+          
+          // selectとstatusで選択肢の取得方法が異なる
+          const options = prop.type === 'select' ? prop.select?.options : prop.status?.options;
+          console.log(`[NotionService] 選択肢: [${options?.map((o: any) => `"${o.name}"`).join(', ') || 'なし'}]`);
           return key;
         }
       }
     }
     
-    // セレクトプロパティで「未着手」「進行中」「完了」を含むものを検索
+    // セレクト・ステータスプロパティで「未着手」「進行中」「完了」を含むものを検索
     for (const key of propertyKeys) {
       const prop = properties[key];
-      if (prop.type === 'select' && prop.select?.options) {
-        const optionNames = prop.select.options.map((o: any) => o.name.toLowerCase());
+      const options = prop.type === 'select' ? prop.select?.options : 
+                     prop.type === 'status' ? prop.status?.options : null;
+      
+      if ((prop.type === 'select' || prop.type === 'status') && options) {
+        const optionNames = options.map((o: any) => o.name.toLowerCase());
         
         // 典型的なステータス値を含むかチェック
         const hasStatusValues = (
@@ -1290,19 +1300,21 @@ export class NotionService {
         );
         
         if (hasStatusValues) {
-          console.log(`[NotionService] ✅ ステータスプロパティ発見（値パターン一致）: "${key}"`);
-          console.log(`[NotionService] 選択肢: [${prop.select.options.map((o: any) => `"${o.name}"`).join(', ')}]`);
+          console.log(`[NotionService] ✅ ステータスプロパティ発見（値パターン一致）: "${key}" (タイプ: ${prop.type})`);
+          console.log(`[NotionService] 選択肢: [${options.map((o: any) => `"${o.name}"`).join(', ')}]`);
           return key;
         }
       }
     }
     
-    // どうしても見つからない場合、最初のselectプロパティを使用
+    // どうしても見つからない場合、最初のselect/statusプロパティを使用
     for (const key of propertyKeys) {
       const prop = properties[key];
-      if (prop.type === 'select') {
-        console.log(`[NotionService] ⚠️ フォールバック: 最初のselectプロパティを使用: "${key}"`);
-        console.log(`[NotionService] 選択肢: [${prop.select?.options?.map((o: any) => `"${o.name}"`).join(', ') || 'なし'}]`);
+      if (prop.type === 'select' || prop.type === 'status') {
+        console.log(`[NotionService] ⚠️ フォールバック: 最初の${prop.type}プロパティを使用: "${key}"`);
+        
+        const options = prop.type === 'select' ? prop.select?.options : prop.status?.options;
+        console.log(`[NotionService] 選択肢: [${options?.map((o: any) => `"${o.name}"`).join(', ') || 'なし'}]`);
         return key;
       }
     }
@@ -1528,15 +1540,26 @@ export class NotionService {
           // ステータスプロパティの設定（未着手）
           const statusProperty = this.findStatusProperty(databaseInfo);
           if (statusProperty) {
-            const statusOptions = databaseInfo[statusProperty]?.select?.options || [];
-            const pendingOption = this.findPendingOption(statusOptions);
+            const statusProp = databaseInfo[statusProperty];
+            const statusOptions = statusProp?.type === 'select' ? statusProp.select?.options : 
+                                 statusProp?.type === 'status' ? statusProp.status?.options : [];
+            const pendingOption = this.findPendingOption(statusOptions || []);
             
             if (pendingOption) {
-              properties[statusProperty] = {
-                select: {
-                  name: pendingOption.name
-                }
-              };
+              // selectとstatusでプロパティ設定方法が異なる
+              if (statusProp?.type === 'select') {
+                properties[statusProperty] = {
+                  select: {
+                    name: pendingOption.name
+                  }
+                };
+              } else if (statusProp?.type === 'status') {
+                properties[statusProperty] = {
+                  status: {
+                    name: pendingOption.name
+                  }
+                };
+              }
             }
           }
 
@@ -1813,25 +1836,32 @@ export class NotionService {
         return false;
       }
 
-      const statusOptions = databaseInfo[statusProperty]?.select?.options || [];
+      // プロパティタイプとオプションを取得
+      const statusProp = databaseInfo[statusProperty];
+      const statusOptions = statusProp?.type === 'select' ? statusProp.select?.options : 
+                           statusProp?.type === 'status' ? statusProp.status?.options : [];
+      
+      console.log(`[NotionService] ステータスプロパティタイプ: ${statusProp?.type}`);
+      console.log(`[NotionService] 利用可能な選択肢: [${statusOptions?.map((o: any) => o.name).join(', ') || 'なし'}]`);
+      
       let targetOption = null;
 
       // ステータスに応じて適切な選択肢を取得
       switch (status) {
         case 'pending':
-          targetOption = this.findPendingOption(statusOptions);
+          targetOption = this.findPendingOption(statusOptions || []);
           break;
         case 'in-progress':
-          targetOption = this.findInProgressOption(statusOptions);
+          targetOption = this.findInProgressOption(statusOptions || []);
           break;
         case 'completed':
-          targetOption = this.findCompletedOption(statusOptions);
+          targetOption = this.findCompletedOption(statusOptions || []);
           break;
         case 'failed':
           // 失敗状態の選択肢を探す
           const failedCandidates = ['失敗', 'Failed', 'Error', 'エラー', '❌'];
           for (const candidate of failedCandidates) {
-            const option = statusOptions.find(opt => opt.name === candidate);
+            const option = statusOptions?.find(opt => opt.name === candidate);
             if (option) {
               targetOption = option;
               break;
@@ -1845,16 +1875,28 @@ export class NotionService {
         return false;
       }
 
+      // selectとstatusでプロパティ更新方法が異なる
+      const propertyUpdate: any = {};
+      if (statusProp?.type === 'select') {
+        propertyUpdate[statusProperty] = {
+          select: {
+            name: targetOption.name
+          }
+        };
+      } else if (statusProp?.type === 'status') {
+        propertyUpdate[statusProperty] = {
+          status: {
+            name: targetOption.name
+          }
+        };
+      }
+
+      console.log(`[NotionService] プロパティ更新内容:`, JSON.stringify(propertyUpdate, null, 2));
+
       // ページプロパティを更新
       await this.notion.pages.update({
         page_id: pageId,
-        properties: {
-          [statusProperty]: {
-            select: {
-              name: targetOption.name
-            }
-          }
-        }
+        properties: propertyUpdate
       });
 
       console.log(`[NotionService] ページステータス更新完了: ${pageId} -> ${targetOption.name}`);
@@ -1943,15 +1985,26 @@ export class NotionService {
       // ステータスプロパティの設定（未着手）
       const statusProperty = this.findStatusProperty(databaseInfo);
       if (statusProperty) {
-        const statusOptions = databaseInfo[statusProperty]?.select?.options || [];
-        const pendingOption = this.findPendingOption(statusOptions);
+        const statusProp = databaseInfo[statusProperty];
+        const statusOptions = statusProp?.type === 'select' ? statusProp.select?.options : 
+                             statusProp?.type === 'status' ? statusProp.status?.options : [];
+        const pendingOption = this.findPendingOption(statusOptions || []);
         
         if (pendingOption) {
-          properties[statusProperty] = {
-            select: {
-              name: pendingOption.name
-            }
-          };
+          // selectとstatusでプロパティ設定方法が異なる
+          if (statusProp?.type === 'select') {
+            properties[statusProperty] = {
+              select: {
+                name: pendingOption.name
+              }
+            };
+          } else if (statusProp?.type === 'status') {
+            properties[statusProperty] = {
+              status: {
+                name: pendingOption.name
+              }
+            };
+          }
         }
       }
 
