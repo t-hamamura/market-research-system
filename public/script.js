@@ -20,7 +20,9 @@ let appState = {
   completedBatches: 0,
   estimatedTotalTime: 9 * 60, // 9分（秒単位）
   lastFormData: null, // 再開用に前回のフォームデータを保存
-  failedStep: null // 失敗したステップ番号
+  failedStep: null, // 失敗したステップ番号
+  stepTimes: [], // 各ステップの実行時間を記録
+  averageStepTime: 25 // 初期推定値（秒）
 };
 
 // 調査プロンプト一覧（UI表示用）
@@ -37,6 +39,15 @@ const elements = {
   researchForm: document.getElementById('researchForm'),
   submitButton: document.getElementById('submitButton'),
   validationErrors: document.getElementById('validationErrors'),
+  
+  // 一括入力関連（新規）
+  toggleBulkInput: document.getElementById('toggleBulkInput'),
+  bulkInputContent: document.getElementById('bulkInputContent'),
+  copyTemplateBtn: document.getElementById('copyTemplateBtn'),
+  bulkParseBtn: document.getElementById('bulkParseBtn'),
+  clearBulkBtn: document.getElementById('clearBulkBtn'),
+  bulkInput: document.getElementById('bulkInput'),
+  bulkValidation: document.getElementById('bulkValidation'),
   
   // 進行状況関連
   progressSection: document.getElementById('progressSection'),
@@ -92,7 +103,7 @@ function setupEventListeners() {
   // リセットボタン
   elements.resetButton.addEventListener('click', resetApplication);
   
-  // 一括入力機能
+  // 一括入力機能（新規）
   setupBulkInputListeners();
   
   // ページ離脱時の処理
@@ -803,8 +814,6 @@ function updateResearchItemsStatus(step, researchType) {
   }
 }
 
-
-
 // ===== 調査項目の状態更新（新UI対応） =====
 function updateResearchItemStatus(itemId, status) {
   // 新しいHTML構造での要素を検索
@@ -1012,7 +1021,9 @@ function resetApplication() {
     completedBatches: 0,
     estimatedTotalTime: 9 * 60,
     lastFormData: null, // 再開用データもリセット
-    failedStep: null // 失敗ステップもリセット
+    failedStep: null, // 失敗ステップもリセット
+    stepTimes: [], // 各ステップの実行時間を記録
+    averageStepTime: 25 // 初期推定値（秒）
   };
   
   // UIをリセット
@@ -1221,13 +1232,43 @@ function normalizeFieldName(fieldName) {
 
 // ===== 一括入力機能 =====
 
-// 一括入力機能のイベントリスナー設定
+// 一括入力機能のイベントリスナー設定（改良版）
 function setupBulkInputListeners() {
+  // トグルボタンの設定
+  const toggleBtn = elements.toggleBulkInput;
+  const bulkContent = elements.bulkInputContent;
+  
+  if (toggleBtn && bulkContent) {
+    toggleBtn.addEventListener('click', function() {
+      const isHidden = bulkContent.classList.contains('hidden');
+      
+      if (isHidden) {
+        // 表示する
+        bulkContent.classList.remove('hidden');
+        toggleBtn.innerHTML = `
+          <span class="btn-icon">📄</span>
+          <span class="btn-text">一括入力を非表示にする</span>
+        `;
+        toggleBtn.classList.remove('btn-outline');
+        toggleBtn.classList.add('btn-primary');
+      } else {
+        // 非表示にする
+        bulkContent.classList.add('hidden');
+        toggleBtn.innerHTML = `
+          <span class="btn-icon">📄</span>
+          <span class="btn-text">一括入力を使用する</span>
+        `;
+        toggleBtn.classList.remove('btn-primary');
+        toggleBtn.classList.add('btn-outline');
+      }
+    });
+  }
+  
+  // 既存のボタン機能
   const copyTemplateBtn = document.getElementById('copyTemplateBtn');
   const bulkParseBtn = document.getElementById('bulkParseBtn');
   const clearBulkBtn = document.getElementById('clearBulkBtn');
   
-  // 一括入力関連
   if (copyTemplateBtn) {
     copyTemplateBtn.addEventListener('click', copyTemplate);
   }

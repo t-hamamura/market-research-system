@@ -1,14 +1,19 @@
 /* ===== 市場調査システム - モダンCSS ===== */
 
 :root {
-  /* カラーパレット */
-  --primary-color: #2563eb;
-  --primary-dark: #1d4ed8;
+  /* カラーパレット - 添付画像のトンマナに寄せたカラー */
+  --primary-color: #1e40af;
+  --primary-dark: #1e3a8a;
+  --primary-light: #3b82f6;
   --secondary-color: #64748b;
-  --accent-color: #3b82f6;
+  --accent-color: #06b6d4;
   --success-color: #10b981;
   --error-color: #ef4444;
   --warning-color: #f59e0b;
+  
+  /* グラデーション */
+  --gradient-primary: linear-gradient(135deg, #1e40af 0%, #06b6d4 100%);
+  --gradient-secondary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   
   /* テキスト色 */
   --text-primary: #1f2937;
@@ -20,19 +25,19 @@
   --bg-primary: #ffffff;
   --bg-secondary: #f8fafc;
   --bg-tertiary: #f1f5f9;
-  --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --bg-gradient: var(--gradient-primary);
   
   /* ボーダー */
   --border-color: #e5e7eb;
-  --border-radius: 8px;
-  --border-radius-lg: 12px;
-  --border-radius-xl: 16px;
+  --border-radius: 12px;
+  --border-radius-lg: 16px;
+  --border-radius-xl: 20px;
   
   /* シャドウ */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   
   /* フォント */
   --font-family: 'Helvetica Neue', 'Arial', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Meiryo', sans-serif;
@@ -57,15 +62,16 @@ body {
   min-height: 100vh;
 }
 
-/* ===== 旧SPIRITSヘッダー（互換性保持） ===== */
+/* ===== SPIRITSヘッダー（改良版） ===== */
 .spirits-header {
   background: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
-  padding: 1rem 0;
+  padding: 1.2rem 0;
   box-shadow: var(--shadow-sm);
   position: sticky;
   top: 0;
   z-index: 100;
+  backdrop-filter: blur(10px);
 }
 
 .spirits-header-content {
@@ -81,19 +87,26 @@ body {
   display: flex;
   align-items: center;
   gap: 1rem;
-  font-size: 1.5rem;
+  font-size: 1.375rem;
   font-weight: 700;
   color: var(--primary-color);
   text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.spirits-logo:hover {
+  color: var(--accent-color);
+  transform: translateY(-1px);
 }
 
 .spirits-tagline {
   font-size: 0.875rem;
   color: var(--text-secondary);
   font-weight: 500;
+  letter-spacing: 0.5px;
 }
 
-/* ===== メインコンテナ（互換性保持） ===== */
+/* ===== メインコンテナ ===== */
 .main-container {
   max-width: var(--max-width);
   margin: 0 auto;
@@ -101,48 +114,382 @@ body {
   min-height: 100vh;
 }
 
-/* ===== ヒーローセクション（互換性保持） ===== */
+/* ===== ヒーローセクション（大幅改良） ===== */
 .hero-section {
   text-align: center;
   margin: 2rem 0;
-  padding: 3rem 2rem;
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
-  border-radius: var(--border-radius-lg);
+  padding: 4rem 2rem;
+  background: var(--gradient-primary);
+  border-radius: var(--border-radius-xl);
   color: var(--text-white);
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+.hero-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+  opacity: 0.3;
+  z-index: 0;
+}
+
+.hero-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  position: relative;
+  z-index: 1;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.hero-subtitle {
+  font-size: 1.25rem;
+  opacity: 0.95;
+  margin-bottom: 0.75rem;
+  position: relative;
+  z-index: 1;
+  font-weight: 600;
+}
+
+.hero-description {
+  font-size: 1.125rem;
+  opacity: 0.85;
+  position: relative;
+  z-index: 1;
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* ===== 一括入力機能（新しいスタイル） ===== */
+.bulk-input-top {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  padding: 1.5rem;
+  margin: 1.5rem 0;
   position: relative;
   overflow: hidden;
 }
 
-.hero-title {
-  font-size: 2rem;
-  font-weight: 700;
+.bulk-input-header {
   margin-bottom: 1rem;
-  position: relative;
-  z-index: 1;
 }
 
-.hero-subtitle {
+.bulk-input-toggle {
+  margin-bottom: 1rem;
+}
+
+.bulk-input-content {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.bulk-input-content.hidden {
+  display: none;
+}
+
+/* ===== 進行状況の改良版スタイル ===== */
+.research-items h4 {
   font-size: 1.125rem;
-  opacity: 0.9;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.research-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.research-item {
+  background: var(--bg-primary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.research-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* 調査項目の状態別スタイル */
+.research-item.pending {
+  border-color: var(--border-color);
+  background: var(--bg-primary);
+}
+
+.research-item.in-progress {
+  border-color: var(--accent-color);
+  background: linear-gradient(135deg, #ffffff 0%, #cffafe 100%);
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.2);
+}
+
+.research-item.completed {
+  border-color: var(--success-color);
+  background: linear-gradient(135deg, #ffffff 0%, #d1fae5 100%);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+}
+
+.research-item.failed {
+  border-color: var(--error-color);
+  background: linear-gradient(135deg, #ffffff 0%, #fee2e2 100%);
+}
+
+/* 新しい研究項目ステータス表示 */
+.research-item-status {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.research-item-icon {
+  font-size: 1.25rem;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  transition: all 0.3s ease;
+}
+
+.research-item.pending .research-item-icon {
+  background: #f3f4f6;
+}
+
+.research-item.in-progress .research-item-icon {
+  background: var(--accent-color);
+  color: white;
+  animation: pulse 2s infinite;
+}
+
+.research-item.completed .research-item-icon {
+  background: var(--success-color);
+  color: white;
+}
+
+.research-item.failed .research-item-icon {
+  background: var(--error-color);
+  color: white;
+}
+
+/* 進行状況バー */
+.research-item-progress-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.research-progress-fill {
+  height: 100%;
+  background: var(--primary-color);
+  border-radius: 3px;
+  width: 0%;
+  transition: width 0.5s ease;
+}
+
+.research-item.in-progress .research-progress-fill {
+  width: 50%;
+  background: var(--accent-color);
+  animation: progressPulse 2s infinite;
+}
+
+.research-item.completed .research-progress-fill {
+  width: 100%;
+  background: var(--success-color);
+}
+
+.research-item.failed .research-progress-fill {
+  width: 100%;
+  background: var(--error-color);
+}
+
+.research-item-content h5 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+  line-height: 1.4;
+}
+
+.research-item-content p {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* ===== フォームの改良スタイル ===== */
+.form-container {
+  background: var(--bg-primary);
+  border-radius: var(--border-radius-lg);
+  padding: 2.5rem;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border-color);
+}
+
+.form-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.form-header h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
-  position: relative;
-  z-index: 1;
 }
 
-.hero-description {
-  font-size: 1rem;
-  opacity: 0.8;
-  position: relative;
-  z-index: 1;
+.form-header p {
+  color: var(--text-secondary);
 }
 
-/* ===== コンテナ ===== */
-.container {
-  max-width: var(--max-width);
-  margin: 0 auto;
-  padding: 0 var(--container-padding);
-  min-height: 100vh;
+/* ===== ボタンの改良スタイル ===== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.75rem;
+  border-radius: var(--border-radius);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  letter-spacing: 0.025em;
 }
+
+.btn-primary {
+  background: var(--gradient-primary);
+  color: var(--text-white);
+  box-shadow: var(--shadow);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  opacity: 0.95;
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--primary-color);
+  border: 2px solid var(--primary-color);
+}
+
+.btn-outline:hover {
+  background: var(--primary-color);
+  color: var(--text-white);
+  transform: translateY(-1px);
+}
+
+/* ===== フォーム送信ボタンの特別スタイル ===== */
+.form-submit {
+  text-align: center;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border-color);
+  margin-top: 2rem;
+}
+
+.form-submit .btn {
+  min-width: 320px;
+  padding: 1.25rem 2.5rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.form-submit .btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.submit-note {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+/* ===== 進行状況セクションの改良 ===== */
+.progress-header h2 {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+}
+
+.progress-bar {
+  background: var(--bg-tertiary);
+  border-radius: 10px;
+  height: 12px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--gradient-primary);
+  border-radius: 10px;
+  transition: width 0.5s ease;
+  position: relative;
+}
+
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 2s infinite;
+}
+
+/* ===== アニメーション ===== */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes progressPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ===== 既存のスタイルを保持 ===== */
 
 /* ===== ヘッダー ===== */
 .header {
@@ -269,25 +616,6 @@ body {
   margin-bottom: 2rem;
 }
 
-.form-container {
-  background: var(--bg-primary);
-  border-radius: var(--border-radius-lg);
-  padding: 2rem;
-  box-shadow: var(--shadow);
-}
-
-.form-header {
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
-.form-header h2 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 0.5rem;
-}
-
 .form-header p {
   color: var(--text-secondary);
 }
@@ -391,65 +719,6 @@ body {
   font-size: 0.875rem;
 }
 
-/* ===== ボタンスタイル ===== */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  border-radius: var(--border-radius);
-  font-size: 0.875rem;
-  font-weight: 500;
-  text-decoration: none;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: none;
-}
-
-.btn-primary {
-  background: var(--primary-color);
-  color: var(--text-white);
-}
-
-.btn-primary:hover {
-  background: var(--primary-dark);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
-
-.btn-outline {
-  background: transparent;
-  color: var(--primary-color);
-  border: 2px solid var(--primary-color);
-}
-
-.btn-outline:hover {
-  background: var(--primary-color);
-  color: var(--text-white);
-}
-
-/* ===== フォーム送信 ===== */
-.form-submit {
-  text-align: center;
-  padding-top: 2rem;
-  border-top: 1px solid var(--border-color);
-  margin-top: 2rem;
-}
-
-.form-submit .btn {
-  min-width: 300px;
-  padding: 1rem 2rem;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.submit-note {
-  margin-top: 0.75rem;
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-}
-
 /* ===== バリデーションエラー ===== */
 .validation-errors {
   background: #fef2f2;
@@ -493,12 +762,6 @@ body {
   margin-bottom: 1.5rem;
 }
 
-.progress-header h2 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
 .progress-stats {
   display: flex;
   gap: 1.5rem;
@@ -508,22 +771,6 @@ body {
 
 .progress-overall {
   margin-bottom: 2rem;
-}
-
-.progress-bar {
-  width: 100%;
-  height: 20px;
-  background: var(--bg-tertiary);
-  border-radius: 10px;
-  overflow: hidden;
-  margin-bottom: 0.5rem;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
-  transition: width 0.3s ease;
-  border-radius: 10px;
 }
 
 .progress-percentage {
@@ -552,68 +799,6 @@ body {
   font-size: 1.125rem;
   font-weight: 600;
   color: var(--text-primary);
-}
-
-/* ===== 調査項目一覧 ===== */
-.research-items h4 {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 1rem;
-}
-
-.research-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
-}
-
-.research-item {
-  background: var(--bg-primary);
-  border: 2px solid var(--border-color);
-  border-radius: var(--border-radius);
-  padding: 1rem;
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  transition: all 0.2s;
-}
-
-.research-item.pending {
-  border-color: var(--border-color);
-}
-
-.research-item.in-progress {
-  border-color: var(--primary-color);
-  background: #eff6ff;
-}
-
-.research-item.completed {
-  border-color: var(--success-color);
-  background: #f0fdf4;
-}
-
-.research-item.failed {
-  border-color: var(--error-color);
-  background: #fef2f2;
-}
-
-.research-item-icon {
-  font-size: 1.25rem;
-  flex-shrink: 0;
-}
-
-.research-item-content h5 {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 0.25rem;
-}
-
-.research-item-content p {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  margin: 0;
 }
 
 /* ===== 結果セクション ===== */
@@ -733,22 +918,6 @@ body {
 /* ===== ユーティリティクラス ===== */
 .hidden {
   display: none !important;
-}
-
-/* ===== アニメーション ===== */
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
 }
 
 /* ===== レスポンシブデザイン ===== */
