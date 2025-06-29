@@ -16,7 +16,7 @@ export function createResearchRouter(researchService: ResearchService): Router {
     try {
       const serviceStatus = await researchService.testServices();
       
-      res.json({
+      return res.json({
         success: true,
         data: {
           status: 'healthy',
@@ -26,7 +26,7 @@ export function createResearchRouter(researchService: ResearchService): Router {
       });
     } catch (error) {
       console.error('[ResearchRouter] ヘルスチェックエラー:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         error: {
           error: 'SERVICE_ERROR',
@@ -45,7 +45,7 @@ export function createResearchRouter(researchService: ResearchService): Router {
     try {
       const prompts = researchService.getResearchPrompts();
       
-      res.json({
+      return res.json({
         success: true,
         data: {
           prompts: prompts,
@@ -54,7 +54,7 @@ export function createResearchRouter(researchService: ResearchService): Router {
       });
     } catch (error) {
       console.error('[ResearchRouter] プロンプト取得エラー:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         error: {
           error: 'SERVICE_ERROR',
@@ -74,13 +74,13 @@ export function createResearchRouter(researchService: ResearchService): Router {
       const researchRequest: ResearchRequest = req.body;
       const validation = researchService.validateRequest(researchRequest);
       
-      res.json({
+      return res.json({
         success: true,
         data: validation
       });
     } catch (error) {
       console.error('[ResearchRouter] バリデーションエラー:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         error: {
           error: 'VALIDATION_ERROR',
@@ -95,7 +95,7 @@ export function createResearchRouter(researchService: ResearchService): Router {
    * 市場調査開始（Server-Sent Events）
    * POST /api/research/start
    */
-  router.post('/start', async (req: Request, res: Response) => {
+  router.post('/start', async (req: Request, res: Response): Promise<void> => {
     try {
       const researchRequest: ResearchRequest = req.body;
       
@@ -104,7 +104,7 @@ export function createResearchRouter(researchService: ResearchService): Router {
       // リクエストバリデーション
       const validation = researchService.validateRequest(researchRequest);
       if (!validation.isValid) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: {
             error: 'VALIDATION_ERROR',
@@ -112,6 +112,7 @@ export function createResearchRouter(researchService: ResearchService): Router {
             timestamp: new Date()
           }
         });
+        return;
       }
 
       // Server-Sent Events設定
@@ -189,7 +190,7 @@ export function createResearchRouter(researchService: ResearchService): Router {
    */
   router.get('/info', (req: Request, res: Response) => {
     try {
-      res.json({
+      return res.json({
         success: true,
         data: {
           system: '市場調査自動化システム',
@@ -208,7 +209,7 @@ export function createResearchRouter(researchService: ResearchService): Router {
       });
     } catch (error) {
       console.error('[ResearchRouter] システム情報取得エラー:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         error: {
           error: 'SERVICE_ERROR',
@@ -225,7 +226,7 @@ export function createResearchRouter(researchService: ResearchService): Router {
 /**
  * エラーハンドリングミドルウェア
  */
-export function errorHandler(err: any, req: Request, res: Response, next: any) {
+export function errorHandler(err: any, req: Request, res: Response, next: any): void {
   console.error('[ResearchRouter] 未処理エラー:', err);
   
   if (!res.headersSent) {
