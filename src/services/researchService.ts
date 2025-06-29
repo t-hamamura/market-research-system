@@ -321,6 +321,20 @@ export class ResearchService {
       errors.push('価格帯・価格設定の方向性は必須です');
     }
 
+    if (!hypothesis.uvp || hypothesis.uvp.trim().length === 0) {
+      errors.push('暫定UVPは必須です');
+    }
+
+    if (!hypothesis.initialKpi || hypothesis.initialKpi.trim().length === 0) {
+      errors.push('初期KPIは必須です');
+    }
+
+    if (!hypothesis.acquisitionChannels || hypothesis.acquisitionChannels.trim().length === 0) {
+      errors.push('獲得チャネル仮説は必須です');
+    }
+
+    // 任意項目は空文字列でもOK（regulatoryTechPrereqs, costStructure）
+
     return { isValid: errors.length === 0, errors };
   }
 

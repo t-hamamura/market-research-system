@@ -211,7 +211,12 @@ function getFormData() {
       targetUsers: formData.get('targetUsers')?.trim() || '',
       competitors: formData.get('competitors')?.trim() || '',
       revenueModel: formData.get('revenueModel')?.trim() || '',
-      pricingDirection: formData.get('pricingDirection')?.trim() || ''
+      pricingDirection: formData.get('pricingDirection')?.trim() || '',
+      uvp: formData.get('uvp')?.trim() || '',
+      initialKpi: formData.get('initialKpi')?.trim() || '',
+      acquisitionChannels: formData.get('acquisitionChannels')?.trim() || '',
+      regulatoryTechPrereqs: formData.get('regulatoryTechPrereqs')?.trim() || '',
+      costStructure: formData.get('costStructure')?.trim() || ''
     }
   };
 }
@@ -234,7 +239,10 @@ function validateFormData(data) {
     { field: 'targetUsers', label: '想定される利用者層' },
     { field: 'competitors', label: '直接競合・間接競合' },
     { field: 'revenueModel', label: '課金モデル' },
-    { field: 'pricingDirection', label: '価格帯・価格設定の方向性' }
+    { field: 'pricingDirection', label: '価格帯・価格設定の方向性' },
+    { field: 'uvp', label: '暫定UVP' },
+    { field: 'initialKpi', label: '初期KPI' },
+    { field: 'acquisitionChannels', label: '獲得チャネル仮説' }
   ];
   
   requiredFields.forEach(({ field, label }) => {

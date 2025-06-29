@@ -309,6 +309,13 @@ body {
   margin-top: var(--spacing-1);
 }
 
+.label-optional {
+  font-size: var(--font-size-xs);
+  font-weight: 400;
+  color: var(--gray-400);
+  margin-left: var(--spacing-1);
+}
+
 .form-input,
 .form-textarea {
   width: 100%;

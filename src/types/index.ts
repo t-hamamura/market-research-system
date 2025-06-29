@@ -11,6 +11,11 @@ export interface ServiceHypothesis {
   competitors: string;               // 直接競合・間接競合
   revenueModel: string;              // 課金モデル
   pricingDirection: string;          // 価格帯・価格設定の方向性
+  uvp: string;                       // 暫定UVP
+  initialKpi: string;                // 初期KPI
+  acquisitionChannels: string;       // 獲得チャネル仮説
+  regulatoryTechPrereqs?: string;    // 規制・技術前提（任意）
+  costStructure?: string;            // 想定コスト構造（任意）
 }
 
 // 調査リクエストの型定義

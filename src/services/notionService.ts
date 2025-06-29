@@ -305,7 +305,7 @@ export class NotionService {
    * @returns Notionブロック配列
    */
   private createServiceHypothesisBlocks(hypothesis: ServiceHypothesis): any[] {
-    return [
+    const blocks = [
       {
         object: 'block',
         type: 'heading_2',
@@ -326,8 +326,22 @@ export class NotionService {
       this.createPropertyBlock('👥 想定される利用者層', hypothesis.targetUsers),
       this.createPropertyBlock('⚔️ 直接競合・間接競合', hypothesis.competitors),
       this.createPropertyBlock('💰 課金モデル', hypothesis.revenueModel),
-      this.createPropertyBlock('💴 価格帯・価格設定の方向性', hypothesis.pricingDirection)
+      this.createPropertyBlock('💴 価格帯・価格設定の方向性', hypothesis.pricingDirection),
+      this.createPropertyBlock('🎯 暫定UVP', hypothesis.uvp),
+      this.createPropertyBlock('📊 初期KPI', hypothesis.initialKpi),
+      this.createPropertyBlock('📈 獲得チャネル仮説', hypothesis.acquisitionChannels)
     ];
+
+    // 任意項目を追加（値がある場合のみ）
+    if (hypothesis.regulatoryTechPrereqs && hypothesis.regulatoryTechPrereqs.trim()) {
+      blocks.push(this.createPropertyBlock('⚖️ 規制・技術前提', hypothesis.regulatoryTechPrereqs));
+    }
+
+    if (hypothesis.costStructure && hypothesis.costStructure.trim()) {
+      blocks.push(this.createPropertyBlock('💸 想定コスト構造', hypothesis.costStructure));
+    }
+
+    return blocks;
   }
 
   /**
