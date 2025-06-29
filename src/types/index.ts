@@ -117,7 +117,7 @@ export interface AppState {
 
 // SSE接続状態の型定義
 export interface SSEConnection {
-  eventSource: EventSource | null;
+  eventSource: any | null;
   isConnected: boolean;
   lastEventTime: Date | null;
 } 
