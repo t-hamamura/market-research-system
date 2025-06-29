@@ -3,18 +3,16 @@
 builder = "NIXPACKS"
 
 [deploy]
-startCommand = "npm run build && npm start"
+startCommand = "npm start"
 healthcheckPath = "/api/research/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
 
 [env]
+# NODE_ENV=production
+# PORT=3000
 # 必要な環境変数（Railway UI で設定）
 # GEMINI_API_KEY=your_gemini_api_key
 # NOTION_TOKEN=your_notion_token
 # NOTION_DATABASE_ID=your_notion_database_id
-# TAVILY_API_KEY=your_tavily_api_key (optional)
-# ENABLE_DEEP_RESEARCH=false (optional)
-# NODE_ENV=production
-# PORT=3000
