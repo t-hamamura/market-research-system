@@ -22,16 +22,29 @@ export class DeepResearchService {
     try {
       console.log('[DeepResearchService] Deep Research開始');
       
-      // Phase 1: 基本調査
+      // Phase 1: 基本調査（リトライ機能付き）
+      console.log('[DeepResearchService] Phase 1: 基本調査実行中...');
       const basicResearch = await this.geminiService.conductResearch(prompt, serviceHypothesis);
       
+      // API制限対策: フェーズ間で少し待機
+      await this.sleep(2000);
+      
       // Phase 2: 深掘り分析プロンプトを生成
+      console.log('[DeepResearchService] Phase 2: 深掘り分析プロンプト生成中...');
       const deepDivePrompt = this.generateDeepDivePrompt(basicResearch, prompt, serviceHypothesis);
       
-      // Phase 3: 深掘り調査実行
+      // API制限対策: さらに待機
+      await this.sleep(2000);
+      
+      // Phase 3: 深掘り調査実行（リトライ機能付き）
+      console.log('[DeepResearchService] Phase 3: 深掘り調査実行中...');
       const deepResearch = await this.geminiService.conductResearch(deepDivePrompt, serviceHypothesis);
       
-      // Phase 4: 結果を統合
+      // API制限対策: 統合前に待機
+      await this.sleep(2000);
+      
+      // Phase 4: 結果を統合（エラー処理強化）
+      console.log('[DeepResearchService] Phase 4: 結果統合中...');
       const integratedResult = await this.integrateResults(basicResearch, deepResearch, prompt);
       
       console.log('[DeepResearchService] Deep Research完了');
@@ -39,9 +52,74 @@ export class DeepResearchService {
 
     } catch (error) {
       console.error('[DeepResearchService] Deep Research エラー:', error);
+      
       // エラーの場合は基本調査結果にフォールバック
-      return await this.geminiService.conductResearch(prompt, serviceHypothesis);
+      try {
+        console.log('[DeepResearchService] フォールバック: 基本調査のみ実行');
+        const fallbackResult = await this.geminiService.conductResearch(prompt, serviceHypothesis);
+        
+        // フォールバック結果であることを明記
+        return `【Deep Research エラーのため基本調査結果のみ】\n\n${fallbackResult}\n\n---\n**注意**: Deep Research機能でエラーが発生したため、基本調査結果のみを表示しています。より詳細な分析が必要な場合は、手動での追加調査をお勧めします。`;
+        
+      } catch (fallbackError) {
+        console.error('[DeepResearchService] フォールバック調査もエラー:', fallbackError);
+        
+        // 最終フォールバック: エラー情報と調査フレームワークを提供
+        return this.generateDeepResearchFallback(prompt, error, fallbackError);
+      }
     }
+  }
+
+  /**
+   * 指定時間待機
+   * @param ms 待機時間（ミリ秒）
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Deep Research の最終フォールバック結果を生成
+   * @param prompt 元のプロンプト
+   * @param primaryError 主要エラー
+   * @param fallbackError フォールバックエラー
+   * @returns フォールバック結果
+   */
+  private generateDeepResearchFallback(prompt: string, primaryError: unknown, fallbackError: unknown): string {
+    const primaryErrorMsg = primaryError instanceof Error ? primaryError.message : 'Unknown error';
+    const fallbackErrorMsg = fallbackError instanceof Error ? fallbackError.message : 'Unknown error';
+    
+    return `
+【Deep Research システムエラー】
+
+**調査プロンプト**: ${prompt.substring(0, 100)}...
+**Deep Research エラー**: ${primaryErrorMsg}
+**基本調査エラー**: ${fallbackErrorMsg}
+
+## 手動調査アプローチの提案
+
+### 1. 情報収集方法
+- **オンライン調査**: Google Scholar、業界メディア、企業IR資料
+- **専門データベース**: Statista、IBISWorld、Euromonitor
+- **政府・公的機関**: 総務省統計、経産省データ、業界団体資料
+
+### 2. 分析フレームワーク
+- **定量分析**: 市場規模、成長率、シェア分析
+- **定性分析**: トレンド、顧客ニーズ、競合戦略
+- **SWOT分析**: 強み・弱み・機会・脅威の整理
+
+### 3. 検証方法
+- **一次調査**: 顧客インタビュー、アンケート調査
+- **専門家意見**: 業界コンサルタント、アナリストへの相談
+- **パイロット調査**: 小規模テスト、MVP検証
+
+## 緊急対応案
+1. 類似企業の公開情報から推定値を算出
+2. 業界レポートから関連データを抽出
+3. 専門調査会社への外注検討
+
+**重要**: システムエラーのため自動調査が実行できませんでした。上記フレームワークを参考に手動での調査実行をお勧めします。
+`;
   }
 
   /**

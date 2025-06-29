@@ -146,11 +146,11 @@ export class ResearchService {
 
       // 16種類の調査を並列実行（バッチ処理）
       const researchResults: Array<{ id: number; title: string; result: string }> = [];
-      const batchSize = parseInt(process.env.PARALLEL_BATCH_SIZE || '4', 10); // 環境変数から取得、デフォルト4
-      const batchInterval = parseInt(process.env.BATCH_INTERVAL || '2000', 10); // 環境変数から取得、デフォルト2000ms
+      const batchSize = parseInt(process.env.PARALLEL_BATCH_SIZE || '2', 10); // デフォルト2に削減（API制限対策）
+      const batchInterval = parseInt(process.env.BATCH_INTERVAL || '5000', 10); // デフォルト5秒に延長
       const batches = this.createBatches(this.researchPrompts, batchSize);
       
-      console.log(`[ResearchService] ${batches.length}バッチで並列実行開始（バッチサイズ: ${batchSize}）`);
+      console.log(`[ResearchService] ${batches.length}バッチで並列実行開始（バッチサイズ: ${batchSize}, 間隔: ${batchInterval}ms）`);
 
       for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
         const batch = batches[batchIndex];
@@ -158,7 +158,7 @@ export class ResearchService {
         
         console.log(`[ResearchService] バッチ${batchIndex + 1}/${batches.length}開始: ${batch.map(p => p.title).join(', ')}`);
         
-        // バッチ内の調査を並列実行
+        // バッチ内の調査を並列実行（エラーハンドリング強化）
         const batchPromises = batch.map(async (prompt, promptIndex) => {
           const globalIndex = batchIndex * batchSize + promptIndex;
           
@@ -174,6 +174,11 @@ export class ResearchService {
 
             console.log(`[ResearchService] 調査${globalIndex + 1}/16: ${prompt.title} (バッチ${batchIndex + 1})`);
             
+            // 各プロミス内でも少し間隔を空ける（同時リクエスト負荷軽減）
+            if (promptIndex > 0) {
+              await this.sleep(1000 * promptIndex); // プロミス内でも時差実行
+            }
+            
             // Deep Research機能があれば使用、なければ通常の調査
             const result = this.deepResearchService 
               ? await this.deepResearchService.conductEnhancedResearch(prompt.prompt, request.serviceHypothesis)
@@ -185,43 +190,66 @@ export class ResearchService {
               id: prompt.id,
               title: prompt.title,
               result: result,
-              index: globalIndex
+              index: globalIndex,
+              success: true
             };
 
           } catch (error) {
             console.error(`[ResearchService] 調査${globalIndex + 1}でエラー:`, error);
             
-            // エラーでも続行
+            // エラーでも続行（詳細なフォールバック情報を提供）
+            const fallbackResult = this.generateFallbackResult(prompt.title, error);
+            
             return {
               id: prompt.id,
               title: prompt.title,
-              result: `調査でエラーが発生しました: ${error instanceof Error ? error.message : 'Unknown error'}`,
-              index: globalIndex
+              result: fallbackResult,
+              index: globalIndex,
+              success: false
             };
           }
         });
 
         // バッチ内のすべての調査完了を待機
-        const batchResults = await Promise.all(batchPromises);
+        const batchResults = await Promise.allSettled(batchPromises);
         
-        // 結果をID順にソートして追加
-        batchResults
-          .sort((a, b) => a.index - b.index)
-          .forEach(result => {
+        // 結果を処理（Promise.allSettledで個別エラーも処理）
+        batchResults.forEach((result, index) => {
+          if (result.status === 'fulfilled') {
+            const researchResult = result.value;
             researchResults.push({
-              id: result.id,
-              title: result.title,
-              result: result.result
+              id: researchResult.id,
+              title: researchResult.title,
+              result: researchResult.result
             });
-          });
+            
+            if (!researchResult.success) {
+              console.warn(`[ResearchService] 調査${researchResult.index + 1}はフォールバック結果を使用`);
+            }
+          } else {
+            // Promise.allSettled でもエラーが発生した場合の処理
+            const promptIndex = index;
+            const globalIndex = batchIndex * batchSize + promptIndex;
+            const prompt = batch[promptIndex];
+            
+            console.error(`[ResearchService] 調査${globalIndex + 1}で致命的エラー:`, result.reason);
+            
+            researchResults.push({
+              id: prompt.id,
+              title: prompt.title,
+              result: this.generateFallbackResult(prompt.title, result.reason)
+            });
+          }
+        });
 
         const batchDuration = Math.round((new Date().getTime() - batchStartTime.getTime()) / 1000);
-        console.log(`[ResearchService] バッチ${batchIndex + 1}完了: ${batchDuration}秒`);
+        const successCount = batchResults.filter(r => r.status === 'fulfilled' && r.value.success).length;
+        console.log(`[ResearchService] バッチ${batchIndex + 1}完了: ${batchDuration}秒, 成功: ${successCount}/${batch.length}`);
 
-        // バッチ間の待機時間（API制限対策）
+        // バッチ間の待機時間（API制限対策強化）
         if (batchIndex < batches.length - 1) {
-          console.log('[ResearchService] バッチ間待機中...');
-          await this.sleep(batchInterval); // 環境変数から取得、デフォルト2000ms
+          console.log(`[ResearchService] バッチ間待機中... (${batchInterval}ms)`);
+          await this.sleep(batchInterval);
         }
       }
 
@@ -406,5 +434,109 @@ export class ResearchService {
    */
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * フォールバック結果を生成
+   * @param title 調査タイトル
+   * @param error エラー情報
+   * @returns フォールバック結果
+   */
+  private generateFallbackResult(title: string, error: unknown): string {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    // 調査タイトルに基づいた基本的なフレームワークを提供
+    const fallbackFrameworks: { [key: string]: string } = {
+      '市場規模と成長性の調査': `
+【エラー発生により基本フレームワークを提供】
+
+## 市場規模調査の基本アプローチ
+1. **TAM（Total Addressable Market）**: 理論上の最大市場規模
+2. **SAM（Serviceable Addressable Market）**: 実際にサービス提供可能な市場
+3. **SOM（Serviceable Obtainable Market）**: 現実的に獲得可能な市場
+
+## 推奨調査手法
+- 業界レポート（IDC、Gartner等）の活用
+- 政府統計データの分析
+- 競合企業の売上・規模データ収集
+- 専門調査会社データの購入検討
+
+**エラー詳細**: ${errorMessage}
+`,
+      'PESTEL分析の調査': `
+【エラー発生により基本フレームワークを提供】
+
+## PESTEL分析フレームワーク
+- **P (Political)**: 政治・政策動向
+- **E (Economic)**: 経済環境・景気動向  
+- **S (Social)**: 社会・文化的変化
+- **T (Technology)**: 技術革新・デジタル化
+- **E (Environmental)**: 環境・持続可能性
+- **L (Legal)**: 法規制・コンプライアンス
+
+## 推奨調査手法
+- 政府白書・政策文書の確認
+- 業界団体レポートの分析
+- ニュース・専門メディアの情報収集
+
+**エラー詳細**: ${errorMessage}
+`,
+      '競合の製品特徴・戦略分析': `
+【エラー発生により基本フレームワークを提供】
+
+## 競合分析の基本観点
+1. **製品・サービス特徴**: 機能、品質、差別化要素
+2. **価格戦略**: 価格帯、課金モデル、割引戦略
+3. **マーケティング**: チャネル、メッセージ、ターゲット
+4. **顧客基盤**: 顧客数、満足度、ロイヤルティ
+
+## 推奨調査手法
+- 競合企業の公式サイト・資料分析
+- 顧客レビュー・評価の調査
+- SNS・メディア露出の分析
+- 業界カンファレンス・展示会での情報収集
+
+**エラー詳細**: ${errorMessage}
+`
+    };
+
+    // タイトルから適切なフレームワークを選択
+    const matchedFramework = Object.keys(fallbackFrameworks).find(key => title.includes(key.split('・')[0]));
+    
+    if (matchedFramework) {
+      return fallbackFrameworks[matchedFramework];
+    }
+
+    // デフォルトのフォールバック
+    return `
+【調査エラーが発生しました】
+
+**調査項目**: ${title}
+**エラー詳細**: ${errorMessage}
+
+## 代替調査アプローチの提案
+
+1. **一次情報収集**
+   - 業界専門家へのインタビュー
+   - 顧客・見込み客へのアンケート調査
+   - 競合企業の公開情報収集
+
+2. **二次情報活用**
+   - 業界レポート・白書の活用
+   - 学術論文・研究資料の参照
+   - 政府統計・公的データの分析
+
+3. **フィールド調査**
+   - 店舗・サービス現場の観察
+   - 展示会・イベントでの情報収集
+   - オンライン・SNS上の口コミ分析
+
+## 推奨次期アクション
+- 調査手法の見直し
+- 複数の情報源からのクロスチェック
+- 専門コンサルタントへの相談検討
+
+**注意**: このフォールバック情報は一般的なフレームワークです。具体的な業界・事業特性を考慮した詳細調査が必要です。
+`;
   }
 }
