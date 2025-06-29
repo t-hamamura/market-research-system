@@ -121,7 +121,7 @@ export class ResearchService {
   }
 
   /**
-   * 全市場調査を実行
+   * 全市場調査を実行（並列処理対応）
    * @param request 調査リクエスト
    * @param onProgress 進行状況コールバック
    * @returns 統合調査結果
@@ -133,62 +133,95 @@ export class ResearchService {
     const startTime = new Date();
     
     try {
-      console.log(`[ResearchService] 市場調査開始: ${request.businessName}`);
+      console.log(`[ResearchService] 市場調査開始（並列処理）: ${request.businessName}`);
       
       // 初期化メッセージ
       onProgress({
         type: 'progress',
         step: 0,
         total: this.researchPrompts.length + 2, // 16調査 + 統合レポート + Notion保存
-        message: '市場調査を開始します...',
+        message: '市場調査を開始します（並列処理モード）...',
         researchType: '初期化'
       });
 
-      // 16種類の調査を順次実行
+      // 16種類の調査を並列実行（バッチ処理）
       const researchResults: Array<{ id: number; title: string; result: string }> = [];
+      const batchSize = parseInt(process.env.PARALLEL_BATCH_SIZE || '4', 10); // 環境変数から取得、デフォルト4
+      const batchInterval = parseInt(process.env.BATCH_INTERVAL || '2000', 10); // 環境変数から取得、デフォルト2000ms
+      const batches = this.createBatches(this.researchPrompts, batchSize);
       
-      for (let i = 0; i < this.researchPrompts.length; i++) {
-        const prompt = this.researchPrompts[i];
+      console.log(`[ResearchService] ${batches.length}バッチで並列実行開始（バッチサイズ: ${batchSize}）`);
+
+      for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+        const batch = batches[batchIndex];
+        const batchStartTime = new Date();
         
-        try {
-          // 進行状況通知
-          onProgress({
-            type: 'progress',
-            step: i + 1,
-            total: this.researchPrompts.length + 2,
-            message: `${prompt.title}を実行中...`,
-            researchType: prompt.title
-          });
-
-          console.log(`[ResearchService] 調査${i + 1}/16: ${prompt.title}`);
+        console.log(`[ResearchService] バッチ${batchIndex + 1}/${batches.length}開始: ${batch.map(p => p.title).join(', ')}`);
+        
+        // バッチ内の調査を並列実行
+        const batchPromises = batch.map(async (prompt, promptIndex) => {
+          const globalIndex = batchIndex * batchSize + promptIndex;
           
-          // Deep Research機能があれば使用、なければ通常の調査
-          const result = this.deepResearchService 
-            ? await this.deepResearchService.conductEnhancedResearch(prompt.prompt, request.serviceHypothesis)
-            : await this.geminiService.conductResearch(prompt.prompt, request.serviceHypothesis);
+          try {
+            // 進行状況通知（開始）
+            onProgress({
+              type: 'progress',
+              step: globalIndex + 1,
+              total: this.researchPrompts.length + 2,
+              message: `${prompt.title}を実行中...`,
+              researchType: prompt.title
+            });
 
-          researchResults.push({
-            id: prompt.id,
-            title: prompt.title,
-            result: result
-          });
+            console.log(`[ResearchService] 調査${globalIndex + 1}/16: ${prompt.title} (バッチ${batchIndex + 1})`);
+            
+            // Deep Research機能があれば使用、なければ通常の調査
+            const result = this.deepResearchService 
+              ? await this.deepResearchService.conductEnhancedResearch(prompt.prompt, request.serviceHypothesis)
+              : await this.geminiService.conductResearch(prompt.prompt, request.serviceHypothesis);
 
-          console.log(`[ResearchService] 調査${i + 1}完了: ${result.length}文字`);
+            console.log(`[ResearchService] 調査${globalIndex + 1}完了: ${result.length}文字`);
 
-          // レート制限対応（最後以外は待機）
-          if (i < this.researchPrompts.length - 1) {
-            await this.sleep(1000);
+            return {
+              id: prompt.id,
+              title: prompt.title,
+              result: result,
+              index: globalIndex
+            };
+
+          } catch (error) {
+            console.error(`[ResearchService] 調査${globalIndex + 1}でエラー:`, error);
+            
+            // エラーでも続行
+            return {
+              id: prompt.id,
+              title: prompt.title,
+              result: `調査でエラーが発生しました: ${error instanceof Error ? error.message : 'Unknown error'}`,
+              index: globalIndex
+            };
           }
+        });
 
-        } catch (error) {
-          console.error(`[ResearchService] 調査${i + 1}でエラー:`, error);
-          
-          // エラーでも続行
-          researchResults.push({
-            id: prompt.id,
-            title: prompt.title,
-            result: `調査でエラーが発生しました: ${error instanceof Error ? error.message : 'Unknown error'}`
+        // バッチ内のすべての調査完了を待機
+        const batchResults = await Promise.all(batchPromises);
+        
+        // 結果をID順にソートして追加
+        batchResults
+          .sort((a, b) => a.index - b.index)
+          .forEach(result => {
+            researchResults.push({
+              id: result.id,
+              title: result.title,
+              result: result.result
+            });
           });
+
+        const batchDuration = Math.round((new Date().getTime() - batchStartTime.getTime()) / 1000);
+        console.log(`[ResearchService] バッチ${batchIndex + 1}完了: ${batchDuration}秒`);
+
+        // バッチ間の待機時間（API制限対策）
+        if (batchIndex < batches.length - 1) {
+          console.log('[ResearchService] バッチ間待機中...');
+          await this.sleep(batchInterval); // 環境変数から取得、デフォルト2000ms
         }
       }
 
@@ -234,7 +267,7 @@ export class ResearchService {
         type: 'complete',
         step: this.researchPrompts.length + 2,
         total: this.researchPrompts.length + 2,
-        message: `市場調査が完了しました！ (実行時間: ${duration}秒)`,
+        message: `市場調査が完了しました！ (実行時間: ${duration}秒、並列処理で高速化)`,
         notionUrl: notionResult.url
       });
 
@@ -256,7 +289,7 @@ export class ResearchService {
         completedAt: completedAt
       };
 
-      console.log(`[ResearchService] 市場調査完了: ${request.businessName}`);
+      console.log(`[ResearchService] 市場調査完了（並列処理）: ${request.businessName}, 実行時間: ${duration}秒`);
       return result;
 
     } catch (error) {
@@ -271,6 +304,20 @@ export class ResearchService {
 
       throw error;
     }
+  }
+
+  /**
+   * 配列をバッチに分割
+   * @param items 分割する配列
+   * @param batchSize バッチサイズ
+   * @returns バッチ配列
+   */
+  private createBatches<T>(items: T[], batchSize: number): T[][] {
+    const batches: T[][] = [];
+    for (let i = 0; i < items.length; i += batchSize) {
+      batches.push(items.slice(i, i + batchSize));
+    }
+    return batches;
   }
 
   /**
