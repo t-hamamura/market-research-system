@@ -33,9 +33,18 @@ export class NotionService {
     try {
       console.log('[NotionService] Notionページ作成開始:', businessName);
 
-      // ページプロパティの設定（実際のNotionデータベース構造に合わせて修正）
-      const properties: any = {
-        '事業名': {
+      // データベース構造を事前に確認（エラー回避）
+      console.log('[NotionService] データベース構造の確認中...');
+      const databaseInfo = await this.getDatabaseProperties();
+      console.log('[NotionService] 利用可能なプロパティ:', Object.keys(databaseInfo));
+
+      // ページプロパティの設定（動的に構造を確認して設定）
+      const properties: any = {};
+
+      // 事業名プロパティの設定（複数パターンに対応）
+      const titleProperty = this.findTitleProperty(databaseInfo);
+      if (titleProperty) {
+        properties[titleProperty] = {
           title: [
             {
               text: {
@@ -43,13 +52,31 @@ export class NotionService {
               }
             }
           ]
-        },
-        'ステータス': {
-          select: {
-            name: '完了'
-          }
+        };
+        console.log(`[NotionService] タイトルプロパティ設定: ${titleProperty}`);
+      } else {
+        console.warn('[NotionService] タイトルプロパティが見つかりません');
+      }
+
+      // ステータスプロパティの設定（複数パターンに対応）
+      const statusProperty = this.findStatusProperty(databaseInfo);
+      if (statusProperty) {
+        const statusOptions = databaseInfo[statusProperty]?.select?.options || [];
+        const completedOption = this.findCompletedOption(statusOptions);
+        
+        if (completedOption) {
+          properties[statusProperty] = {
+            select: {
+              name: completedOption.name
+            }
+          };
+          console.log(`[NotionService] ステータスプロパティ設定: ${statusProperty} = ${completedOption.name}`);
+        } else {
+          console.warn('[NotionService] 完了状態の選択肢が見つかりません:', statusOptions.map(o => o.name));
         }
-      };
+      } else {
+        console.warn('[NotionService] ステータスプロパティが見つかりません');
+      }
 
       // 作成日時は自動設定されるプロパティのため、手動設定不要
       console.log('[NotionService] プロパティ設定: 事業名、ステータス');
@@ -660,5 +687,90 @@ export class NotionService {
    */
   generatePageUrl(pageId: string): string {
     return `https://www.notion.so/${pageId.replace(/-/g, '')}`;
+  }
+
+  /**
+   * データベースのプロパティ構造を取得
+   * @returns プロパティ情報のオブジェクト
+   */
+  private async getDatabaseProperties(): Promise<Record<string, any>> {
+    try {
+      const response = await this.notion.databases.retrieve({
+        database_id: this.config.databaseId
+      });
+      
+      return response.properties || {};
+    } catch (error) {
+      console.error('[NotionService] データベースプロパティ取得エラー:', error);
+      return {};
+    }
+  }
+
+  /**
+   * タイトルプロパティを見つける
+   * @param properties プロパティ情報
+   * @returns タイトルプロパティ名またはnull
+   */
+  private findTitleProperty(properties: Record<string, any>): string | null {
+    // 複数のパターンをチェック
+    const titleCandidates = ['事業名', 'Name', 'Title', '名前', 'タイトル'];
+    
+    for (const candidate of titleCandidates) {
+      if (properties[candidate] && properties[candidate].type === 'title') {
+        return candidate;
+      }
+    }
+    
+    // title型のプロパティを探す
+    for (const [propName, propInfo] of Object.entries(properties)) {
+      if (propInfo && (propInfo as any).type === 'title') {
+        return propName;
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * ステータスプロパティを見つける
+   * @param properties プロパティ情報
+   * @returns ステータスプロパティ名またはnull
+   */
+  private findStatusProperty(properties: Record<string, any>): string | null {
+    // 複数のパターンをチェック
+    const statusCandidates = ['ステータス', 'Status', '状態', 'State'];
+    
+    for (const candidate of statusCandidates) {
+      if (properties[candidate] && properties[candidate].type === 'select') {
+        return candidate;
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * 完了状態の選択肢を見つける
+   * @param options select プロパティの選択肢リスト
+   * @returns 完了状態の選択肢またはnull
+   */
+  private findCompletedOption(options: Array<{ name: string; id: string; color?: string }>): { name: string; id: string } | null {
+    // 複数のパターンをチェック
+    const completedCandidates = ['完了', 'Done', 'Completed', '終了', 'Finished', '✅'];
+    
+    for (const candidate of completedCandidates) {
+      const option = options.find(opt => opt.name === candidate);
+      if (option) {
+        return option;
+      }
+    }
+    
+    // デフォルトで最初の選択肢を使用
+    if (options.length > 0) {
+      console.log('[NotionService] デフォルトでステータス選択肢を使用:', options[0].name);
+      return options[0];
+    }
+    
+    return null;
   }
 }

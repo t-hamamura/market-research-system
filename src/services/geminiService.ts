@@ -54,16 +54,44 @@ export class GeminiService {
         });
         
         const result = await Promise.race([requestPromise, timeoutPromise]) as any;
+        
+        // レスポンスオブジェクトの詳細チェック
+        if (!result) {
+          throw new Error('Gemini APIからnullレスポンスオブジェクトが返されました');
+        }
+        
         const response = await result.response;
         
         // レスポンス詳細ログ（デバッグ用）
         console.log(`[GeminiService] レスポンス取得成功 (試行${attempt})`);
         
-        const text = response.text();
+        // レスポンスオブジェクトの検証
+        if (!response) {
+          throw new Error('Gemini APIからnullレスポンスが返されました');
+        }
+        
+        // text()関数の存在確認
+        if (typeof response.text !== 'function') {
+          console.error('[GeminiService] レスポンスオブジェクト詳細:', response);
+          throw new Error('レスポンスオブジェクトにtext()メソッドがありません');
+        }
+        
+        let text: string;
+        try {
+          text = response.text();
+        } catch (textError) {
+          console.error('[GeminiService] text()関数エラー:', textError);
+          throw new Error(`レスポンステキスト取得エラー: ${textError instanceof Error ? textError.message : 'Unknown'}`);
+        }
         
         // 空レスポンスのより詳細なチェック
-        if (!text) {
-          throw new Error('Gemini APIから null レスポンスが返されました');
+        if (text === null || text === undefined) {
+          throw new Error('Gemini APIから null/undefined テキストが返されました');
+        }
+        
+        if (typeof text !== 'string') {
+          console.error('[GeminiService] 予期しないテキスト型:', typeof text, text);
+          throw new Error(`予期しないレスポンス型: ${typeof text}`);
         }
         
         const trimmedText = text.trim();
@@ -73,6 +101,8 @@ export class GeminiService {
         
         if (trimmedText.length < 10) {
           console.warn(`[GeminiService] 非常に短いレスポンス (${trimmedText.length}文字): "${trimmedText}"`);
+          // 短すぎるレスポンスの場合もリトライ対象とする
+          throw new Error(`レスポンスが短すぎます (${trimmedText.length}文字): "${trimmedText}"`);
         }
 
         console.log(`[GeminiService] 調査完了 (試行${attempt}): ${trimmedText.length}文字の結果を取得`);

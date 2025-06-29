@@ -53,19 +53,35 @@ export class DeepResearchService {
     } catch (error) {
       console.error('[DeepResearchService] Deep Research エラー:', error);
       
+      // エラーの種類を判定
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isApiLimitError = errorMessage.toLowerCase().includes('rate limit') || 
+                             errorMessage.toLowerCase().includes('quota') ||
+                             errorMessage.toLowerCase().includes('429');
+      
+      // API制限エラーの場合は少し待ってからフォールバック
+      if (isApiLimitError) {
+        console.log('[DeepResearchService] API制限エラー検出、待機してからフォールバック...');
+        await this.sleep(5000); // 5秒待機
+      }
+      
       // エラーの場合は基本調査結果にフォールバック
       try {
         console.log('[DeepResearchService] フォールバック: 基本調査のみ実行');
         const fallbackResult = await this.geminiService.conductResearch(prompt, serviceHypothesis);
         
-        // フォールバック結果であることを明記
-        return `【Deep Research エラーのため基本調査結果のみ】\n\n${fallbackResult}\n\n---\n**注意**: Deep Research機能でエラーが発生したため、基本調査結果のみを表示しています。より詳細な分析が必要な場合は、手動での追加調査をお勧めします。`;
+        // フォールバック結果であることを明記（エラー種別に応じてメッセージを調整）
+        const warningMessage = isApiLimitError 
+          ? "**注意**: API制限によりDeep Research機能を使用できませんでしたが、基本調査は正常に完了しました。"
+          : "**注意**: Deep Research機能でエラーが発生したため、基本調査結果のみを表示しています。より詳細な分析が必要な場合は、手動での追加調査をお勧めします。";
+        
+        return `【Deep Research エラーのため基本調査結果のみ】\n\n${fallbackResult}\n\n---\n${warningMessage}`;
         
       } catch (fallbackError) {
         console.error('[DeepResearchService] フォールバック調査もエラー:', fallbackError);
         
-        // 最終フォールバック: エラー情報と調査フレームワークを提供
-        return this.generateDeepResearchFallback(prompt, error, fallbackError);
+        // 最終フォールバック: より詳細なエラー情報を含む調査フレームワークを提供
+        return this.generateEnhancedFallback(prompt, error, fallbackError, serviceHypothesis);
       }
     }
   }
@@ -76,6 +92,70 @@ export class DeepResearchService {
    */
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * 強化された最終フォールバック結果を生成
+   * @param prompt 元のプロンプト
+   * @param primaryError 主要エラー
+   * @param fallbackError フォールバックエラー
+   * @param serviceHypothesis サービス仮説
+   * @returns 強化されたフォールバック結果
+   */
+  private generateEnhancedFallback(prompt: string, primaryError: unknown, fallbackError: unknown, serviceHypothesis: ServiceHypothesis): string {
+    const primaryErrorMsg = primaryError instanceof Error ? primaryError.message : 'Unknown error';
+    const fallbackErrorMsg = fallbackError instanceof Error ? fallbackError.message : 'Unknown error';
+    
+    return `
+【Deep Research システムエラー - 緊急代替分析】
+
+**事業名**: ${serviceHypothesis.concept}
+**調査項目**: ${prompt.substring(0, 150)}...
+
+## エラー詳細
+- **Deep Research エラー**: ${primaryErrorMsg}
+- **基本調査エラー**: ${fallbackErrorMsg}
+- **発生時刻**: ${new Date().toLocaleString('ja-JP')}
+
+## サービス仮説に基づく代替分析フレームワーク
+
+### 対象事業概要
+- **コンセプト**: ${serviceHypothesis.concept}
+- **解決課題**: ${serviceHypothesis.customerProblem}
+- **ターゲット業界**: ${serviceHypothesis.targetIndustry}
+- **想定ユーザー**: ${serviceHypothesis.targetUsers}
+- **競合環境**: ${serviceHypothesis.competitors}
+
+### 推奨調査アプローチ
+
+#### 1. 即座に実行可能な調査
+- **Google検索**: "${serviceHypothesis.targetIndustry} 市場規模"で検索
+- **業界団体サイト**: 関連する業界団体の統計情報確認
+- **政府統計**: e-Stat、経済センサス等の公開データ活用
+- **企業IR情報**: 上場競合他社の決算説明資料
+
+#### 2. 専門データソース
+- **無料リソース**: JETRO、中小企業庁の業界レポート
+- **有料データベース**: 矢野経済研究所、富士経済等
+- **海外情報**: Statista、IBISWorld（トライアル活用）
+
+#### 3. 一次情報収集
+- **専門家インタビュー**: 業界コンサルタント、アナリスト
+- **顧客ヒアリング**: ${serviceHypothesis.targetUsers}層への簡易調査
+- **競合分析**: ${serviceHypothesis.competitors}の公開情報精査
+
+### 緊急対応チェックリスト
+□ 業界規模の概算値把握
+□ 主要プレイヤーの特定
+□ 成長トレンドの方向性確認
+□ 規制・制約要因の洗い出し
+□ 技術トレンドの影響度評価
+
+## 重要な注意事項
+システムの技術的問題により自動調査が完全に実行できませんでした。上記フレームワークを活用して手動調査を実施し、重要な事業判断に必要な情報を確保してください。
+
+**次回の調査実行時の推奨事項**: システム復旧後、同一内容での再実行を推奨します。
+`;
   }
 
   /**
