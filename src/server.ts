@@ -8,6 +8,7 @@ import { NotionService } from './services/notionService';
 import { ResearchService } from './services/researchService';
 import { createResearchRouter, errorHandler } from './routes/research';
 import { ServerConfig } from './types';
+import { DeepResearchService } from './services/deepResearchService';
 
 // 環境変数を読み込み
 dotenv.config();
@@ -51,10 +52,14 @@ async function initializeServices(config: ServerConfig) {
   const geminiService = new GeminiService(config.gemini);
   const notionService = new NotionService(config.notion);
 
-  // ResearchService作成（Deep Research無し）
+  // DeepResearchService作成
+  const deepResearchService = new DeepResearchService(geminiService);
+
+  // ResearchService作成（Deep Research付き）
   const researchService = new ResearchService(
     geminiService, 
-    notionService
+    notionService,
+    deepResearchService  // Deep Research サービスを追加
   );
 
   // 接続テスト
@@ -73,8 +78,20 @@ async function initializeServices(config: ServerConfig) {
     console.log('[Server] ✅ Notion API接続成功');
   }
 
+  // Deep Research接続テスト
+  try {
+    const deepResearchTest = await deepResearchService.testConnection();
+    if (deepResearchTest) {
+      console.log('[Server] ✅ Deep Research機能接続成功');
+    } else {
+      console.warn('[Server] ⚠️ Deep Research機能接続に失敗しました');
+    }
+  } catch (error) {
+    console.warn('[Server] ⚠️ Deep Research機能テストエラー:', error);
+  }
+
   console.log('[Server] サービス初期化完了');
-  return { geminiService, notionService, researchService };
+  return { geminiService, notionService, deepResearchService, researchService };
 }
 
 /**
