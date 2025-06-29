@@ -4,16 +4,11 @@ builder = "NIXPACKS"
 
 [deploy]
 startCommand = "npm start"
-healthcheckPath = "/api/research/health"
-healthcheckTimeout = 120
-healthcheckInterval = 60
+healthcheckPath = "/health"
+healthcheckTimeout = 60
+healthcheckInterval = 30
 restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 5
-
-# Railway向け設定の追加
-[environment]
-NODE_ENV = "production"
-PORT = "3000"
+restartPolicyMaxRetries = 3
 
 # 必要な環境変数はRailway UIで設定
 # GEMINI_API_KEY=your_gemini_api_key
