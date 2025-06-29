@@ -178,9 +178,13 @@ async function handleFormSubmit(event) {
   
   // バリデーション
   const formData = getFormData();
+  console.log('[App] 取得したフォームデータ:', formData);
+  
   const validation = validateFormData(formData);
+  console.log('[App] バリデーション結果:', validation);
   
   if (!validation.isValid) {
+    console.error('[App] バリデーションエラー:', validation.errors);
     showValidationErrors(validation.errors);
     return;
   }
@@ -259,21 +263,28 @@ function validateField(event) {
 function showFieldError(field, message) {
   clearFieldError(field);
   
-  field.style.borderColor = 'var(--error-red)';
+  // フィールドにエラースタイルを適用
+  field.classList.add('error');
   
   const errorElement = document.createElement('div');
   errorElement.className = 'field-error';
-  errorElement.style.color = 'var(--error-red)';
-  errorElement.style.fontSize = 'var(--font-size-sm)';
-  errorElement.style.marginTop = 'var(--spacing-1)';
   errorElement.textContent = message;
   
   field.parentNode.appendChild(errorElement);
+  
+  // エラーアニメーション
+  setTimeout(() => {
+    field.style.animation = 'errorShake 0.5s ease-out';
+    setTimeout(() => {
+      field.style.animation = '';
+    }, 500);
+  }, 50);
 }
 
 // ===== フィールドエラーのクリア =====
 function clearFieldError(field) {
-  field.style.borderColor = '';
+  // エラークラスを削除
+  field.classList.remove('error');
   
   const errorElement = field.parentNode.querySelector('.field-error');
   if (errorElement) {
