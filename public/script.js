@@ -357,9 +357,33 @@ function connectToResearchStream(formData, resumeFromStep = null) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestBody)
-    }).then(response => {
+    }).then(async response => {
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        // エラーレスポンスの詳細を取得
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        
+        try {
+          const errorData = await response.json();
+          if (errorData.error && errorData.error.message) {
+            errorMessage = errorData.error.message;
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (e) {
+          // JSONパースエラーの場合、レスポンステキストを取得
+          try {
+            const errorText = await response.text();
+            if (errorText && errorText.length < 500) {
+              errorMessage = errorText;
+            }
+          } catch (e2) {
+            // テキスト取得も失敗した場合は元のエラーメッセージを使用
+          }
+        }
+        
+        throw new Error(errorMessage);
       }
       
       // レスポンスストリームを読み込み

@@ -145,6 +145,56 @@ export function createResearchRouter(researchService: ResearchService): Router {
         console.log('[ResearchRouter] 再開ステップ:', resumeFromStep);
       }
 
+      // サービス状態確認
+      try {
+        const serviceStatus = await researchService.testServices();
+        if (!serviceStatus.gemini && !serviceStatus.notion) {
+          res.status(503).json({
+            success: false,
+            error: {
+              error: 'SERVICE_UNAVAILABLE',
+              message: '⚠️ システムが正しく設定されていません。管理者にお問い合わせください。\n\n詳細: Gemini APIとNotion APIの両方に接続できません。環境変数（GEMINI_API_KEY、NOTION_TOKEN、NOTION_DATABASE_ID）を確認してください。',
+              details: {
+                gemini: serviceStatus.gemini ? 'OK' : 'FAIL - GEMINI_API_KEYを確認してください',
+                notion: serviceStatus.notion ? 'OK' : 'FAIL - NOTION_TOKENとNOTION_DATABASE_IDを確認してください'
+              },
+              timestamp: new Date()
+            }
+          });
+          return;
+        } else if (!serviceStatus.gemini) {
+          res.status(503).json({
+            success: false,
+            error: {
+              error: 'GEMINI_API_ERROR',
+              message: '⚠️ Gemini APIに接続できません。環境変数GEMINI_API_KEYを確認してください。',
+              timestamp: new Date()
+            }
+          });
+          return;
+        } else if (!serviceStatus.notion) {
+          res.status(503).json({
+            success: false,
+            error: {
+              error: 'NOTION_API_ERROR', 
+              message: '⚠️ Notion APIに接続できません。環境変数NOTION_TOKENとNOTION_DATABASE_IDを確認してください。',
+              timestamp: new Date()
+            }
+          });
+          return;
+        }
+      } catch (serviceError) {
+        res.status(503).json({
+          success: false,
+          error: {
+            error: 'SERVICE_TEST_ERROR',
+            message: `⚠️ サービス接続テストに失敗しました: ${serviceError instanceof Error ? serviceError.message : 'Unknown error'}`,
+            timestamp: new Date()
+          }
+        });
+        return;
+      }
+
       // リクエストバリデーション
       const validation = researchService.validateRequest(researchRequest);
       if (!validation.isValid) {
@@ -152,7 +202,8 @@ export function createResearchRouter(researchService: ResearchService): Router {
           success: false,
           error: {
             error: 'VALIDATION_ERROR',
-            message: `バリデーションエラー: ${validation.errors.join(', ')}`,
+            message: `入力データに不備があります:\n${validation.errors.map(err => `• ${err}`).join('\n')}`,
+            details: validation.errors,
             timestamp: new Date()
           }
         });
