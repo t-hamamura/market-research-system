@@ -502,6 +502,20 @@ export class NotionService {
             divider: {}
           });
         }
+        // JSON形式データの検出とスキップ
+        else if (this.isJsonData(trimmedLine)) {
+          console.warn(`[NotionService] ⚠️ 不正なJSONデータを検出、スキップ: ${trimmedLine.substring(0, 50)}...`);
+          // JSONデータから有用な情報を抽出
+          const extractedContent = this.extractContentFromJson(trimmedLine);
+          if (extractedContent) {
+            blocks.push(this.createParagraphBlock(extractedContent));
+          }
+          // リスト終了処理
+          if (currentListItems.length > 0) {
+            blocks.push(...currentListItems);
+            currentListItems = [];
+          }
+        }
         // 通常の段落
         else {
           // リスト終了処理
@@ -602,6 +616,77 @@ export class NotionService {
   }
 
   /**
+   * 行がJSON形式データかどうかを判定
+   * @param line 判定する行
+   * @returns JSON形式データの場合true
+   */
+  private isJsonData(line: string): boolean {
+    // JSON形式の典型的なパターンを検出
+    const jsonPatterns = [
+      /^\s*\{\s*"type"\s*:\s*"[^"]+"\s*,/,  // {"type": "...
+      /^\s*\[\s*\{\s*"type"\s*:\s*"[^"]+"/,  // [{"type": "...
+      /^\s*"type"\s*:\s*"[^"]+"\s*,/,       // "type": "...
+      /^\s*\{\s*"object"\s*:\s*"block"/,    // {"object": "block"
+      /^\s*\],?\s*$/,                       // 配列終了
+      /^\s*\},?\s*$/                        // オブジェクト終了
+    ];
+
+    return jsonPatterns.some(pattern => pattern.test(line));
+  }
+
+  /**
+   * JSON形式データから有用なコンテンツを抽出
+   * @param jsonLine JSON形式の行
+   * @returns 抽出されたコンテンツまたはnull
+   */
+  private extractContentFromJson(jsonLine: string): string | null {
+    try {
+      // コンテンツフィールドを抽出するパターン
+      const contentMatches = [
+        /"content"\s*:\s*"([^"]+)"/,          // "content": "テキスト"
+        /"text"\s*:\s*"([^"]+)"/,             // "text": "テキスト"  
+        /"title"\s*:\s*"([^"]+)"/             // "title": "テキスト"
+      ];
+
+      for (const pattern of contentMatches) {
+        const match = jsonLine.match(pattern);
+        if (match && match[1]) {
+          return match[1];
+        }
+      }
+
+      // ブロックタイプに基づく処理
+      const typeMatch = jsonLine.match(/"type"\s*:\s*"([^"]+)"/);
+      if (typeMatch) {
+        const blockType = typeMatch[1];
+        const content = this.extractContentFromJson(jsonLine.replace(/"type"\s*:\s*"[^"]+"\s*,?/, ''));
+        
+        if (content) {
+          switch (blockType) {
+            case 'heading_1':
+              return `# ${content}`;
+            case 'heading_2':
+              return `## ${content}`;
+            case 'heading_3':
+              return `### ${content}`;
+            case 'bulleted_list_item':
+              return `- ${content}`;
+            case 'callout':
+              return `💡 ${content}`;
+            default:
+              return content;
+          }
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.warn('[NotionService] JSON内容抽出エラー:', error);
+      return null;
+    }
+  }
+
+  /**
    * 段落ブロックを作成（文章装飾対応版）
    * @param text テキスト
    * @returns Notionブロック
@@ -643,7 +728,10 @@ export class NotionService {
           text: {
             content: safeContent
           },
-          annotations: part.annotations
+          annotations: {
+            ...part.annotations,
+            color: 'default'  // 明示的に黒色を指定
+          }
         });
       }
     }
@@ -652,6 +740,9 @@ export class NotionService {
       type: 'text',
       text: {
         content: '（空のテキストブロック）'
+      },
+      annotations: {
+        color: 'default'
       }
     }];
   }
@@ -720,7 +811,7 @@ export class NotionService {
             },
             annotations: {
               bold: true,
-              color: 'blue'
+              color: 'default'
             }
           }
         ]
@@ -747,7 +838,7 @@ export class NotionService {
             },
             annotations: {
               bold: true,
-              color: 'green'
+              color: 'default'
             }
           }
         ]
@@ -774,7 +865,7 @@ export class NotionService {
             },
             annotations: {
               bold: true,
-              color: 'orange'
+              color: 'default'
             }
           }
         ]
@@ -793,6 +884,22 @@ export class NotionService {
       object: 'block',
       type: 'bulleted_list_item',
       bulleted_list_item: {
+        rich_text: richText
+      }
+    } as any;
+  }
+
+  /**
+   * 数字付きリストアイテムブロックを作成
+   * @param text テキスト
+   * @returns Notionブロック
+   */
+  private createNumberedListItemBlock(text: string): any {
+    const richText = this.parseTextToRichText(this.truncateTextSafely(text));
+    return {
+      object: 'block',
+      type: 'numbered_list_item',
+      numbered_list_item: {
         rich_text: richText
       }
     } as any;
@@ -1118,26 +1225,89 @@ export class NotionService {
    * @returns ステータスプロパティ名またはnull
    */
   private findStatusProperty(properties: Record<string, any>): string | null {
-    // 複数のパターンをチェック（日本語と英語）
+    // デバッグ用：利用可能なプロパティを詳細表示
+    console.log('[NotionService] データベースプロパティ検索開始');
+    console.log('[NotionService] 利用可能なプロパティ:');
+    Object.keys(properties).forEach(key => {
+      const prop = properties[key];
+      console.log(`  - プロパティ名: "${key}" | タイプ: ${prop.type}`);
+      if (prop.type === 'select' && prop.select?.options) {
+        console.log(`    └─ 選択肢: [${prop.select.options.map((o: any) => `"${o.name}"`).join(', ')}]`);
+      }
+    });
+    
+    // 複数のパターンをチェック（日本語と英語の拡張パターン）
     const statusCandidates = [
-      'ステータス', 'Status', '状態', 'State', '進行状況', 
-      'Progress', '完了状況', 'Completion', '状況', 'Condition'
+      'ステータス', 'Status', 'status', 'STATUS',
+      '状態', 'State', 'state', 'STATE',
+      '進行状況', 'Progress', 'progress', 'PROGRESS',
+      '完了状況', 'Completion', 'completion', 'COMPLETION',
+      '状況', 'Condition', 'condition', 'CONDITION',
+      'ステイタス', 'ステータス（Status）'
     ];
     
+    // 完全一致チェック
     for (const candidate of statusCandidates) {
       if (properties[candidate] && properties[candidate].type === 'select') {
-        console.log(`[NotionService] ステータスプロパティ発見: ${candidate}`);
+        console.log(`[NotionService] ✅ ステータスプロパティ発見（完全一致）: "${candidate}"`);
+        console.log(`[NotionService] 選択肢: [${properties[candidate].select?.options?.map((o: any) => `"${o.name}"`).join(', ') || 'なし'}]`);
         return candidate;
       }
     }
     
-    // デバッグ用：利用可能なプロパティをログ出力
-    console.log('[NotionService] ステータスプロパティが見つかりません。利用可能なプロパティ:');
-    Object.keys(properties).forEach(key => {
+    // 部分一致チェック（大文字小文字を無視）
+    const propertyKeys = Object.keys(properties);
+    for (const key of propertyKeys) {
       const prop = properties[key];
-      console.log(`  - ${key}: ${prop.type} ${prop.type === 'select' ? `(選択肢: ${prop.select?.options?.map((o: any) => o.name).join(', ') || 'なし'})` : ''}`);
-    });
+      if (prop.type === 'select') {
+        const lowerKey = key.toLowerCase();
+        
+        // ステータス関連キーワードを含むかチェック
+        const statusKeywords = ['ステータス', 'status', '状態', 'state', '進行', 'progress'];
+        const containsStatusKeyword = statusKeywords.some(keyword => 
+          lowerKey.includes(keyword.toLowerCase())
+        );
+        
+        if (containsStatusKeyword) {
+          console.log(`[NotionService] ✅ ステータスプロパティ発見（部分一致）: "${key}"`);
+          console.log(`[NotionService] 選択肢: [${prop.select?.options?.map((o: any) => `"${o.name}"`).join(', ') || 'なし'}]`);
+          return key;
+        }
+      }
+    }
     
+    // セレクトプロパティで「未着手」「進行中」「完了」を含むものを検索
+    for (const key of propertyKeys) {
+      const prop = properties[key];
+      if (prop.type === 'select' && prop.select?.options) {
+        const optionNames = prop.select.options.map((o: any) => o.name.toLowerCase());
+        
+        // 典型的なステータス値を含むかチェック
+        const hasStatusValues = (
+          optionNames.some(name => name.includes('未着手') || name.includes('pending') || name.includes('todo')) &&
+          optionNames.some(name => name.includes('進行') || name.includes('progress') || name.includes('working')) &&
+          optionNames.some(name => name.includes('完了') || name.includes('done') || name.includes('completed'))
+        );
+        
+        if (hasStatusValues) {
+          console.log(`[NotionService] ✅ ステータスプロパティ発見（値パターン一致）: "${key}"`);
+          console.log(`[NotionService] 選択肢: [${prop.select.options.map((o: any) => `"${o.name}"`).join(', ')}]`);
+          return key;
+        }
+      }
+    }
+    
+    // どうしても見つからない場合、最初のselectプロパティを使用
+    for (const key of propertyKeys) {
+      const prop = properties[key];
+      if (prop.type === 'select') {
+        console.log(`[NotionService] ⚠️ フォールバック: 最初のselectプロパティを使用: "${key}"`);
+        console.log(`[NotionService] 選択肢: [${prop.select?.options?.map((o: any) => `"${o.name}"`).join(', ') || 'なし'}]`);
+        return key;
+      }
+    }
+    
+    console.error('[NotionService] ❌ ステータスプロパティが見つかりません');
     return null;
   }
 

@@ -752,6 +752,27 @@ function updateResearchItemsStatus(step, researchType) {
     20: 'integration_report'             // 統合レポート更新
   };
 
+  // 現在実行中の調査項目名を取得
+  const researchTitles = {
+    'market_size_research': '市場規模と成長性',
+    'pestel_analysis': 'PESTEL分析',
+    'competitor_product_analysis': '競合製品・戦略分析',
+    'competitor_strategy_analysis': '競合経営戦略・離脱分析',
+    'customer_segment_analysis': '顧客セグメント・意思決定分析',
+    'customer_emotion_analysis': '顧客感情・潜在ニーズ分析',
+    'product_market_fit_analysis': 'プロダクト市場適合性・価格戦略',
+    'marketing_tactics_analysis': 'マーケティング戦術分析',
+    'brand_positioning_analysis': 'ブランドポジショニング',
+    'technology_security_analysis': 'テクノロジー・セキュリティ分析',
+    'partnership_strategy_analysis': 'パートナーシップ戦略',
+    'risk_scenario_analysis': 'リスク・シナリオ分析',
+    'kpi_measurement_design': 'KPI・測定方法設計',
+    'legal_compliance_analysis': '法務・コンプライアンス分析',
+    'research_method_proposal': '効果的リサーチ手法提案',
+    'pmf_research_design': 'PMF前特化リサーチ設計',
+    'integration_report': '統合レポート更新'
+  };
+
   console.log(`[UpdateResearchItems] ステップ${step}: ${researchType} の状態を更新`);
 
   // Phase 1: 事前作成フェーズ（ステップ1-3）
@@ -821,6 +842,78 @@ function updateResearchItemsStatus(step, researchType) {
     
     // 統合レポート更新中
     updateResearchItemStatus('integration_report', 'in-progress');
+  }
+  
+  // 現在実行中の調査項目を表示更新
+  updateCurrentResearchDisplay(step, researchItems, researchTitles);
+}
+
+// ===== 現在実行中の調査を表示更新 =====
+function updateCurrentResearchDisplay(step, researchItems, researchTitles) {
+  const currentItemId = researchItems[step];
+  const currentTitle = researchTitles[currentItemId];
+  
+  console.log(`[Frontend] 現在の調査表示更新: ${currentTitle} (Step ${step})`);
+  
+  // 現在実行中の調査項目を強調表示
+  if (currentItemId && currentTitle) {
+    // ページタイトル更新
+    if (step >= 4 && step <= 19) {
+      document.title = `🔄 ${currentTitle} 実行中 - AI市場調査システム`;
+    } else if (step <= 3) {
+      document.title = `⚙️ 事前作成フェーズ - AI市場調査システム`;
+    } else {
+      document.title = `📊 統合レポート生成中 - AI市場調査システム`;
+    }
+    
+    // プログレス表示の詳細情報更新
+    const progressDetails = document.querySelector('.progress-details');
+    if (progressDetails) {
+      let phaseText = '';
+      let statusText = '';
+      
+      if (step <= 3) {
+        phaseText = 'Phase 1: 事前作成フェーズ';
+        statusText = 'Notionページの準備中...';
+      } else if (step <= 19) {
+        phaseText = 'Phase 2: 調査実行フェーズ';
+        statusText = `🔍 ${currentTitle} を実行中...`;
+      } else {
+        phaseText = 'Phase 3: 統合レポート生成';
+        statusText = '📊 全調査結果を統合中...';
+      }
+      
+      progressDetails.innerHTML = `
+        <div class="current-phase">${phaseText}</div>
+        <div class="current-status">${statusText}</div>
+      `;
+    }
+    
+    // すべてのアイコンを一旦グレーアウト
+    const allItems = document.querySelectorAll('[data-id]');
+    allItems.forEach(item => {
+      if (!item.classList.contains('completed')) {
+        const icon = item.querySelector('.research-item-icon');
+        if (icon && icon.textContent !== '✅') {
+          icon.textContent = '⏳';
+          item.style.opacity = '0.6';
+        }
+      }
+    });
+    
+    // 現在実行中の項目を強調
+    const currentItem = document.querySelector(`[data-id="${currentItemId}"]`);
+    if (currentItem) {
+      currentItem.style.opacity = '1.0';
+      currentItem.style.border = '2px solid #4A90C2';
+      currentItem.style.boxShadow = '0 4px 12px rgba(74, 144, 194, 0.3)';
+      
+      // 滑らかにスクロールして表示
+      currentItem.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }
   }
 }
 
