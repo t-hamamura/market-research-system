@@ -145,9 +145,6 @@ export function createResearchRouter(researchService: ResearchService): Router {
         console.log('[ResearchRouter] 再開ステップ:', resumeFromStep);
       }
 
-      // サービス状態確認をスキップ（サーバー起動時に確認済み）
-      console.log('[ResearchRouter] サービス状態確認をスキップ、処理を開始します');
-
       // リクエストバリデーション
       const validation = researchService.validateRequest(researchRequest);
       if (!validation.isValid) {

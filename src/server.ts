@@ -63,55 +63,83 @@ function createServerConfig(): ServerConfig {
 }
 
 /**
- * サービスを初期化
+ * サービスを初期化（リトライ機能付き）
  */
-async function initializeServices(config: ServerConfig) {
-  console.log('[Server] サービス初期化開始...');
-
-  // 基本サービス作成
-  const geminiService = new GeminiService(config.gemini);
-  const notionService = new NotionService(config.notion);
-
-  // DeepResearchService作成
-  const deepResearchService = new DeepResearchService(geminiService);
-
-  // ResearchService作成（Deep Research付き）
-  const researchService = new ResearchService(
-    geminiService, 
-    notionService,
-    deepResearchService  // Deep Research サービスを追加
-  );
-
-  // 接続テスト
-  console.log('[Server] API接続テスト開始...');
-  const serviceStatus = await researchService.testServices();
+async function initializeServices(config: ServerConfig, retryCount = 0): Promise<any> {
+  const maxRetries = 3;
+  const retryDelay = 2000 * (retryCount + 1); // 段階的な遅延
   
-  if (!serviceStatus.gemini) {
-    console.warn('[Server] ⚠️ Gemini API接続に失敗しました');
-  } else {
-    console.log('[Server] ✅ Gemini API接続成功');
-  }
+  console.log(`[Server] サービス初期化開始... (試行 ${retryCount + 1}/${maxRetries + 1})`);
 
-  if (!serviceStatus.notion) {
-    console.warn('[Server] ⚠️ Notion API接続に失敗しました');
-  } else {
-    console.log('[Server] ✅ Notion API接続成功');
-  }
-
-  // Deep Research接続テスト
   try {
-    const deepResearchTest = await deepResearchService.testConnection();
-    if (deepResearchTest) {
-      console.log('[Server] ✅ Deep Research機能接続成功');
-    } else {
-      console.warn('[Server] ⚠️ Deep Research機能接続に失敗しました');
-    }
-  } catch (error) {
-    console.warn('[Server] ⚠️ Deep Research機能テストエラー:', error);
-  }
+    // 基本サービス作成
+    const geminiService = new GeminiService(config.gemini);
+    const notionService = new NotionService(config.notion);
 
-  console.log('[Server] サービス初期化完了');
-  return { geminiService, notionService, deepResearchService, researchService };
+    // DeepResearchService作成
+    const deepResearchService = new DeepResearchService(geminiService);
+
+    // ResearchService作成（Deep Research付き）
+    const researchService = new ResearchService(
+      geminiService, 
+      notionService,
+      deepResearchService  // Deep Research サービスを追加
+    );
+
+    // 接続テスト（タイムアウト付き）
+    console.log('[Server] API接続テスト開始...');
+    const testPromise = researchService.testServices();
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('接続テストタイムアウト')), 15000);
+    });
+    
+    const serviceStatus = await Promise.race([testPromise, timeoutPromise]) as any;
+    
+    if (!serviceStatus.gemini) {
+      console.warn('[Server] ⚠️ Gemini API接続に失敗しました');
+    } else {
+      console.log('[Server] ✅ Gemini API接続成功');
+    }
+
+    if (!serviceStatus.notion) {
+      console.warn('[Server] ⚠️ Notion API接続に失敗しました');
+    } else {
+      console.log('[Server] ✅ Notion API接続成功');
+    }
+
+    // Deep Research接続テスト（エラー耐性付き）
+    try {
+      const deepResearchTestPromise = deepResearchService.testConnection();
+      const deepTestTimeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Deep Research テストタイムアウト')), 10000);
+      });
+      
+      const deepResearchTest = await Promise.race([deepResearchTestPromise, deepTestTimeoutPromise]);
+      
+      if (deepResearchTest) {
+        console.log('[Server] ✅ Deep Research機能接続成功');
+      } else {
+        console.warn('[Server] ⚠️ Deep Research機能接続に失敗しました');
+      }
+    } catch (error) {
+      console.warn('[Server] ⚠️ Deep Research機能テストエラー:', error);
+    }
+
+    console.log(`[Server] サービス初期化完了 (試行 ${retryCount + 1})`);
+    return { geminiService, notionService, deepResearchService, researchService };
+
+  } catch (error) {
+    console.error(`[Server] サービス初期化エラー (試行 ${retryCount + 1}):`, error);
+    
+    if (retryCount < maxRetries) {
+      console.log(`[Server] ${retryDelay}ms後にリトライします... (${retryCount + 1}/${maxRetries})`);
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
+      return await initializeServices(config, retryCount + 1);
+    } else {
+      console.error('[Server] ❌ サービス初期化の最大リトライ回数に達しました');
+      throw error;
+    }
+  }
 }
 
 /**
