@@ -1221,23 +1221,51 @@ const FIELD_MAPPING = {
     '狙っている業種・業界': 'targetIndustry',
     '想定される利用者層': 'targetUsers',
     '直接競合・間接競合': 'competitors',
+    '競合': 'competitors',
     '課金モデル': 'revenueModel',
+    'revenueModel': 'revenueModel',
     '価格帯・価格設定の方向性': 'pricingDirection',
+    '価格設定': 'pricingDirection',
+    '価格戦略': 'pricingDirection',
     '暫定UVP（Unique Value Proposition）': 'uvp',
     '暫定UVP': 'uvp',
+    'UVP': 'uvp',
+    '独自価値提案': 'uvp',
     '初期KPI': 'initialKpi',
+    'KPI': 'initialKpi',
+    '目標指標': 'initialKpi',
     '獲得チャネル仮説': 'acquisitionChannels',
+    '獲得チャネル': 'acquisitionChannels',
+    'チャネル戦略': 'acquisitionChannels',
     '規制・技術前提': 'regulatoryTechPrereqs',
-    '想定コスト構造': 'costStructure'
+    '技術前提': 'regulatoryTechPrereqs',
+    '規制要件': 'regulatoryTechPrereqs',
+    '想定コスト構造': 'costStructure',
+    'コスト構造': 'costStructure',
+    'コスト': 'costStructure'
 };
 
-// フィールド名の正規化関数
+// フィールド名の正規化関数（強化版）
 function normalizeFieldName(fieldName) {
-  // トリムして、末尾の「：」「:」を削除
-  let normalized = fieldName.trim().replace(/[：:]+$/, '').trim();
+  console.log(`[BulkInput] 正規化前: "${fieldName}"`);
   
-  // 括弧内の説明を除去（例：「暫定UVP（独自価値提案）」→「暫定UVP」）
+  // 1. 基本のトリム
+  let normalized = fieldName.trim();
+  
+  // 2. 末尾の「：」「:」を削除
+  normalized = normalized.replace(/[：:]+$/, '').trim();
+  
+  // 3. 括弧内の説明を除去（例：「暫定UVP（独自価値提案）」→「暫定UVP」）
   normalized = normalized.replace(/[（(][^）)]*[）)]/g, '').trim();
+  
+  // 4. 全角・半角の統一
+  normalized = normalized.replace(/：/g, ':');
+  
+  // 5. 連続する空白を単一の空白に
+  normalized = normalized.replace(/\s+/g, ' ').trim();
+  
+  console.log(`[BulkInput] 正規化後: "${normalized}"`);
+  console.log(`[BulkInput] マッピング存在確認: ${FIELD_MAPPING[normalized] ? '✅ 存在' : '❌ 不存在'}`);
   
   return normalized;
 }
@@ -1369,7 +1397,7 @@ function parseBulkText() {
   }
 }
 
-// テンプレートテキストの解析
+// テンプレートテキストの解析（強化版: 複数行リスト対応）
 function parseTemplateText(text) {
   const lines = text.split('\n');
   const parsed = {};
@@ -1377,48 +1405,89 @@ function parseTemplateText(text) {
   let currentField = null;
   let currentValue = '';
   
-  for (const line of lines) {
+  console.log('[BulkInput] 解析開始 - 総行数:', lines.length);
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     const trimmedLine = line.trim();
     
-    // 空行をスキップ
+    console.log(`[BulkInput] 行${i + 1}: "${line}"`);
+    
+    // 空行の場合
     if (!trimmedLine) {
+      console.log(`[BulkInput] 行${i + 1}: 空行をスキップ`);
+      // 空行は、現在のフィールドに既に内容がある場合のみ改行として追加
+      // これにより、フィールド開始直後の空行は無視される
+      if (currentField && currentValue.trim()) {
+        currentValue += '\n';
+        console.log(`[BulkInput] 行${i + 1}: 改行を追加`);
+      }
       continue;
     }
     
-    // フィールド行の検出（コロンを含む行で、コロンの後に内容がある場合）
-    if (trimmedLine.includes(':') || trimmedLine.includes('：')) {
-      // 前のフィールドがあれば保存
-      if (currentField && FIELD_MAPPING[currentField]) {
-        parsed[FIELD_MAPPING[currentField]] = currentValue.trim();
-        console.log(`[BulkInput] 解析: ${currentField} -> ${FIELD_MAPPING[currentField]} = "${currentValue.trim()}"`);
-      }
-      
-      // 新しいフィールドを開始
+    // フィールド行の検出（より厳密な判定）
+    const hasColon = trimmedLine.includes(':') || trimmedLine.includes('：');
+    
+    if (hasColon) {
       const colonIndex = trimmedLine.indexOf(':') !== -1 ? trimmedLine.indexOf(':') : trimmedLine.indexOf('：');
       const fieldName = trimmedLine.substring(0, colonIndex).trim();
       const fieldValue = trimmedLine.substring(colonIndex + 1).trim();
       
+      // フィールド検出の条件を強化
+      // 1. 行の先頭から始まる（箇条書き記号は除く）
+      // 2. コロンより前の部分が50文字以下
+      // 3. 箇条書き記号（*, -, •）で始まっていない、または知られたフィールド名
+      const isListItem = /^[\s]*[*\-•][\s]/.test(trimmedLine);
+      const fieldNameLength = fieldName.length;
+      
       // フィールド名を正規化
       const normalizedFieldName = normalizeFieldName(fieldName);
       
-      currentField = normalizedFieldName;
-      currentValue = fieldValue;
+      console.log(`[BulkInput] 行${i + 1}: フィールド候補 "${fieldName}" -> 正規化 "${normalizedFieldName}"`);
+      console.log(`[BulkInput] 行${i + 1}: 箇条書き判定=${isListItem}, 文字数=${fieldNameLength}`);
       
-      console.log(`[BulkInput] 新フィールド検出: "${currentField}"`);
-    } else if (currentField && trimmedLine) {
+      // FIELD_MAPPINGに存在するかチェック + 箇条書きでない場合のみフィールドとして認識
+      const isValidField = FIELD_MAPPING[normalizedFieldName] && (!isListItem || fieldNameLength <= 50);
+      
+      if (isValidField) {
+        // 前のフィールドがあれば保存
+        if (currentField && FIELD_MAPPING[currentField]) {
+          const finalValue = currentValue.trim();
+          parsed[FIELD_MAPPING[currentField]] = finalValue;
+          console.log(`[BulkInput] ✅ フィールド保存: ${currentField} -> ${FIELD_MAPPING[currentField]} = "${finalValue}"`);
+        }
+        
+        // 新しいフィールドを開始
+        currentField = normalizedFieldName;
+        currentValue = fieldValue; // コロンの後の値から開始
+        
+        console.log(`[BulkInput] 🆕 新フィールド開始: "${currentField}"`);
+      } else {
+        console.log(`[BulkInput] ⚠️ 未知のフィールド名: "${normalizedFieldName}"`);
+        // 未知のフィールドの場合、継続行として処理
+        if (currentField) {
+          currentValue += (currentValue ? '\n' : '') + trimmedLine;
+          console.log(`[BulkInput] 継続行として追加: "${trimmedLine}"`);
+        }
+      }
+    } else if (currentField) {
       // 継続行（前のフィールドの続き）
       currentValue += (currentValue ? '\n' : '') + trimmedLine;
+      console.log(`[BulkInput] 行${i + 1}: 継続行として追加 "${trimmedLine}"`);
+    } else {
+      console.log(`[BulkInput] 行${i + 1}: フィールド未設定のため無視 "${trimmedLine}"`);
     }
   }
   
   // 最後のフィールドを保存
   if (currentField && FIELD_MAPPING[currentField]) {
-    parsed[FIELD_MAPPING[currentField]] = currentValue.trim();
-    console.log(`[BulkInput] 最終フィールド保存: ${currentField} -> ${FIELD_MAPPING[currentField]} = "${currentValue.trim()}"`);
+    const finalValue = currentValue.trim();
+    parsed[FIELD_MAPPING[currentField]] = finalValue;
+    console.log(`[BulkInput] ✅ 最終フィールド保存: ${currentField} -> ${FIELD_MAPPING[currentField]} = "${finalValue}"`);
   }
   
-  console.log('[BulkInput] 解析結果:', parsed);
-  console.log('[BulkInput] フィールドマッピング:', FIELD_MAPPING);
+  console.log('[BulkInput] 🎯 解析結果:', parsed);
+  console.log('[BulkInput] 📋 利用可能フィールド:', Object.keys(FIELD_MAPPING));
   
   return parsed;
 }
