@@ -49,8 +49,10 @@
             </div>
         </div>
 
-        <!-- 2列レイアウトコンテナ -->
-        <div class="two-column-layout">
+        <!-- フォーム全体のセクション -->
+        <section id="formSection" class="form-section">
+            <!-- 2列レイアウトコンテナ -->
+            <div class="two-column-layout">
             <!-- 左側：サービス仮説入力 -->
             <section class="left-column">
                 <div class="form-card">
@@ -244,20 +246,6 @@
                                 placeholder="変動費、固定費、人件費などの想定コスト構造があれば記述してください"
                             ></textarea>
                         </div>
-
-                        <!-- 送信ボタン -->
-                        <div class="form-submit text-center mt-16">
-                            <button type="submit" id="submitButton" class="btn-primary">
-                                <span class="btn-icon">🚀</span>
-                                <span class="btn-text">AI市場調査を開始</span>
-                            </button>
-                            <p class="btn-subtext" style="margin-top: 8px; color: var(--text-secondary); font-size: 14px;">
-                                16種類の専門的な市場調査を並列実行します
-                            </p>
-                        </div>
-
-                        <!-- バリデーションエラー表示 -->
-                        <div id="validationErrors" class="validation-errors hidden"></div>
                     </form>
                 </div>
             </section>
@@ -311,6 +299,23 @@
                 </div>
             </section>
         </div>
+
+        <!-- 共通の送信エリア -->
+        <section class="submit-section">
+            <div class="form-submit text-center">
+                <button type="submit" id="submitButton" class="btn-primary" form="researchForm">
+                    <span class="btn-icon">🚀</span>
+                    <span class="btn-text">AI市場調査を開始</span>
+                </button>
+                <p class="btn-subtext" style="margin-top: 12px; color: var(--text-secondary); font-size: 14px;">
+                    16種類の専門的な市場調査を並列実行します
+                </p>
+            </div>
+            
+            <!-- バリデーションエラー表示 -->
+            <div id="validationErrors" class="validation-errors hidden"></div>
+        </section>
+        </section>
 
         <!-- 進行状況表示セクション -->
         <section class="progress-section hidden" id="progressSection">

@@ -767,18 +767,18 @@ window.addEventListener('unhandledrejection', function(event) {
 console.log('[SPIRITS] AI市場調査システム初期化完了');
 
 // ===== 一括入力機能の定数とテンプレート =====
-const TEMPLATE_TEXT = `コンセプト: 
-解決したい顧客課題: 
-狙っている業種・業界: 
-想定される利用者層: 
-直接競合・間接競合: 
-課金モデル: 
-価格帯・価格設定の方向性: 
-暫定UVP（Unique Value Proposition）: 
-初期KPI: 
-獲得チャネル仮説: 
-規制・技術前提: 
-想定コスト構造: `;
+const TEMPLATE_TEXT = `コンセプト：
+解決したい顧客課題：
+狙っている業種・業界：
+想定される利用者層：
+直接競合・間接競合：
+課金モデル：
+価格帯・価格設定の方向性：
+暫定UVP（Unique Value Proposition）：
+初期KPI：
+獲得チャネル仮説：
+規制・技術前提：
+想定コスト構造：`;
 
 // フィールドマッピング
 const FIELD_MAPPING = {

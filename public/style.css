@@ -135,6 +135,11 @@ body {
   z-index: 1;
 }
 
+/* ===== フォームセクション ===== */
+.form-section {
+  margin-bottom: 32px;
+}
+
 /* ===== 2列レイアウト ===== */
 .two-column-layout {
   display: grid;
@@ -303,6 +308,29 @@ body {
 .btn-copy-template:hover {
   background: var(--spirits-navy);
   transform: translateY(-1px);
+}
+
+/* ===== 共通送信エリア ===== */
+.submit-section {
+  background: var(--spirits-white);
+  border-radius: var(--border-radius-lg);
+  padding: 32px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.submit-section .btn-primary {
+  max-width: 400px;
+  margin: 0 auto;
+  font-size: 18px;
+  padding: 20px 40px;
+}
+
+.submit-section .btn-subtext {
+  max-width: 600px;
+  margin: 12px auto 0;
 }
 
 /* ===== 一括入力エリア ===== */
