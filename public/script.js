@@ -565,7 +565,7 @@ function updatePhaseGroupStatus() {
   }
 }
 
-// ===== 時間予測の更新 =====
+// ===== 時間予測の更新（改良版） =====
 function updateTimeEstimate() {
   if (!appState.startTime || !elements.estimatedTime) return;
   
@@ -573,24 +573,100 @@ function updateTimeEstimate() {
   const elapsedSeconds = Math.floor((currentTime - appState.startTime) / 1000);
   const progress = appState.currentStep / appState.totalSteps;
   
-  if (progress > 0) {
-    const estimatedTotalSeconds = Math.floor(elapsedSeconds / progress);
-    const remainingSeconds = Math.max(0, estimatedTotalSeconds - elapsedSeconds);
+  // フェーズ別の想定実行時間（秒）
+  const phaseEstimates = {
+    1: 120,  // フェーズ1: 基本情報収集 (2分)
+    2: 150,  // フェーズ2: 市場機会分析 (2.5分)
+    3: 180,  // フェーズ3: ビジネス戦略分析 (3分)
+    4: 150,  // フェーズ4: リスク・機会評価 (2.5分)
+    5: 90    // 最終処理: レポート統合 (1.5分)
+  };
+  
+  if (progress > 0.05) {  // 最低5%進行してから予測開始
+    let remainingSeconds = 0;
     
-    if (remainingSeconds > 0) {
+    // 複数の予測方法を組み合わせて精度向上
+    const predictions = [];
+    
+    // 1. 線形予測（従来の方法）
+    const linearEstimate = Math.floor(elapsedSeconds / progress) - elapsedSeconds;
+    predictions.push(Math.max(0, linearEstimate));
+    
+    // 2. フェーズベース予測
+    const currentPhase = Math.min(5, Math.ceil(appState.currentStep / 4));
+    let phaseRemainingTime = 0;
+    
+    // 現在のフェーズの残り時間を計算
+    const currentPhaseSteps = 4; // 1フェーズあたり4ステップ
+    const stepsInCurrentPhase = ((appState.currentStep - 1) % 4) + 1;
+    const phaseProgress = stepsInCurrentPhase / currentPhaseSteps;
+    const currentPhaseRemaining = phaseEstimates[currentPhase] * (1 - phaseProgress);
+    
+    // 未来のフェーズの時間を加算
+    for (let phase = currentPhase + 1; phase <= 5; phase++) {
+      phaseRemainingTime += phaseEstimates[phase];
+    }
+    
+    phaseRemainingTime += currentPhaseRemaining;
+    predictions.push(Math.max(0, phaseRemainingTime));
+    
+    // 3. 適応的予測（実際の進行速度に基づく）
+    if (appState.currentStep >= 2) {
+      const averageTimePerStep = elapsedSeconds / appState.currentStep;
+      const adaptiveEstimate = averageTimePerStep * (appState.totalSteps - appState.currentStep);
+      predictions.push(Math.max(0, adaptiveEstimate));
+    }
+    
+    // 予測値の中央値を採用（外れ値の影響を軽減）
+    predictions.sort((a, b) => a - b);
+    const medianIndex = Math.floor(predictions.length / 2);
+    remainingSeconds = Math.floor(predictions[medianIndex]);
+    
+    // 最小残り時間を設定（10秒未満は「まもなく完了」）
+    if (remainingSeconds < 10) {
+      elements.estimatedTime.textContent = 'まもなく完了';
+    } else if (remainingSeconds < 60) {
+      // 1分未満は秒のみ表示
+      elements.estimatedTime.textContent = `約${remainingSeconds}秒`;
+    } else {
+      // 1分以上は分と秒で表示
       const minutes = Math.floor(remainingSeconds / 60);
       const seconds = remainingSeconds % 60;
       
-      if (minutes > 0) {
-        elements.estimatedTime.textContent = `約${minutes}分${seconds > 0 ? seconds + '秒' : ''}`;
+      if (seconds > 10) {
+        elements.estimatedTime.textContent = `約${minutes}分${seconds}秒`;
       } else {
-        elements.estimatedTime.textContent = `約${seconds}秒`;
+        // 秒が10秒以下の場合は分のみ表示（見やすさ向上）
+        elements.estimatedTime.textContent = `約${minutes}分`;
       }
-    } else {
-      elements.estimatedTime.textContent = 'まもなく完了';
     }
+    
+    // デバッグ用ログ（開発環境のみ）
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      console.log(`[TimeEstimate] Progress: ${(progress * 100).toFixed(1)}%, Predictions: [${predictions.map(p => Math.floor(p)).join(', ')}]s, Selected: ${remainingSeconds}s`);
+    }
+    
   } else {
-    elements.estimatedTime.textContent = '計算中...';
+    // 進行率が5%未満の場合は初期予測を表示
+    const totalEstimatedTime = Object.values(phaseEstimates).reduce((sum, time) => sum + time, 0);
+    const minutes = Math.floor(totalEstimatedTime / 60);
+    const seconds = totalEstimatedTime % 60;
+    
+    if (elapsedSeconds < 30) {
+      // 開始30秒以内は全体予測時間を表示
+      elements.estimatedTime.textContent = `約${minutes}分${seconds}秒（予測）`;
+    } else {
+      // 30秒以上経過したら簡易予測を開始
+      const simpleEstimate = Math.max(0, totalEstimatedTime - elapsedSeconds);
+      const estMinutes = Math.floor(simpleEstimate / 60);
+      const estSeconds = Math.floor(simpleEstimate % 60);
+      
+      if (estMinutes > 0) {
+        elements.estimatedTime.textContent = `約${estMinutes}分${estSeconds > 10 ? estSeconds + '秒' : ''}`;
+      } else {
+        elements.estimatedTime.textContent = `約${estSeconds}秒`;
+      }
+    }
   }
 }
 
