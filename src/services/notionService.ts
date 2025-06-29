@@ -48,10 +48,10 @@ export class NotionService {
           title: [
             {
               text: {
-                content: `${businessName} - 統合レポート`
-              }
-            }
-          ]
+                content: businessName,
+              },
+            },
+          ],
         };
         console.log(`[NotionService] タイトルプロパティ設定: ${titleProperty}`);
       } else {
@@ -206,7 +206,7 @@ export class NotionService {
 
       // バッチ2: 統合レポートセクション
       console.log('[NotionService] 統合レポートセクション追加中...');
-      const integratedReportBlocks = this.createIntegratedReportBlocks(integratedReport);
+      const integratedReportBlocks = this.createBlocksFromJSON(integratedReport);
       await this.appendBlocks(pageId, integratedReportBlocks);
       await this.sleep(500);
 
@@ -238,40 +238,11 @@ export class NotionService {
       await this.appendBlocks(pageId, sectionHeader);
       await this.sleep(500);
 
-      // 個別調査結果を3つずつに分けて追加
-      const batchSize = 3;
-      for (let i = 0; i < researchResults.length; i += batchSize) {
-        const batch = researchResults.slice(i, i + batchSize);
-        console.log(`[NotionService] 調査結果バッチ ${Math.floor(i/batchSize) + 1} 追加中...`);
-        
-        const batchBlocks: any[] = [];
-        batch.forEach((result, index) => {
-          const globalIndex = i + index;
-          batchBlocks.push(
-            {
-              object: 'block',
-              type: 'heading_3',
-              heading_3: {
-                rich_text: [
-                  {
-                    type: 'text',
-                    text: {
-                      content: `${globalIndex + 1}. ${result.title}`
-                    }
-                  }
-                ]
-              }
-            } as any
-          );
-
-          // 調査結果を短縮してブロックに変換
-          const shortResult = this.truncateText(result.result, 3000);
-          const resultBlocks = this.convertMarkdownToBlocks(shortResult);
-          batchBlocks.push(...resultBlocks.slice(0, 5)); // 最大5ブロックまで
-        });
-
-        await this.appendBlocks(pageId, batchBlocks);
-        await this.sleep(1000); // バッチ間隔を長めに
+      for (const result of researchResults) {
+        const resultBlocks = this.createBlocksFromJSON(result.result);
+        const toggleBlock = this.createToggleBlock(result.title, resultBlocks);
+        await this.appendBlocks(pageId, toggleBlock);
+        await this.sleep(500);
       }
 
       console.log('[NotionService] コンテンツ追加完了');
@@ -583,72 +554,103 @@ export class NotionService {
   }
 
   /**
-   * マークダウンテキストをNotionブロックに変換
-   * @param markdown マークダウンテキスト
+   * マークダウンテキストをNotionブロックに変換（JSON対応版）
+   * @param jsonString Geminiから受け取ったJSON文字列
    * @returns Notionブロック配列
    */
-  private convertMarkdownToBlocks(markdown: string): any[] {
-    const blocks: any[] = [];
-    const lines = markdown.split('\n');
-    let currentParagraph = '';
+  private createBlocksFromJSON(jsonString: string): any[] {
+    try {
+      const cleanedJsonString = this.cleanupJsonString(jsonString);
+      if (!cleanedJsonString) {
+        return [this.createParagraphBlock('AIからの応答が空でした。')];
+      }
 
-    for (const line of lines) {
-      const trimmedLine = line.trim();
+      const blocksContent = JSON.parse(cleanedJsonString);
 
-      if (trimmedLine === '') {
-        // 空行の場合、現在の段落をブロックに追加
-        if (currentParagraph.trim()) {
-          blocks.push(this.createParagraphBlock(currentParagraph.trim()));
-          currentParagraph = '';
+      if (!Array.isArray(blocksContent)) {
+        console.warn('[NotionService] JSONのルートが配列ではありません。段落として扱います。');
+        return [this.createParagraphBlock(cleanedJsonString)];
+      }
+
+      return this.createBlocksRecursive(blocksContent);
+    } catch (error) {
+      console.error('[NotionService] JSON解析エラー。フォールバックとしてテキスト表示します。', error);
+      return [
+        this.createCalloutBlock(
+          'JSON解析エラー',
+          'AIからの応答をJSONとして解析できませんでした。以下に元のテキストを表示します。',
+          '⚠️'
+        ),
+        this.createParagraphBlock(jsonString),
+      ];
+    }
+  }
+
+  /**
+   * 再帰的にブロックを生成
+   * @param blocksContent ブロック定義の配列
+   * @returns Notionブロック配列
+   */
+  private createBlocksRecursive(blocksContent: any[]): any[] {
+    const notionBlocks: any[] = [];
+    for (const block of blocksContent) {
+      if (!block || !block.type) continue;
+      
+      let createdBlock: any | any[] = null;
+      const content = block.content || '';
+
+      switch (block.type) {
+        case 'heading_2':
+          createdBlock = this.createHeading2Block(content);
+          break;
+        case 'heading_3':
+          createdBlock = this.createHeading3Block(content);
+          break;
+        case 'paragraph':
+          createdBlock = this.createParagraphBlock(content);
+          break;
+        case 'bulleted_list_item':
+          createdBlock = this.createBulletedListItemBlock(content);
+          break;
+        case 'toggle':
+          const children = block.children && Array.isArray(block.children)
+            ? this.createBlocksRecursive(block.children)
+            : [];
+          createdBlock = this.createToggleBlock(content, children);
+          break;
+        case 'callout':
+          createdBlock = this.createCalloutBlock(content, '', block.icon || 'ℹ️');
+          break;
+        case 'divider':
+          createdBlock = { object: 'block', type: 'divider', divider: {} };
+          break;
+        default:
+          console.warn(`[NotionService] 未知のブロックタイプ: ${block.type}`);
+          createdBlock = this.createParagraphBlock(`[未知のタイプ: ${block.type}] ${content}`);
+      }
+      
+      if (createdBlock) {
+        if (Array.isArray(createdBlock)) {
+          notionBlocks.push(...createdBlock);
+        } else {
+          notionBlocks.push(createdBlock);
         }
-      } else if (trimmedLine.startsWith('# ')) {
-        // H1見出し
-        if (currentParagraph.trim()) {
-          blocks.push(this.createParagraphBlock(currentParagraph.trim()));
-          currentParagraph = '';
-        }
-        blocks.push(this.createHeading1Block(trimmedLine.substring(2)));
-      } else if (trimmedLine.startsWith('## ')) {
-        // H2見出し
-        if (currentParagraph.trim()) {
-          blocks.push(this.createParagraphBlock(currentParagraph.trim()));
-          currentParagraph = '';
-        }
-        blocks.push(this.createHeading2Block(trimmedLine.substring(3)));
-      } else if (trimmedLine.startsWith('### ')) {
-        // H3見出し
-        if (currentParagraph.trim()) {
-          blocks.push(this.createParagraphBlock(currentParagraph.trim()));
-          currentParagraph = '';
-        }
-        blocks.push(this.createHeading3Block(trimmedLine.substring(4)));
-      } else if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
-        // リスト項目
-        if (currentParagraph.trim()) {
-          blocks.push(this.createParagraphBlock(currentParagraph.trim()));
-          currentParagraph = '';
-        }
-        blocks.push(this.createBulletedListItemBlock(trimmedLine.substring(2)));
-      } else if (/^\d+\.\s/.test(trimmedLine)) {
-        // 番号付きリスト
-        if (currentParagraph.trim()) {
-          blocks.push(this.createParagraphBlock(currentParagraph.trim()));
-          currentParagraph = '';
-        }
-        const content = trimmedLine.replace(/^\d+\.\s/, '');
-        blocks.push(this.createNumberedListItemBlock(content));
-      } else {
-        // 通常のテキスト
-        currentParagraph += (currentParagraph ? '\n' : '') + trimmedLine;
       }
     }
-
-    // 最後の段落を追加
-    if (currentParagraph.trim()) {
-      blocks.push(this.createParagraphBlock(currentParagraph.trim()));
-    }
-
-    return blocks;
+    return notionBlocks;
+  }
+  
+  /**
+   * Geminiからの応答からJSON文字列をクリーンアップ
+   * @param jsonString 
+   * @returns 
+   */
+  private cleanupJsonString(jsonString: string): string {
+    // 前後の```jsonと```を削除
+    let cleaned = jsonString.trim().replace(/^```json\s*/, '').replace(/```$/, '').trim();
+    // 時々含まれる不正なエスケープを修正
+    cleaned = cleaned.replace(/\\"/g, '"').replace(/\\n/g, '\n');
+    return cleaned;
   }
 
   /**
@@ -849,19 +851,57 @@ export class NotionService {
   }
 
   /**
-   * 番号付きリストアイテムブロックを作成（装飾対応版）
-   * @param text テキスト
-   * @returns Notionブロック
+   * トグルブロックを作成（子要素の分割対応版）
+   * @param text トグル見出し
+   * @param children 子ブロック
+   * @returns 
    */
-  private createNumberedListItemBlock(text: string): any {
+  private createToggleBlock(text: string, children: any[]): any[] {
+    const MAX_CHILDREN = 95; // 安全マージン
+    const createdBlocks: any[] = [];
     const richText = this.parseTextToRichText(this.truncateTextSafely(text));
-    return {
-      object: 'block',
-      type: 'numbered_list_item',
-      numbered_list_item: {
-        rich_text: richText
-      }
-    } as any;
+
+    if (children.length === 0) {
+      return [{
+        object: 'block',
+        type: 'toggle',
+        toggle: {
+          rich_text: richText,
+          children: [],
+        },
+      }];
+    }
+    
+    for (let i = 0; i < children.length; i += MAX_CHILDREN) {
+      const chunk = children.slice(i, i + MAX_CHILDREN);
+      const toggleText = i === 0 
+        ? richText 
+        : this.parseTextToRichText(this.truncateTextSafely(`${text} (続き ${Math.floor(i / MAX_CHILDREN) + 1})`));
+      
+      createdBlocks.push({
+        object: 'block',
+        type: 'toggle',
+        toggle: {
+          rich_text: toggleText,
+          children: chunk,
+        },
+      });
+    }
+  
+    return createdBlocks;
+  }
+
+  /**
+   * テキストをRich Text形式に短縮
+   * @param text 元のテキスト
+   * @returns Rich Text形式に短縮されたテキスト
+   */
+  private truncateTextForRichText(text: string): string {
+    const maxLength = 100;
+    if (text.length <= maxLength) {
+      return text;
+    }
+    return text.substring(0, maxLength) + '...';
   }
 
   /**
@@ -937,11 +977,14 @@ export class NotionService {
           title: [
             {
               text: {
-                content: `${businessName} - ${researchTitle}`
-              }
-            }
-          ]
+                content: businessName,
+              },
+            },
+          ],
         };
+        console.log(`[NotionService] タイトルプロパティ設定: ${titleProperty}`);
+      } else {
+        console.warn('[NotionService] タイトルプロパティが見つかりません');
       }
 
       // ステータスプロパティの設定
@@ -1036,7 +1079,7 @@ export class NotionService {
       console.log(`[NotionService] 個別調査基本ページ作成完了: ${pageId}`);
 
       // 調査結果コンテンツを追加
-      const resultBlocks = this.convertMarkdownToBlocks(researchResult);
+      const resultBlocks = this.createBlocksFromJSON(researchResult);
       
       // 調査結果ヘッダーを追加
       const contentWithHeader = [
@@ -1186,18 +1229,5 @@ export class NotionService {
     
     console.log('[NotionService] 調査種別プロパティが見つかりません。利用可能なプロパティ:', Object.keys(properties));
     return null;
-  }
-
-  /**
-   * テキストをRich Text形式に短縮
-   * @param text 元のテキスト
-   * @returns Rich Text形式に短縮されたテキスト
-   */
-  private truncateTextForRichText(text: string): string {
-    const maxLength = 100;
-    if (text.length <= maxLength) {
-      return text;
-    }
-    return text.substring(0, maxLength) + '...';
   }
 }

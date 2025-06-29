@@ -361,4 +361,40 @@ ${this.formatServiceHypothesis(serviceHypothesis)}
       throw new Error(`統合レポート生成エラー: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
+
+  /**
+   * Geminiからの応答をクリーンアップ
+   * @param response Geminiからの応答テキスト
+   * @returns クリーンアップされたテキスト
+   */
+  private _cleanupResponse(response: string): string {
+    // ```json と ``` を削除
+    let cleaned = response.replace(/^```json\s*|```$/g, '');
+    
+    // エスケープされた改行や引用符を修正
+    cleaned = cleaned.replace(/\\n/g, '\n').replace(/\\"/g, '"');
+    
+    // JSONオブジェクトまたは配列の開始と終了を探す
+    const firstBracket = cleaned.indexOf('[');
+    const firstBrace = cleaned.indexOf('{');
+    let start = -1;
+
+    if (firstBracket > -1 && firstBrace > -1) {
+      start = Math.min(firstBracket, firstBrace);
+    } else if (firstBracket > -1) {
+      start = firstBracket;
+    } else {
+      start = firstBrace;
+    }
+
+    const lastBracket = cleaned.lastIndexOf(']');
+    const lastBrace = cleaned.lastIndexOf('}');
+    let end = Math.max(lastBracket, lastBrace);
+
+    if (start > -1 && end > -1 && end > start) {
+      cleaned = cleaned.substring(start, end + 1);
+    }
+
+    return cleaned.trim();
+  }
 } 
