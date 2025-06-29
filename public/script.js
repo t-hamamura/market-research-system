@@ -719,8 +719,10 @@ function updateTimeEstimate() {
   }
 }
 
-// ===== 調査項目の状態更新（統合レポート事前作成対応） =====
+// ===== 調査項目の状態更新（統合レポート事前作成対応・進行状況表示強化） =====
 function updateResearchItemsStatus(step, researchType) {
+  console.log(`[Frontend] 調査項目ステータス更新開始: Step ${step}, Type: ${researchType}`);
+  
   // 調査項目マッピング（統合レポート事前作成対応）
   const researchItems = {
     // Phase 1: 事前作成フェーズ（ステップ1-3）
