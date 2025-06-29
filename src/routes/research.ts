@@ -145,25 +145,8 @@ export function createResearchRouter(researchService: ResearchService): Router {
         console.log('[ResearchRouter] 再開ステップ:', resumeFromStep);
       }
 
-      // サービス状態確認（緩和版）
-      try {
-        console.log('[ResearchRouter] サービス状態確認開始...');
-        const serviceStatus = await researchService.testServices();
-        console.log('[ResearchRouter] サービス状態結果:', serviceStatus);
-        
-        // 警告ログを出すが、処理は継続
-        if (!serviceStatus.gemini) {
-          console.warn('[ResearchRouter] ⚠️ Gemini API接続に問題がある可能性があります');
-        }
-        if (!serviceStatus.notion) {
-          console.warn('[ResearchRouter] ⚠️ Notion API接続に問題がある可能性があります');
-        }
-        
-        console.log('[ResearchRouter] サービス状態確認完了、処理を継続');
-        
-      } catch (serviceError) {
-        console.warn('[ResearchRouter] ⚠️ サービス状態確認でエラーが発生しましたが、処理を継続します:', serviceError);
-      }
+      // サービス状態確認をスキップ（サーバー起動時に確認済み）
+      console.log('[ResearchRouter] サービス状態確認をスキップ、処理を開始します');
 
       // リクエストバリデーション
       const validation = researchService.validateRequest(researchRequest);

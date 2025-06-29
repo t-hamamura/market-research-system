@@ -269,15 +269,26 @@ async function startServer() {
       
     } catch (error) {
       console.error('[Server] ⚠️ サービス初期化エラー:', error);
-      console.log('[Server] 🔄 基本モードで続行します...');
+      console.log('[Server] 🔄 リトライしています...');
       
-      // 基本的なサービスオブジェクトを作成（ダミー）
-      researchService = {
-        testServices: () => Promise.resolve({ gemini: false, notion: false }),
-        getResearchPrompts: () => [],
-        validateRequest: () => ({ isValid: false, errors: ['サービスが初期化されていません'] }),
-        conductFullResearch: () => Promise.reject(new Error('サービスが利用できません'))
-      };
+      // 再初期化を試行
+      try {
+        console.log('[Server] 🔄 サービス再初期化試行中...');
+        const services = await initializeServices(config);
+        researchService = services.researchService;
+        console.log('[Server] ✅ サービス再初期化成功');
+      } catch (retryError) {
+        console.error('[Server] ❌ サービス再初期化も失敗:', retryError);
+        console.log('[Server] 🔄 基本モードで続行します...');
+        
+        // それでも失敗した場合のみダミーサービスを作成
+        researchService = {
+          testServices: () => Promise.resolve({ gemini: false, notion: false }),
+          getResearchPrompts: () => [],
+          validateRequest: () => ({ isValid: false, errors: ['サービスが初期化されていません'] }),
+          conductFullResearch: () => Promise.reject(new Error('サービスが利用できません'))
+        };
+      }
     }
     
     // Expressアプリを作成
