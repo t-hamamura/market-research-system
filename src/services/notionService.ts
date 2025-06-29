@@ -53,16 +53,7 @@ export class NotionService {
             start: new Date().toISOString()
           }
         };
-      } catch (e) {
-        // 作成日時プロパティが存在しない場合はスキップ
-      }
-      
-      try {
-        properties['作成日時'] = {
-          date: {
-            start: new Date().toISOString()
-          }
-        };
+        console.log('[NotionService] 作成日時プロパティ設定完了');
       } catch (e) {
         console.log('[NotionService] 作成日時プロパティをスキップ:', e);
       }
@@ -104,7 +95,7 @@ export class NotionService {
               }
             ]
           }
-        },
+        } as any,
         {
           object: 'block',
           type: 'paragraph',
@@ -118,24 +109,24 @@ export class NotionService {
               }
             ]
           }
-        },
+        } as any,
         {
           object: 'block',
           type: 'divider',
           divider: {}
-        },
+        } as any,
         ...hypothesisBlocks,
         {
           object: 'block',
           type: 'divider',
           divider: {}
-        },
+        } as any,
         ...integratedReportBlocks,
         {
           object: 'block',
           type: 'divider',
           divider: {}
-        },
+        } as any,
         ...researchResultsBlocks
       ];
 
@@ -198,7 +189,7 @@ export class NotionService {
             }
           ]
         }
-      },
+      } as any,
       this.createPropertyBlock('💡 コンセプト', hypothesis.concept),
       this.createPropertyBlock('❗ 解決したい顧客課題', hypothesis.customerProblem),
       this.createPropertyBlock('🏢 狙っている業種・業界', hypothesis.targetIndustry),
@@ -229,7 +220,7 @@ export class NotionService {
             }
           ]
         }
-      }
+      } as any
     ];
 
     // マークダウンテキストをNotionブロックに変換
@@ -259,7 +250,7 @@ export class NotionService {
             }
           ]
         }
-      }
+      } as any
     ];
 
     results.forEach((result, index) => {
@@ -277,7 +268,7 @@ export class NotionService {
               }
             ]
           }
-        }
+        } as any
       );
 
       // 調査結果をブロックに変換
@@ -311,7 +302,7 @@ export class NotionService {
           emoji: '📝'
         }
       }
-    };
+    } as any;
   }
 
   /**
@@ -405,7 +396,7 @@ export class NotionService {
             }
           ]
         }
-      };
+      } as any;
     } else {
       // 長いテキストを分割
       return {
@@ -421,7 +412,7 @@ export class NotionService {
             }
           ]
         }
-      };
+      } as any;
     }
   }
 
@@ -445,7 +436,7 @@ export class NotionService {
           }
         ]
       }
-    };
+    } as any;
   }
 
   /**
@@ -468,7 +459,7 @@ export class NotionService {
           }
         ]
       }
-    };
+    } as any;
   }
 
   /**
@@ -491,7 +482,7 @@ export class NotionService {
           }
         ]
       }
-    };
+    } as any;
   }
 
   /**
@@ -513,7 +504,7 @@ export class NotionService {
           }
         ]
       }
-    };
+    } as any;
   }
 
   /**
@@ -535,7 +526,7 @@ export class NotionService {
           }
         ]
       }
-    };
+    } as any;
   }
 
   /**
