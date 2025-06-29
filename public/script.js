@@ -230,19 +230,14 @@ function validateFormData(data) {
     errors.push('事業名は必須です');
   }
   
-  // サービス仮説チェック
+  // サービス仮説チェック（必須項目のみ）
   const hypothesis = data.serviceHypothesis;
   const requiredFields = [
     { field: 'concept', label: 'コンセプト' },
     { field: 'customerProblem', label: '解決したい顧客課題' },
     { field: 'targetIndustry', label: '狙っている業種・業界' },
     { field: 'targetUsers', label: '想定される利用者層' },
-    { field: 'competitors', label: '直接競合・間接競合' },
-    { field: 'revenueModel', label: '課金モデル' },
-    { field: 'pricingDirection', label: '価格帯・価格設定の方向性' },
-    { field: 'uvp', label: '暫定UVP' },
-    { field: 'initialKpi', label: '初期KPI' },
-    { field: 'acquisitionChannels', label: '獲得チャネル仮説' }
+    { field: 'competitors', label: '直接競合・間接競合' }
   ];
   
   requiredFields.forEach(({ field, label }) => {

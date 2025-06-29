@@ -112,12 +112,8 @@ ${deepResult}
         customerProblem: "統合処理",
         targetIndustry: "統合処理", 
         targetUsers: "統合処理",
-        competitors: "統合処理",
-        revenueModel: "統合処理",
-        pricingDirection: "統合処理",
-        uvp: "統合処理",
-        initialKpi: "統合処理",
-        acquisitionChannels: "統合処理"
+        competitors: "統合処理"
+        // 任意項目は未設定
       };
 
       const integratedResult = await this.geminiService.conductResearch(integrationPrompt, dummyHypothesis);
@@ -140,12 +136,8 @@ ${deepResult}
         customerProblem: "テスト課題",
         targetIndustry: "テスト業界",
         targetUsers: "テストユーザー",
-        competitors: "テスト競合",
-        revenueModel: "テスト課金",
-        pricingDirection: "テスト価格",
-        uvp: "テスト用UVP",
-        initialKpi: "テスト用KPI",
-        acquisitionChannels: "テスト用チャネル"
+        competitors: "テスト競合"
+        // 任意項目は未設定
       };
 
       const result = await this.conductEnhancedResearch(

@@ -124,9 +124,19 @@ export class GeminiService {
 
 直接競合・間接競合: ${hypothesis.competitors}
 
-課金モデル: ${hypothesis.revenueModel}
+課金モデル: ${hypothesis.revenueModel || '未設定'}
 
-価格帯・価格設定の方向性: ${hypothesis.pricingDirection}
+価格帯・価格設定の方向性: ${hypothesis.pricingDirection || '未設定'}
+
+暫定UVP: ${hypothesis.uvp || '未設定'}
+
+初期KPI: ${hypothesis.initialKpi || '未設定'}
+
+獲得チャネル仮説: ${hypothesis.acquisitionChannels || '未設定'}
+
+規制・技術前提: ${hypothesis.regulatoryTechPrereqs || '未設定'}
+
+想定コスト構造: ${hypothesis.costStructure || '未設定'}
     `.trim();
   }
 

@@ -4,16 +4,16 @@
 
 // サービス仮説の型定義
 export interface ServiceHypothesis {
-  concept: string;                    // コンセプト
-  customerProblem: string;           // 解決したい顧客課題
-  targetIndustry: string;            // 狙っている業種・業界
-  targetUsers: string;               // 想定される利用者層
-  competitors: string;               // 直接競合・間接競合
-  revenueModel: string;              // 課金モデル
-  pricingDirection: string;          // 価格帯・価格設定の方向性
-  uvp: string;                       // 暫定UVP
-  initialKpi: string;                // 初期KPI
-  acquisitionChannels: string;       // 獲得チャネル仮説
+  concept: string;                    // コンセプト（必須）
+  customerProblem: string;           // 解決したい顧客課題（必須）
+  targetIndustry: string;            // 狙っている業種・業界（必須）
+  targetUsers: string;               // 想定される利用者層（必須）
+  competitors: string;               // 直接競合・間接競合（必須）
+  revenueModel?: string;             // 課金モデル（任意）
+  pricingDirection?: string;         // 価格帯・価格設定の方向性（任意）
+  uvp?: string;                      // 暫定UVP（任意）
+  initialKpi?: string;               // 初期KPI（任意）
+  acquisitionChannels?: string;      // 獲得チャネル仮説（任意）
   regulatoryTechPrereqs?: string;    // 規制・技術前提（任意）
   costStructure?: string;            // 想定コスト構造（任意）
 }
