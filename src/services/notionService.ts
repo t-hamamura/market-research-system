@@ -70,18 +70,8 @@ export class NotionService {
         console.log('[NotionService] ステータスプロパティをスキップ:', e);
       }
 
-      // サービス仮説セクションのブロック
-      const hypothesisBlocks = this.createServiceHypothesisBlocks(serviceHypothesis);
-      
-      // 統合レポートセクションのブロック
-      const integratedReportBlocks = this.createIntegratedReportBlocks(integratedReport);
-      
-      // 個別調査結果セクションのブロック
-      const researchResultsBlocks = this.createResearchResultsBlocks(researchResults);
-
-      // 全ブロックを結合
-      const children = [
-        // ヘッダー
+      // 基本ページ構造のみで作成（ヘッダーのみ）
+      const initialChildren = [
         {
           object: 'block',
           type: 'heading_1',
@@ -114,36 +104,28 @@ export class NotionService {
           object: 'block',
           type: 'divider',
           divider: {}
-        } as any,
-        ...hypothesisBlocks,
-        {
-          object: 'block',
-          type: 'divider',
-          divider: {}
-        } as any,
-        ...integratedReportBlocks,
-        {
-          object: 'block',
-          type: 'divider',
-          divider: {}
-        } as any,
-        ...researchResultsBlocks
+        } as any
       ];
 
       // デバッグ情報を出力
       console.log('[NotionService] プロパティ設定:', JSON.stringify(properties, null, 2));
       console.log('[NotionService] データベースID:', this.config.databaseId);
 
-      // Notionページを作成
+      // 基本Notionページを作成
       const response = await this.notion.pages.create({
         parent: {
           database_id: this.config.databaseId
         },
         properties,
-        children
+        children: initialChildren
       });
 
       const pageId = response.id;
+      console.log('[NotionService] 基本ページ作成完了:', pageId);
+
+      // コンテンツを段階的に追加
+      await this.addContentInBatches(pageId, serviceHypothesis, researchResults, integratedReport);
+
       // URLを手動で生成（APIレスポンスにURLがない場合）
       const url = this.generatePageUrl(pageId);
 
@@ -167,6 +149,154 @@ export class NotionService {
       
       throw new Error(`Notionページ作成エラー: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * コンテンツを段階的に追加（413エラー対策）
+   * @param pageId ページID
+   * @param serviceHypothesis サービス仮説
+   * @param researchResults 調査結果
+   * @param integratedReport 統合レポート
+   */
+  private async addContentInBatches(
+    pageId: string,
+    serviceHypothesis: ServiceHypothesis,
+    researchResults: Array<{ id: number; title: string; result: string }>,
+    integratedReport: string
+  ): Promise<void> {
+    try {
+      // バッチ1: サービス仮説セクション
+      console.log('[NotionService] サービス仮説セクション追加中...');
+      const hypothesisBlocks = this.createServiceHypothesisBlocks(serviceHypothesis);
+      await this.appendBlocks(pageId, hypothesisBlocks);
+      await this.sleep(500); // レート制限対策
+
+      // バッチ2: 統合レポートセクション
+      console.log('[NotionService] 統合レポートセクション追加中...');
+      const integratedReportBlocks = this.createIntegratedReportBlocks(integratedReport);
+      await this.appendBlocks(pageId, integratedReportBlocks);
+      await this.sleep(500);
+
+      // バッチ3: 個別調査結果セクション（分割して追加）
+      console.log('[NotionService] 個別調査結果セクション追加中...');
+      
+      // セクションヘッダーを先に追加
+      const sectionHeader = [
+        {
+          object: 'block',
+          type: 'divider',
+          divider: {}
+        } as any,
+        {
+          object: 'block',
+          type: 'heading_2',
+          heading_2: {
+            rich_text: [
+              {
+                type: 'text',
+                text: {
+                  content: '🔍 個別調査結果'
+                }
+              }
+            ]
+          }
+        } as any
+      ];
+      await this.appendBlocks(pageId, sectionHeader);
+      await this.sleep(500);
+
+      // 個別調査結果を3つずつに分けて追加
+      const batchSize = 3;
+      for (let i = 0; i < researchResults.length; i += batchSize) {
+        const batch = researchResults.slice(i, i + batchSize);
+        console.log(`[NotionService] 調査結果バッチ ${Math.floor(i/batchSize) + 1} 追加中...`);
+        
+        const batchBlocks: any[] = [];
+        batch.forEach((result, index) => {
+          const globalIndex = i + index;
+          batchBlocks.push(
+            {
+              object: 'block',
+              type: 'heading_3',
+              heading_3: {
+                rich_text: [
+                  {
+                    type: 'text',
+                    text: {
+                      content: `${globalIndex + 1}. ${result.title}`
+                    }
+                  }
+                ]
+              }
+            } as any
+          );
+
+          // 調査結果を短縮してブロックに変換
+          const shortResult = this.truncateText(result.result, 3000);
+          const resultBlocks = this.convertMarkdownToBlocks(shortResult);
+          batchBlocks.push(...resultBlocks.slice(0, 5)); // 最大5ブロックまで
+        });
+
+        await this.appendBlocks(pageId, batchBlocks);
+        await this.sleep(1000); // バッチ間隔を長めに
+      }
+
+      console.log('[NotionService] コンテンツ追加完了');
+
+    } catch (error) {
+      console.error('[NotionService] コンテンツ追加エラー:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * ページにブロックを追加
+   * @param pageId ページID
+   * @param blocks 追加するブロック
+   */
+  private async appendBlocks(pageId: string, blocks: any[]): Promise<void> {
+    if (blocks.length === 0) return;
+
+    try {
+      await this.notion.blocks.children.append({
+        block_id: pageId,
+        children: blocks
+      });
+    } catch (error) {
+      console.error('[NotionService] ブロック追加エラー:', error);
+      
+      // 413エラーの場合はさらに分割
+      if (error && typeof error === 'object' && 'code' in error && (error as any).code === 413) {
+        console.log('[NotionService] ブロック数を半分に分割して再試行...');
+        const midpoint = Math.floor(blocks.length / 2);
+        await this.appendBlocks(pageId, blocks.slice(0, midpoint));
+        await this.sleep(500);
+        await this.appendBlocks(pageId, blocks.slice(midpoint));
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  /**
+   * テキストを指定文字数で短縮
+   * @param text 元のテキスト
+   * @param maxLength 最大文字数
+   * @returns 短縮されたテキスト
+   */
+  private truncateText(text: string, maxLength: number): string {
+    if (text.length <= maxLength) {
+      return text;
+    }
+    return text.substring(0, maxLength) + '\n\n... (内容が長いため省略されました)';
+  }
+
+  /**
+   * 待機関数
+   * @param ms 待機時間（ミリ秒）
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**
@@ -226,55 +356,6 @@ export class NotionService {
     // マークダウンテキストをNotionブロックに変換
     const reportBlocks = this.convertMarkdownToBlocks(report);
     blocks.push(...reportBlocks);
-
-    return blocks;
-  }
-
-  /**
-   * 個別調査結果セクションのブロックを作成
-   * @param results 調査結果配列
-   * @returns Notionブロック配列
-   */
-  private createResearchResultsBlocks(results: Array<{ id: number; title: string; result: string }>): any[] {
-    const blocks = [
-      {
-        object: 'block',
-        type: 'heading_2',
-        heading_2: {
-          rich_text: [
-            {
-              type: 'text',
-              text: {
-                content: '🔍 個別調査結果'
-              }
-            }
-          ]
-        }
-      } as any
-    ];
-
-    results.forEach((result, index) => {
-      blocks.push(
-        {
-          object: 'block',
-          type: 'heading_3',
-          heading_3: {
-            rich_text: [
-              {
-                type: 'text',
-                text: {
-                  content: `${index + 1}. ${result.title}`
-                }
-              }
-            ]
-          }
-        } as any
-      );
-
-      // 調査結果をブロックに変換
-      const resultBlocks = this.convertMarkdownToBlocks(result.result);
-      blocks.push(...resultBlocks);
-    });
 
     return blocks;
   }
