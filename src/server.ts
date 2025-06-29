@@ -1,12 +1,10 @@
-// src/server.ts
+// src/server.ts - 簡略化版
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import dotenv from 'dotenv';
 import { GeminiService } from './services/geminiService';
 import { NotionService } from './services/notionService';
-import { TavilyService } from './services/tavilyService';
-import { DeepResearchService } from './services/deepResearchService';
 import { ResearchService } from './services/researchService';
 import { createResearchRouter, errorHandler } from './routes/research';
 import { ServerConfig } from './types';
@@ -53,23 +51,10 @@ async function initializeServices(config: ServerConfig) {
   const geminiService = new GeminiService(config.gemini);
   const notionService = new NotionService(config.notion);
 
-  // Deep Research サービス作成
-  let tavilyService: TavilyService | null = null;
-  let deepResearchService: DeepResearchService | null = null;
-  
-  if (process.env.TAVILY_API_KEY && process.env.ENABLE_DEEP_RESEARCH === 'true') {
-    console.log('[Server] Deep Research機能を有効化...');
-    tavilyService = new TavilyService(process.env.TAVILY_API_KEY);
-    deepResearchService = new DeepResearchService(geminiService, tavilyService);
-  } else {
-    console.log('[Server] Deep Research機能は無効（通常モード）');
-  }
-
-  // ResearchService作成
+  // ResearchService作成（Deep Research無し）
   const researchService = new ResearchService(
     geminiService, 
-    notionService, 
-    deepResearchService || undefined
+    notionService
   );
 
   // 接続テスト
@@ -88,17 +73,8 @@ async function initializeServices(config: ServerConfig) {
     console.log('[Server] ✅ Notion API接続成功');
   }
 
-  if (tavilyService) {
-    const tavilyStatus = await tavilyService.testConnection();
-    if (!tavilyStatus) {
-      console.warn('[Server] ⚠️ Tavily API接続に失敗しました（通常モードで継続）');
-    } else {
-      console.log('[Server] ✅ Tavily API接続成功 - Deep Research機能有効');
-    }
-  }
-
   console.log('[Server] サービス初期化完了');
-  return { geminiService, notionService, researchService, tavilyService, deepResearchService };
+  return { geminiService, notionService, researchService };
 }
 
 /**
@@ -115,7 +91,7 @@ function createApp(researchService: ResearchService): express.Application {
     allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control']
   }));
 
-  // JSONパーサー設定（サイズ制限を増加）
+  // JSONパーサー設定
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -167,10 +143,6 @@ async function startServer() {
     const config = createServerConfig();
     console.log(`📡 サーバーポート: ${config.port}`);
 
-    // Deep Research機能の状態確認
-    const deepResearchEnabled = process.env.TAVILY_API_KEY && process.env.ENABLE_DEEP_RESEARCH === 'true';
-    console.log(`🔍 Deep Research: ${deepResearchEnabled ? '✅ 有効' : '❌ 無効'}`);
-
     // サービスを初期化
     const { researchService } = await initializeServices(config);
 
@@ -184,40 +156,6 @@ async function startServer() {
       console.log('');
       console.log(`🌐 ウェブアプリ: http://localhost:${config.port}`);
       console.log(`⚡ API エンドポイント: http://localhost:${config.port}/api/research`);
-      console.log('');
-      console.log('📋 利用可能なAPIエンドポイント:');
-      console.log(`   GET  /api/research/health      - ヘルスチェック`);
-      console.log(`   GET  /api/research/info        - システム情報`);
-      console.log(`   GET  /api/research/prompts     - 調査プロンプト一覧`);
-      console.log(`   POST /api/research/validate    - リクエストバリデーション`);
-      console.log(`   POST /api/research/start       - 市場調査開始 (SSE)`);
-      console.log('');
-      console.log('🎯 システム機能:');
-      console.log('   • 16種類の詳細市場調査');
-      console.log('   • リアルタイム進行状況表示');
-      console.log('   • Gemini 2.5による高度分析');
-      console.log('   • Notion統合レポート生成');
-      console.log(`   • ${deepResearchEnabled ? 'Deep Research (Tavily Web検索)' : '通常調査モード'}`);
-      console.log('   • Server-Sent Events対応');
-      console.log('');
-      console.log('📝 使用方法:');
-      console.log('   1. ブラウザでWebアプリにアクセス');
-      console.log('   2. 事業名とサービス仮説を入力');
-      console.log('   3. 「調査開始」ボタンをクリック');
-      console.log('   4. リアルタイムで進行状況を確認');
-      console.log('   5. 完了後、NotionリンクでレポートをReview');
-      console.log('');
-      if (deepResearchEnabled) {
-        console.log('🔍 Deep Research機能:');
-        console.log('   - リアルタイムWeb検索による最新情報取得');
-        console.log('   - 具体的な数値データと出典付きレポート');
-        console.log('   - 競合情報とトレンド分析の自動統合');
-        console.log('');
-      }
-      console.log('💡 開発者向け:');
-      console.log('   - TypeScript開発: npm run dev');
-      console.log('   - 本番ビルド: npm run build && npm start');
-      console.log('   - ログレベル: INFO');
       console.log('');
     });
 
@@ -240,14 +178,6 @@ async function startServer() {
 
   } catch (error) {
     console.error('❌ サーバー起動エラー:', error);
-    console.error('');
-    console.error('🔧 トラブルシューティング:');
-    console.error('   1. 環境変数が正しく設定されているか確認');
-    console.error('   2. Gemini APIキーが有効か確認');
-    console.error('   3. Notion APIトークンとデータベースIDが正しいか確認');
-    console.error('   4. Tavily APIキーが有効か確認（Deep Research使用時）');
-    console.error('   5. ポートが他のプロセスで使用されていないか確認');
-    console.error('');
     process.exit(1);
   }
 }
