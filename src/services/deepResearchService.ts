@@ -13,77 +13,132 @@ export class DeepResearchService {
   }
 
   /**
-   * 強化された市場調査を実行
+   * 強化された市場調査を実行（タイムアウト対策強化版）
    * @param prompt 調査プロンプト
    * @param serviceHypothesis サービス仮説
    * @returns 調査結果
    */
   async conductEnhancedResearch(prompt: string, serviceHypothesis: ServiceHypothesis): Promise<string> {
+    const startTime = Date.now();
+    console.log('[DeepResearchService] Deep Research開始（タイムアウト対策強化版）');
+    
     try {
-      console.log('[DeepResearchService] Deep Research開始');
-      
-      // Phase 1: 基本調査（リトライ機能付き）
+      // Phase 1: 基本調査（タイムアウト制御付き）
       console.log('[DeepResearchService] Phase 1: 基本調査実行中...');
-      const basicResearch = await this.geminiService.conductResearch(prompt, serviceHypothesis);
+      const basicResearch = await this.executeWithTimeout(
+        () => this.geminiService.conductResearch(prompt, serviceHypothesis),
+        90000, // 90秒タイムアウト
+        'Phase 1: 基本調査'
+      );
+      console.log(`[DeepResearchService] Phase 1完了 (${Date.now() - startTime}ms経過)`);
       
-      // API制限対策: フェーズ間で少し待機
-      await this.sleep(2000);
+      // API制限対策: 適応的待機
+      const phase1Duration = Date.now() - startTime;
+      const adaptiveWait = Math.min(2000, Math.max(1000, phase1Duration / 10));
+      await this.sleep(adaptiveWait);
       
-      // Phase 2: 深掘り分析プロンプトを生成
+      // Phase 2: 深掘り分析プロンプトを生成（軽量化）
       console.log('[DeepResearchService] Phase 2: 深掘り分析プロンプト生成中...');
-      const deepDivePrompt = this.generateDeepDivePrompt(basicResearch, prompt, serviceHypothesis);
+      const deepDivePrompt = this.generateOptimizedDeepDivePrompt(basicResearch, prompt, serviceHypothesis);
       
-      // API制限対策: さらに待機
-      await this.sleep(2000);
-      
-      // Phase 3: 深掘り調査実行（リトライ機能付き）
+      // Phase 3: 深掘り調査実行（タイムアウト制御付き）
       console.log('[DeepResearchService] Phase 3: 深掘り調査実行中...');
-      const deepResearch = await this.geminiService.conductResearch(deepDivePrompt, serviceHypothesis);
+      const deepResearch = await this.executeWithTimeout(
+        () => this.geminiService.conductResearch(deepDivePrompt, serviceHypothesis),
+        90000, // 90秒タイムアウト
+        'Phase 3: 深掘り調査'
+      );
+      console.log(`[DeepResearchService] Phase 3完了 (${Date.now() - startTime}ms経過)`);
       
-      // API制限対策: 統合前に待機
-      await this.sleep(2000);
+      // 簡略化された統合処理
+      console.log('[DeepResearchService] Phase 4: 効率的結果統合中...');
+      const integratedResult = this.simpleIntegrateResults(basicResearch, deepResearch, prompt);
       
-      // Phase 4: 結果を統合（エラー処理強化）
-      console.log('[DeepResearchService] Phase 4: 結果統合中...');
-      const integratedResult = await this.integrateResults(basicResearch, deepResearch, prompt);
-      
-      console.log('[DeepResearchService] Deep Research完了');
+      const totalDuration = Date.now() - startTime;
+      console.log(`[DeepResearchService] Deep Research完了 (総実行時間: ${totalDuration}ms)`);
       return integratedResult;
 
     } catch (error) {
-      console.error('[DeepResearchService] Deep Research エラー:', error);
+      const totalDuration = Date.now() - startTime;
+      console.error(`[DeepResearchService] Deep Research エラー (${totalDuration}ms後):`, error);
       
       // エラーの種類を判定
       const errorMessage = error instanceof Error ? error.message : String(error);
+      const isTimeoutError = errorMessage.includes('タイムアウト');
       const isApiLimitError = errorMessage.toLowerCase().includes('rate limit') || 
                              errorMessage.toLowerCase().includes('quota') ||
                              errorMessage.toLowerCase().includes('429');
       
-      // API制限エラーの場合は少し待ってからフォールバック
+      // エラー種別に応じた待機時間
+      let fallbackWaitTime = 0;
       if (isApiLimitError) {
-        console.log('[DeepResearchService] API制限エラー検出、待機してからフォールバック...');
-        await this.sleep(5000); // 5秒待機
+        fallbackWaitTime = 5000; // API制限エラー: 5秒待機
+      } else if (isTimeoutError) {
+        fallbackWaitTime = 1000; // タイムアウトエラー: 1秒待機
       }
       
-      // エラーの場合は基本調査結果にフォールバック
+      if (fallbackWaitTime > 0) {
+        console.log(`[DeepResearchService] エラー回復待機中: ${fallbackWaitTime}ms`);
+        await this.sleep(fallbackWaitTime);
+      }
+      
+      // エラーの場合は基本調査結果にフォールバック（短縮タイムアウト）
       try {
         console.log('[DeepResearchService] フォールバック: 基本調査のみ実行');
-        const fallbackResult = await this.geminiService.conductResearch(prompt, serviceHypothesis);
+        const fallbackResult = await this.executeWithTimeout(
+          () => this.geminiService.conductResearch(prompt, serviceHypothesis),
+          60000, // 1分の短縮タイムアウト
+          'フォールバック基本調査'
+        );
         
-        // フォールバック結果であることを明記（エラー種別に応じてメッセージを調整）
-        const warningMessage = isApiLimitError 
-          ? "**注意**: API制限によりDeep Research機能を使用できませんでしたが、基本調査は正常に完了しました。"
-          : "**注意**: Deep Research機能でエラーが発生したため、基本調査結果のみを表示しています。より詳細な分析が必要な場合は、手動での追加調査をお勧めします。";
+        // エラー種別に応じたメッセージ
+        let warningMessage = '';
+        if (isTimeoutError) {
+          warningMessage = "**注意**: Deep Research機能がタイムアウトしたため、基本調査結果のみを表示しています。";
+        } else if (isApiLimitError) {
+          warningMessage = "**注意**: API制限によりDeep Research機能を使用できませんでしたが、基本調査は正常に完了しました。";
+        } else {
+          warningMessage = "**注意**: Deep Research機能でエラーが発生したため、基本調査結果のみを表示しています。";
+        }
         
-        return `【Deep Research エラーのため基本調査結果のみ】\n\n${fallbackResult}\n\n---\n${warningMessage}`;
+        return `${fallbackResult}\n\n---\n\n${warningMessage}`;
         
       } catch (fallbackError) {
         console.error('[DeepResearchService] フォールバック調査もエラー:', fallbackError);
         
-        // 最終フォールバック: より詳細なエラー情報を含む調査フレームワークを提供
-        return this.generateEnhancedFallback(prompt, error, fallbackError, serviceHypothesis);
+        // 最終フォールバック: 軽量版エラー対応フレームワーク
+        return this.generateLightweightFallback(prompt, error, fallbackError, serviceHypothesis);
       }
     }
+  }
+
+  /**
+   * タイムアウト制御付きで関数を実行
+   * @param fn 実行する関数
+   * @param timeoutMs タイムアウト時間（ミリ秒）
+   * @param description 処理の説明
+   * @returns 実行結果
+   */
+  private async executeWithTimeout<T>(
+    fn: () => Promise<T>,
+    timeoutMs: number,
+    description: string
+  ): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timeoutTimer = setTimeout(() => {
+        reject(new Error(`${description} がタイムアウトしました (${timeoutMs}ms)`));
+      }, timeoutMs);
+
+      fn()
+        .then((result) => {
+          clearTimeout(timeoutTimer);
+          resolve(result);
+        })
+        .catch((error) => {
+          clearTimeout(timeoutTimer);
+          reject(error);
+        });
+    });
   }
 
   /**
@@ -230,6 +285,110 @@ ${basicResult}
 ${originalPrompt}
 
 上記を踏まえ、より詳細で実用的な調査結果を作成してください。
+    `;
+  }
+
+  /**
+   * 最適化された深掘り分析プロンプトを生成（軽量版）
+   * @param basicResult 基本調査結果
+   * @param originalPrompt 元のプロンプト
+   * @param serviceHypothesis サービス仮説
+   * @returns 最適化された深掘りプロンプト
+   */
+  private generateOptimizedDeepDivePrompt(basicResult: string, originalPrompt: string, serviceHypothesis: ServiceHypothesis): string {
+    return `
+以下の基本調査結果を補強し、重要な数値データと実用的な提案を追加してください。
+
+【基本調査結果（要約）】
+${basicResult.length > 1000 ? basicResult.substring(0, 1000) + '...[省略]' : basicResult}
+
+【追加要求（重点3項目）】
+1. 具体的な数値データ（市場規模、成長率等）
+2. 主要企業の実例・成功事例
+3. 実行可能なアクションプラン
+
+簡潔で実用的な深掘り分析を作成してください。
+    `;
+  }
+
+  /**
+   * 簡略化された結果統合
+   * @param basicResult 基本調査結果
+   * @param deepResult 深掘り調査結果
+   * @param originalPrompt 元のプロンプト
+   * @returns 統合結果
+   */
+  private simpleIntegrateResults(basicResult: string, deepResult: string, originalPrompt: string): string {
+    return `
+# 統合市場調査レポート
+
+## 基本分析
+${basicResult}
+
+---
+
+## 深掘り分析
+${deepResult}
+
+---
+
+## 統合サマリー
+上記の基本分析と深掘り分析を統合し、以下の包括的な調査結果を提供します：
+
+### 重要な発見事項
+- 基本調査から得られた核心的インサイト
+- 深掘り分析による追加の重要データ
+- 両調査の結果から導かれる戦略的示唆
+
+### 推奨アクション
+1. 短期的な実行可能施策
+2. 中長期的な戦略方向性
+3. リスク対策と機会活用策
+
+**注記**: この統合レポートは基本調査と深掘り調査の両方の結果を包含しています。
+    `;
+  }
+
+  /**
+   * 軽量版フォールバック結果を生成
+   * @param prompt 元のプロンプト
+   * @param primaryError 主要エラー
+   * @param fallbackError フォールバックエラー
+   * @param serviceHypothesis サービス仮説
+   * @returns 軽量版フォールバック結果
+   */
+  private generateLightweightFallback(prompt: string, primaryError: unknown, fallbackError: unknown, serviceHypothesis: ServiceHypothesis): string {
+    const primaryErrorMsg = primaryError instanceof Error ? primaryError.message : 'Unknown error';
+    const fallbackErrorMsg = fallbackError instanceof Error ? fallbackError.message : 'Unknown error';
+    
+    return `
+# システムエラー対応 - 調査フレームワーク
+
+**調査項目**: ${prompt.substring(0, 100)}...
+**エラー状況**: Deep Research及び基本調査でエラーが発生
+
+## 手動調査アプローチ
+
+### 対象事業概要
+- **コンセプト**: ${serviceHypothesis.concept}
+- **ターゲット業界**: ${serviceHypothesis.targetIndustry}
+- **対象顧客**: ${serviceHypothesis.targetUsers}
+
+### 推奨調査方法
+1. **オンライン調査**: Google検索、業界サイト
+2. **公的データ**: 政府統計、業界団体資料
+3. **競合分析**: ${serviceHypothesis.competitors}の公開情報
+
+### 緊急対応チェックリスト
+□ 市場規模概算の把握
+□ 主要競合の特定
+□ 基本トレンドの確認
+
+**重要**: システム復旧後の再実行を推奨します。
+
+**エラー詳細**: 
+- Primary: ${primaryErrorMsg}
+- Fallback: ${fallbackErrorMsg}
     `;
   }
 

@@ -304,11 +304,39 @@ export class ResearchService {
             await this.notionService.updatePageStatus(pageInfo.pageId, 'in-progress');
           }
           
-          // Step 2: 実際の調査を実行
+          // Step 2: 実際の調査を実行（Deep Research機能改善版）
           console.log(`[ResearchService] 調査実行中: ${prompt.title}`);
-          const result = this.deepResearchService 
-            ? await this.deepResearchService.conductEnhancedResearch(prompt.prompt, request.serviceHypothesis)
-            : await this.geminiService.conductResearch(prompt.prompt, request.serviceHypothesis);
+          let result: string;
+          
+          if (this.deepResearchService) {
+            try {
+              // Deep Research機能を試行（タイムアウト制御強化）
+              console.log(`[ResearchService] Deep Research実行: ${prompt.title}`);
+              result = await this.executeWithTimeout(
+                () => this.deepResearchService!.conductEnhancedResearch(prompt.prompt, request.serviceHypothesis),
+                180000, // 3分のタイムアウト
+                `Deep Research: ${prompt.title}`
+              );
+              console.log(`[ResearchService] Deep Research成功: ${prompt.title} (${result.length}文字)`);
+            } catch (deepError) {
+              console.warn(`[ResearchService] Deep Research失敗、標準調査にフォールバック: ${prompt.title}`, deepError);
+              // フォールバック: 標準Gemini調査
+              result = await this.executeWithTimeout(
+                () => this.geminiService.conductResearch(prompt.prompt, request.serviceHypothesis),
+                120000, // 2分のタイムアウト
+                `標準調査: ${prompt.title}`
+              );
+              console.log(`[ResearchService] 標準調査成功: ${prompt.title} (${result.length}文字)`);
+            }
+          } else {
+            // Deep Research機能が利用できない場合は標準調査
+            console.log(`[ResearchService] 標準調査実行: ${prompt.title}`);
+            result = await this.executeWithTimeout(
+              () => this.geminiService.conductResearch(prompt.prompt, request.serviceHypothesis),
+              120000, // 2分のタイムアウト
+              `標準調査: ${prompt.title}`
+            );
+          }
 
           console.log(`[ResearchService] 調査完了: ${prompt.title} (${result.length}文字)`);
 
@@ -562,6 +590,37 @@ export class ResearchService {
    */
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * タイムアウト制御付きで関数を実行
+   * @param fn 実行する関数
+   * @param timeoutMs タイムアウト時間（ミリ秒）
+   * @param description 処理の説明
+   * @returns 実行結果
+   */
+  private async executeWithTimeout<T>(
+    fn: () => Promise<T>,
+    timeoutMs: number,
+    description: string
+  ): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      // タイムアウトタイマーを設定
+      const timeoutTimer = setTimeout(() => {
+        reject(new Error(`${description} がタイムアウトしました (${timeoutMs}ms)`));
+      }, timeoutMs);
+
+      // 実際の処理を実行
+      fn()
+        .then((result) => {
+          clearTimeout(timeoutTimer);
+          resolve(result);
+        })
+        .catch((error) => {
+          clearTimeout(timeoutTimer);
+          reject(error);
+        });
+    });
   }
 
   /**

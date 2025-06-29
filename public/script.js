@@ -822,12 +822,14 @@ function updateResearchItemsStatus(step, researchType) {
   }
 }
 
-// ===== 調査項目の状態更新（新UI対応） =====
+// ===== 調査項目の状態更新（強化版UI対応） =====
 function updateResearchItemStatus(itemId, status) {
   // 新しいHTML構造での要素を検索
   const item = document.querySelector(`[data-id="${itemId}"]`);
   
   if (item) {
+    console.log(`[UpdateResearchItemStatus] 項目「${itemId}」を「${status}」に更新`);
+    
     // 既存のステータスクラスを削除
     item.classList.remove('pending', 'in-progress', 'completed', 'failed');
     item.classList.add(status);
@@ -838,17 +840,51 @@ function updateResearchItemStatus(itemId, status) {
       switch (status) {
         case 'in-progress':
           icon.textContent = '🔄';
+          console.log(`[UpdateResearchItemStatus] 「${itemId}」のアイコンを🔄に変更`);
           break;
         case 'completed':
           icon.textContent = '✅';
+          console.log(`[UpdateResearchItemStatus] 「${itemId}」のアイコンを✅に変更`);
           break;
         case 'failed':
           icon.textContent = '❌';
+          console.log(`[UpdateResearchItemStatus] 「${itemId}」のアイコンを❌に変更`);
           break;
         default:
           icon.textContent = '⏳';
+          console.log(`[UpdateResearchItemStatus] 「${itemId}」のアイコンを⏳に変更`);
+      }
+    } else {
+      console.warn(`[UpdateResearchItemStatus] アイコン要素が見つかりません: ${itemId}`);
+    }
+    
+    // プログレスバーも更新
+    const progressFill = item.querySelector('.research-progress-fill');
+    if (progressFill) {
+      switch (status) {
+        case 'in-progress':
+          progressFill.style.width = '50%';
+          console.log(`[UpdateResearchItemStatus] 「${itemId}」のプログレスバーを50%に設定`);
+          break;
+        case 'completed':
+          progressFill.style.width = '100%';
+          console.log(`[UpdateResearchItemStatus] 「${itemId}」のプログレスバーを100%に設定`);
+          break;
+        case 'failed':
+          progressFill.style.width = '100%';
+          progressFill.style.backgroundColor = '#ef4444';
+          console.log(`[UpdateResearchItemStatus] 「${itemId}」のプログレスバーをエラー表示に設定`);
+          break;
+        default:
+          progressFill.style.width = '0%';
+          progressFill.style.backgroundColor = '';
       }
     }
+  } else {
+    console.warn(`[UpdateResearchItemStatus] 要素が見つかりません: data-id="${itemId}"`);
+    // デバッグ用: 存在する要素を確認
+    const allItems = document.querySelectorAll('[data-id]');
+    console.log(`[UpdateResearchItemStatus] 利用可能な要素:`, Array.from(allItems).map(el => el.getAttribute('data-id')));
   }
 }
 
