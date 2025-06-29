@@ -1230,4 +1230,29 @@ export class NotionService {
     console.log('[NotionService] 調査種別プロパティが見つかりません。利用可能なプロパティ:', Object.keys(properties));
     return null;
   }
+
+  /**
+   * コールアウトブロックを作成
+   * @param title 見出し
+   * @param content 内容
+   * @param icon 絵文字
+   * @returns Notionブロック
+   */
+  private createCalloutBlock(title: string, content: string, icon: string): any {
+    const combinedText = content ? `**${title}**\n${content}` : `**${title}**`;
+    const richText = this.parseTextToRichText(
+      this.truncateTextSafely(combinedText)
+    );
+    return {
+      object: 'block',
+      type: 'callout',
+      callout: {
+        rich_text: richText,
+        icon: {
+          emoji: icon,
+        },
+        color: 'gray_background',
+      },
+    } as any;
+  }
 }
