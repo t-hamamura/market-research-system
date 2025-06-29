@@ -796,25 +796,13 @@ const FIELD_MAPPING = {
     '想定コスト構造': 'costStructure'
 };
 
-// 現在のアクティブなタブを記録
-let activeTab = 'individual';
-
 // ===== 一括入力機能 =====
 
 // 一括入力機能のイベントリスナー設定
 function setupBulkInputListeners() {
-  const individualTab = document.getElementById('individualTab');
-  const bulkTab = document.getElementById('bulkTab');
   const copyTemplateButton = document.getElementById('copyTemplateButton');
   const parseBulkButton = document.getElementById('parseBulkButton');
   const clearBulkButton = document.getElementById('clearBulkButton');
-  
-  // 要素が存在しない場合は何もしない
-  if (!individualTab || !bulkTab) return;
-  
-  // タブ切り替え
-  individualTab.addEventListener('click', () => switchTab('individual'));
-  bulkTab.addEventListener('click', () => switchTab('bulk'));
   
   // 一括入力関連
   if (copyTemplateButton) {
@@ -826,34 +814,6 @@ function setupBulkInputListeners() {
   if (clearBulkButton) {
     clearBulkButton.addEventListener('click', clearBulkInput);
   }
-}
-
-// タブ切り替え機能
-function switchTab(tabName) {
-  activeTab = tabName;
-  
-  const individualTab = document.getElementById('individualTab');
-  const bulkTab = document.getElementById('bulkTab');
-  const individualPanel = document.getElementById('individualPanel');
-  const bulkPanel = document.getElementById('bulkPanel');
-  
-  if (!individualTab || !bulkTab || !individualPanel || !bulkPanel) return;
-  
-  // タブボタンの切り替え
-  if (tabName === 'individual') {
-    individualTab.classList.add('active');
-    bulkTab.classList.remove('active');
-    individualPanel.classList.add('active');
-    bulkPanel.classList.remove('active');
-  } else {
-    bulkTab.classList.add('active');
-    individualTab.classList.remove('active');
-    bulkPanel.classList.add('active');
-    individualPanel.classList.remove('active');
-  }
-  
-  // バリデーションエラーをクリア
-  hideValidationErrors();
 }
 
 // テンプレートコピー機能
@@ -871,7 +831,7 @@ function copyTemplate() {
     
     setTimeout(() => {
       copyTemplateButton.innerHTML = originalText;
-      copyTemplateButton.style.background = '#3b82f6';
+      copyTemplateButton.style.background = '#4A90C2';
     }, 2000);
   }).catch(err => {
     console.error('テンプレートのコピーに失敗しました:', err);
@@ -908,11 +868,8 @@ function parseBulkText() {
       }
     });
     
-    // 個別入力タブに切り替え
-    switchTab('individual');
-    
     // 成功メッセージ
-    showBulkSuccessMessage('一括入力の解析が完了しました。個別フィールドに反映されました。');
+    showBulkSuccessMessage('一括入力の解析が完了しました。左側のフィールドに反映されました。');
     
   } catch (error) {
     showBulkValidationError(`テキストの解析に失敗しました: ${error.message}`);

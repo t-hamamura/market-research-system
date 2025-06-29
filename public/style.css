@@ -112,23 +112,6 @@ body {
   overflow: hidden;
 }
 
-.hero-section::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  right: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(45deg, transparent 40%, rgba(255, 255, 255, 0.1) 50%, transparent 60%);
-  transform: rotate(-45deg);
-  animation: shimmer 3s infinite;
-}
-
-@keyframes shimmer {
-  0% { transform: translateX(-100%) rotate(-45deg); }
-  100% { transform: translateX(100%) rotate(-45deg); }
-}
-
 .hero-title {
   font-size: 32px;
   font-weight: 700;
@@ -150,6 +133,19 @@ body {
   opacity: 0.8;
   position: relative;
   z-index: 1;
+}
+
+/* ===== 2列レイアウト ===== */
+.two-column-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  margin-bottom: 32px;
+}
+
+.left-column,
+.right-column {
+  min-height: 0; /* グリッドアイテムのオーバーフロー対策 */
 }
 
 /* ===== カードスタイル ===== */
@@ -177,45 +173,6 @@ body {
 
 .section-icon {
   font-size: 28px;
-}
-
-/* ===== タブスタイル ===== */
-.input-tabs {
-  display: flex;
-  gap: 0;
-  margin-bottom: 32px;
-  border-bottom: 2px solid var(--border-color);
-  background: transparent;
-}
-
-.tab-button {
-  flex: 1;
-  padding: 16px 24px;
-  background: var(--spirits-bg-gray);
-  color: var(--text-secondary);
-  border: none;
-  cursor: pointer;
-  font-weight: 500;
-  font-size: 16px;
-  border-radius: var(--border-radius) var(--border-radius) 0 0;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border-bottom: 3px solid transparent;
-}
-
-.tab-button:hover {
-  background: #F1F5F9;
-  color: var(--spirits-blue);
-}
-
-.tab-button.active {
-  background: var(--spirits-white);
-  color: var(--spirits-navy);
-  border-bottom: 3px solid var(--spirits-blue);
-  box-shadow: 0 -2px 8px rgba(74, 144, 194, 0.15);
 }
 
 /* ===== フォームスタイル ===== */
@@ -292,6 +249,7 @@ body {
   text-decoration: none;
   position: relative;
   overflow: hidden;
+  width: 100%;
 }
 
 .btn-primary:hover {
@@ -316,6 +274,7 @@ body {
   align-items: center;
   gap: 8px;
   transition: all 0.3s ease;
+  flex: 1;
 }
 
 .btn-secondary:hover {
@@ -336,6 +295,9 @@ body {
   align-items: center;
   gap: 8px;
   transition: all 0.3s ease;
+  width: 100%;
+  justify-content: center;
+  margin-bottom: 16px;
 }
 
 .btn-copy-template:hover {
@@ -353,21 +315,9 @@ body {
 
 .bulk-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   margin-bottom: 20px;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.bulk-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--spirits-navy);
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .bulk-description {
@@ -393,6 +343,13 @@ body {
   border: 2px solid var(--border-color);
   min-height: 400px;
   resize: vertical;
+}
+
+.bulk-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-top: 16px;
 }
 
 /* ===== プログレスバー ===== */
@@ -474,6 +431,7 @@ body {
   padding: 8px 16px;
   border-radius: var(--border-radius);
   background: var(--spirits-bg-gray);
+  margin-bottom: 32px;
 }
 
 .system-status.success {
@@ -492,6 +450,11 @@ body {
     padding: 16px 12px;
   }
   
+  .two-column-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  
   .form-card,
   .progress-card,
   .result-card,
@@ -507,23 +470,12 @@ body {
     font-size: 24px;
   }
   
-  .tab-button {
-    font-size: 14px;
-    padding: 14px 16px;
-  }
-  
-  .bulk-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
   .bulk-actions {
-    justify-content: stretch;
+    flex-direction: column;
+    gap: 8px;
   }
   
-  .btn-secondary,
-  .btn-copy-template {
-    flex: 1;
+  .btn-secondary {
     justify-content: center;
   }
 }
