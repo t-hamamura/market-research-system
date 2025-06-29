@@ -56,15 +56,27 @@ export class NotionService {
       } catch (e) {
         // 作成日時プロパティが存在しない場合はスキップ
       }
+      
+      try {
+        properties['作成日時'] = {
+          date: {
+            start: new Date().toISOString()
+          }
+        };
+      } catch (e) {
+        console.log('[NotionService] 作成日時プロパティをスキップ:', e);
+      }
 
+      // ステータスプロパティの設定（デバッグ情報付き）
       try {
         properties['ステータス'] = {
           select: {
             name: '完了'
           }
         };
+        console.log('[NotionService] ステータスプロパティ設定完了');
       } catch (e) {
-        // ステータスプロパティが存在しない場合はスキップ
+        console.log('[NotionService] ステータスプロパティをスキップ:', e);
       }
 
       // サービス仮説セクションのブロック
@@ -127,6 +139,10 @@ export class NotionService {
         ...researchResultsBlocks
       ];
 
+      // デバッグ情報を出力
+      console.log('[NotionService] プロパティ設定:', JSON.stringify(properties, null, 2));
+      console.log('[NotionService] データベースID:', this.config.databaseId);
+
       // Notionページを作成
       const response = await this.notion.pages.create({
         parent: {
@@ -146,6 +162,18 @@ export class NotionService {
 
     } catch (error) {
       console.error('[NotionService] Notionページ作成エラー:', error);
+      
+      // より詳細なエラー情報を出力
+      if (error instanceof Error) {
+        console.error('[NotionService] エラーメッセージ:', error.message);
+        console.error('[NotionService] スタックトレース:', error.stack);
+      }
+      
+      // Notion APIのエラーコードがある場合は出力
+      if (error && typeof error === 'object' && 'code' in error) {
+        console.error('[NotionService] Notion APIエラーコード:', (error as any).code);
+      }
+      
       throw new Error(`Notionページ作成エラー: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
