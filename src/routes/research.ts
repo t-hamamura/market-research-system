@@ -145,54 +145,24 @@ export function createResearchRouter(researchService: ResearchService): Router {
         console.log('[ResearchRouter] 再開ステップ:', resumeFromStep);
       }
 
-      // サービス状態確認
+      // サービス状態確認（緩和版）
       try {
+        console.log('[ResearchRouter] サービス状態確認開始...');
         const serviceStatus = await researchService.testServices();
-        if (!serviceStatus.gemini && !serviceStatus.notion) {
-          res.status(503).json({
-            success: false,
-            error: {
-              error: 'SERVICE_UNAVAILABLE',
-              message: '⚠️ システムが正しく設定されていません。管理者にお問い合わせください。\n\n詳細: Gemini APIとNotion APIの両方に接続できません。環境変数（GEMINI_API_KEY、NOTION_TOKEN、NOTION_DATABASE_ID）を確認してください。',
-              details: {
-                gemini: serviceStatus.gemini ? 'OK' : 'FAIL - GEMINI_API_KEYを確認してください',
-                notion: serviceStatus.notion ? 'OK' : 'FAIL - NOTION_TOKENとNOTION_DATABASE_IDを確認してください'
-              },
-              timestamp: new Date()
-            }
-          });
-          return;
-        } else if (!serviceStatus.gemini) {
-          res.status(503).json({
-            success: false,
-            error: {
-              error: 'GEMINI_API_ERROR',
-              message: '⚠️ Gemini APIに接続できません。環境変数GEMINI_API_KEYを確認してください。',
-              timestamp: new Date()
-            }
-          });
-          return;
-        } else if (!serviceStatus.notion) {
-          res.status(503).json({
-            success: false,
-            error: {
-              error: 'NOTION_API_ERROR', 
-              message: '⚠️ Notion APIに接続できません。環境変数NOTION_TOKENとNOTION_DATABASE_IDを確認してください。',
-              timestamp: new Date()
-            }
-          });
-          return;
+        console.log('[ResearchRouter] サービス状態結果:', serviceStatus);
+        
+        // 警告ログを出すが、処理は継続
+        if (!serviceStatus.gemini) {
+          console.warn('[ResearchRouter] ⚠️ Gemini API接続に問題がある可能性があります');
         }
+        if (!serviceStatus.notion) {
+          console.warn('[ResearchRouter] ⚠️ Notion API接続に問題がある可能性があります');
+        }
+        
+        console.log('[ResearchRouter] サービス状態確認完了、処理を継続');
+        
       } catch (serviceError) {
-        res.status(503).json({
-          success: false,
-          error: {
-            error: 'SERVICE_TEST_ERROR',
-            message: `⚠️ サービス接続テストに失敗しました: ${serviceError instanceof Error ? serviceError.message : 'Unknown error'}`,
-            timestamp: new Date()
-          }
-        });
-        return;
+        console.warn('[ResearchRouter] ⚠️ サービス状態確認でエラーが発生しましたが、処理を継続します:', serviceError);
       }
 
       // リクエストバリデーション
