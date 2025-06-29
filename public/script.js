@@ -1134,7 +1134,7 @@ const TEMPLATE_TEXT = `コンセプト：
 規制・技術前提：
 想定コスト構造：`;
 
-// フィールドマッピング
+// フィールドマッピング（複数の表記に対応）
 const FIELD_MAPPING = {
     'コンセプト': 'concept',
     '解決したい顧客課題': 'customerProblem',
@@ -1144,11 +1144,23 @@ const FIELD_MAPPING = {
     '課金モデル': 'revenueModel',
     '価格帯・価格設定の方向性': 'pricingDirection',
     '暫定UVP（Unique Value Proposition）': 'uvp',
+    '暫定UVP': 'uvp',
     '初期KPI': 'initialKpi',
     '獲得チャネル仮説': 'acquisitionChannels',
     '規制・技術前提': 'regulatoryTechPrereqs',
     '想定コスト構造': 'costStructure'
 };
+
+// フィールド名の正規化関数
+function normalizeFieldName(fieldName) {
+  // トリムして、末尾の「：」「:」を削除
+  let normalized = fieldName.trim().replace(/[：:]+$/, '').trim();
+  
+  // 括弧内の説明を除去（例：「暫定UVP（独自価値提案）」→「暫定UVP」）
+  normalized = normalized.replace(/[（(][^）)]*[）)]/g, '').trim();
+  
+  return normalized;
+}
 
 // ===== 一括入力機能 =====
 
@@ -1202,9 +1214,13 @@ function copyTemplate() {
 function parseBulkText() {
   const bulkInput = document.getElementById('bulkInput');
   
-  if (!bulkInput) return;
+  if (!bulkInput) {
+    console.error('[BulkInput] bulkInput要素が見つかりません');
+    return;
+  }
   
   const bulkText = bulkInput.value.trim();
+  console.log('[BulkInput] 入力テキスト:', bulkText);
   
   if (!bulkText) {
     showBulkValidationError('一括入力エリアにテキストを入力してください。');
@@ -1213,19 +1229,32 @@ function parseBulkText() {
   
   try {
     const parsed = parseTemplateText(bulkText);
+    let reflectedCount = 0;
     
     // 解析結果を個別フィールドに反映
     Object.entries(parsed).forEach(([fieldName, value]) => {
+      console.log(`[BulkInput] フィールド反映試行: ${fieldName} = "${value}"`);
       const element = document.getElementById(fieldName);
       if (element) {
         element.value = value;
+        reflectedCount++;
+        console.log(`[BulkInput] ✅ フィールド反映成功: ${fieldName}`);
+      } else {
+        console.warn(`[BulkInput] ❌ フィールド要素が見つかりません: ${fieldName}`);
       }
     });
     
-    // 成功メッセージ
-    showBulkSuccessMessage('一括入力の解析が完了しました。左側のフィールドに反映されました。');
+    console.log(`[BulkInput] 反映完了: ${reflectedCount}件`);
+    
+    if (reflectedCount > 0) {
+      // 成功メッセージ
+      showBulkSuccessMessage(`一括入力の解析が完了しました。${reflectedCount}件のフィールドに反映されました。`);
+    } else {
+      showBulkValidationError('有効なフィールドが見つかりませんでした。テンプレート形式を確認してください。');
+    }
     
   } catch (error) {
+    console.error('[BulkInput] 解析エラー:', error);
     showBulkValidationError(`テキストの解析に失敗しました: ${error.message}`);
   }
 }
@@ -1241,17 +1270,31 @@ function parseTemplateText(text) {
   for (const line of lines) {
     const trimmedLine = line.trim();
     
-    // フィールド行の検出（コロンを含む行）
-    if (trimmedLine.includes(':')) {
+    // 空行をスキップ
+    if (!trimmedLine) {
+      continue;
+    }
+    
+    // フィールド行の検出（コロンを含む行で、コロンの後に内容がある場合）
+    if (trimmedLine.includes(':') || trimmedLine.includes('：')) {
       // 前のフィールドがあれば保存
       if (currentField && FIELD_MAPPING[currentField]) {
         parsed[FIELD_MAPPING[currentField]] = currentValue.trim();
+        console.log(`[BulkInput] 解析: ${currentField} -> ${FIELD_MAPPING[currentField]} = "${currentValue.trim()}"`);
       }
       
       // 新しいフィールドを開始
-      const [fieldName, ...valueParts] = trimmedLine.split(':');
-      currentField = fieldName.trim();
-      currentValue = valueParts.join(':').trim();
+      const colonIndex = trimmedLine.indexOf(':') !== -1 ? trimmedLine.indexOf(':') : trimmedLine.indexOf('：');
+      const fieldName = trimmedLine.substring(0, colonIndex).trim();
+      const fieldValue = trimmedLine.substring(colonIndex + 1).trim();
+      
+      // フィールド名を正規化
+      const normalizedFieldName = normalizeFieldName(fieldName);
+      
+      currentField = normalizedFieldName;
+      currentValue = fieldValue;
+      
+      console.log(`[BulkInput] 新フィールド検出: "${currentField}"`);
     } else if (currentField && trimmedLine) {
       // 継続行（前のフィールドの続き）
       currentValue += (currentValue ? '\n' : '') + trimmedLine;
@@ -1261,7 +1304,11 @@ function parseTemplateText(text) {
   // 最後のフィールドを保存
   if (currentField && FIELD_MAPPING[currentField]) {
     parsed[FIELD_MAPPING[currentField]] = currentValue.trim();
+    console.log(`[BulkInput] 最終フィールド保存: ${currentField} -> ${FIELD_MAPPING[currentField]} = "${currentValue.trim()}"`);
   }
+  
+  console.log('[BulkInput] 解析結果:', parsed);
+  console.log('[BulkInput] フィールドマッピング:', FIELD_MAPPING);
   
   return parsed;
 }
