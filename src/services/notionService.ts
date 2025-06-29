@@ -1150,4 +1150,27 @@ export class NotionService {
 
     return '一般調査'; // デフォルト
   }
+
+  /**
+   * プロパティブロックを作成（サービス仮説用）
+   * @param title プロパティタイトル
+   * @param content プロパティの内容
+   * @returns Notionブロック
+   */
+  private createPropertyBlock(title: string, content?: string): any {
+    const displayContent = content && content.trim() ? content : '未設定';
+    const combinedText = `**${title}**: ${displayContent}`;
+    
+    const richText = this.parseTextToRichText(
+      this.truncateTextSafely(combinedText)
+    );
+
+    return {
+      object: 'block',
+      type: 'paragraph',
+      paragraph: {
+        rich_text: richText
+      }
+    } as any;
+  }
 }
