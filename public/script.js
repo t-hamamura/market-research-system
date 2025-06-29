@@ -618,17 +618,53 @@ function updateResearchItemsStatus(step, researchType) {
     18: 'notion'
   };
   
-  const currentItemId = researchItems[step];
+  // フェーズ別の調査項目グループ
+  const phaseGroups = {
+    1: [1, 2, 3, 4],      // フェーズ1: 基本情報収集
+    2: [5, 6, 7, 8],      // フェーズ2: 市場機会分析
+    3: [9, 10, 11, 12],   // フェーズ3: ビジネス戦略分析
+    4: [13, 14, 15, 16],  // フェーズ4: リスク・機会評価
+    5: [17, 18]           // 最終処理
+  };
   
-  // 現在の項目を進行中に
-  if (currentItemId) {
-    updateResearchItemStatus(currentItemId, 'in-progress');
-  }
+  // 現在のフェーズを取得
+  const currentPhase = Math.min(5, Math.ceil(step / 4));
   
-  // 前の項目を完了に
-  const prevItemId = researchItems[step - 1];
-  if (prevItemId) {
-    updateResearchItemStatus(prevItemId, 'completed');
+  // 各フェーズの状態を更新
+  for (let phase = 1; phase <= 5; phase++) {
+    const phaseSteps = phaseGroups[phase];
+    
+    if (phase < currentPhase) {
+      // 完了したフェーズ：すべての項目を完了状態に
+      phaseSteps.forEach(stepNum => {
+        const itemId = researchItems[stepNum];
+        if (itemId) {
+          updateResearchItemStatus(itemId, 'completed');
+        }
+      });
+         } else if (phase === currentPhase) {
+       // 現在のフェーズ：進行中のフェーズでは現在実行中の項目のみアクティブ
+       phaseSteps.forEach(stepNum => {
+         const itemId = researchItems[stepNum];
+         if (itemId) {
+           if (stepNum === step) {
+             // 現在実行中の項目
+             updateResearchItemStatus(itemId, 'in-progress');
+           } else {
+             // 同じフェーズ内の他の項目は保留状態のまま
+             updateResearchItemStatus(itemId, 'pending');
+           }
+         }
+       });
+    } else {
+      // 未来のフェーズ：すべて保留状態
+      phaseSteps.forEach(stepNum => {
+        const itemId = researchItems[stepNum];
+        if (itemId) {
+          updateResearchItemStatus(itemId, 'pending');
+        }
+      });
+    }
   }
 }
 
