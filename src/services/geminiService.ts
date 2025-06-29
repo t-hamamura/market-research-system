@@ -101,8 +101,16 @@ export class GeminiService {
         
         if (trimmedText.length < 10) {
           console.warn(`[GeminiService] 非常に短いレスポンス (${trimmedText.length}文字): "${trimmedText}"`);
-          // 短すぎるレスポンスの場合もリトライ対象とする
-          throw new Error(`レスポンスが短すぎます (${trimmedText.length}文字): "${trimmedText}"`);
+          // 接続テストや明らかに意味のある短いレスポンスは除外
+          const validShortResponses = ['接続成功', 'OK', 'Success', 'Connected', 'Test successful'];
+          const isValidShortResponse = validShortResponses.some(valid => 
+            trimmedText.includes(valid) || valid.includes(trimmedText)
+          );
+          
+          if (!isValidShortResponse) {
+            // 意味のない短いレスポンスのみリトライ対象とする
+            throw new Error(`レスポンスが短すぎます (${trimmedText.length}文字): "${trimmedText}"`);
+          }
         }
 
         console.log(`[GeminiService] 調査完了 (試行${attempt}): ${trimmedText.length}文字の結果を取得`);

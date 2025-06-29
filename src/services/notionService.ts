@@ -48,7 +48,7 @@ export class NotionService {
           title: [
             {
               text: {
-                content: businessName
+                content: `${businessName} - 統合レポート`
               }
             }
           ]
@@ -91,7 +91,7 @@ export class NotionService {
               {
                 type: 'text',
                 text: {
-                  content: `市場調査レポート：${businessName}`
+                  content: `市場調査統合レポート：${businessName}`
                 }
               }
             ]
@@ -268,23 +268,48 @@ export class NotionService {
   private async appendBlocks(pageId: string, blocks: any[]): Promise<void> {
     if (blocks.length === 0) return;
 
-    try {
-      await this.notion.blocks.children.append({
-        block_id: pageId,
-        children: blocks
-      });
-    } catch (error) {
-      console.error('[NotionService] ブロック追加エラー:', error);
+    // Notion APIの制限: 100ブロック/リクエスト
+    const maxBlocksPerRequest = 90; // 安全マージンを設けて90に設定
+    
+    if (blocks.length <= maxBlocksPerRequest) {
+      try {
+        await this.notion.blocks.children.append({
+          block_id: pageId,
+          children: blocks
+        });
+        console.log(`[NotionService] ブロック追加成功: ${blocks.length}ブロック`);
+      } catch (error) {
+        console.error('[NotionService] ブロック追加エラー:', error);
+        
+        // エラーメッセージをチェック
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const isValidationError = errorMessage.includes('body failed validation') || 
+                                 errorMessage.includes('children.length should be');
+        
+        if (isValidationError && blocks.length > 1) {
+          console.log(`[NotionService] バリデーションエラー検出、ブロック数を削減して再試行: ${blocks.length} -> ${Math.floor(blocks.length / 2)}`);
+          const midpoint = Math.floor(blocks.length / 2);
+          await this.appendBlocks(pageId, blocks.slice(0, midpoint));
+          await this.sleep(500);
+          await this.appendBlocks(pageId, blocks.slice(midpoint));
+        } else {
+          throw error;
+        }
+      }
+    } else {
+      // 制限を超える場合は分割して送信
+      console.log(`[NotionService] ブロック数が制限を超過 (${blocks.length}), ${maxBlocksPerRequest}ブロックずつに分割`);
       
-      // 413エラーの場合はさらに分割
-      if (error && typeof error === 'object' && 'code' in error && (error as any).code === 413) {
-        console.log('[NotionService] ブロック数を半分に分割して再試行...');
-        const midpoint = Math.floor(blocks.length / 2);
-        await this.appendBlocks(pageId, blocks.slice(0, midpoint));
-        await this.sleep(500);
-        await this.appendBlocks(pageId, blocks.slice(midpoint));
-      } else {
-        throw error;
+      for (let i = 0; i < blocks.length; i += maxBlocksPerRequest) {
+        const chunk = blocks.slice(i, i + maxBlocksPerRequest);
+        console.log(`[NotionService] ブロックチャンク ${Math.floor(i/maxBlocksPerRequest) + 1}/${Math.ceil(blocks.length/maxBlocksPerRequest)} 送信中: ${chunk.length}ブロック`);
+        
+        await this.appendBlocks(pageId, chunk);
+        
+        // チャンク間の待機（レート制限対策）
+        if (i + maxBlocksPerRequest < blocks.length) {
+          await this.sleep(1000);
+        }
       }
     }
   }
@@ -677,6 +702,154 @@ export class NotionService {
         databaseId: this.config.databaseId ? this.config.databaseId.substring(0, 8) + '...' : 'なし'
       });
       return false;
+    }
+  }
+
+  /**
+   * 個別調査結果をNotionページとして作成
+   * @param businessName 事業名
+   * @param researchTitle 調査タイトル
+   * @param researchResult 調査結果
+   * @param researchIndex 調査番号
+   * @returns NotionページのURL
+   */
+  async createIndividualResearchPage(
+    businessName: string,
+    researchTitle: string,
+    researchResult: string,
+    researchIndex: number
+  ): Promise<{ pageId: string; url: string }> {
+    try {
+      console.log(`[NotionService] 個別調査ページ作成開始: ${researchTitle}`);
+
+      // データベース構造を確認
+      const databaseInfo = await this.getDatabaseProperties();
+      const properties: any = {};
+
+      // タイトルプロパティの設定
+      const titleProperty = this.findTitleProperty(databaseInfo);
+      if (titleProperty) {
+        properties[titleProperty] = {
+          title: [
+            {
+              text: {
+                content: `${businessName} - ${researchTitle}`
+              }
+            }
+          ]
+        };
+      }
+
+      // ステータスプロパティの設定
+      const statusProperty = this.findStatusProperty(databaseInfo);
+      if (statusProperty) {
+        const statusOptions = databaseInfo[statusProperty]?.select?.options || [];
+        const completedOption = this.findCompletedOption(statusOptions);
+        
+        if (completedOption) {
+          properties[statusProperty] = {
+            select: {
+              name: completedOption.name
+            }
+          };
+        }
+      }
+
+      // 個別調査ページコンテンツ
+      const pageContent = [
+        {
+          object: 'block',
+          type: 'heading_1',
+          heading_1: {
+            rich_text: [
+              {
+                type: 'text',
+                text: {
+                  content: `${researchIndex}. ${researchTitle}`
+                }
+              }
+            ]
+          }
+        } as any,
+        {
+          object: 'block',
+          type: 'paragraph',
+          paragraph: {
+            rich_text: [
+              {
+                type: 'text',
+                text: {
+                  content: `事業名: ${businessName}`
+                }
+              }
+            ]
+          }
+        } as any,
+        {
+          object: 'block',
+          type: 'paragraph',
+          paragraph: {
+            rich_text: [
+              {
+                type: 'text',
+                text: {
+                  content: `作成日時: ${new Date().toLocaleString('ja-JP')}`
+                }
+              }
+            ]
+          }
+        } as any,
+        {
+          object: 'block',
+          type: 'divider',
+          divider: {}
+        } as any
+      ];
+
+      // 基本ページを作成
+      const response = await this.notion.pages.create({
+        parent: {
+          database_id: this.config.databaseId
+        },
+        properties,
+        children: pageContent
+      });
+
+      const pageId = response.id;
+      console.log(`[NotionService] 個別調査基本ページ作成完了: ${pageId}`);
+
+      // 調査結果コンテンツを追加
+      const resultBlocks = this.convertMarkdownToBlocks(researchResult);
+      
+      // 調査結果ヘッダーを追加
+      const contentWithHeader = [
+        {
+          object: 'block',
+          type: 'heading_2',
+          heading_2: {
+            rich_text: [
+              {
+                type: 'text',
+                text: {
+                  content: '📋 調査結果'
+                }
+              }
+            ]
+          }
+        } as any,
+        ...resultBlocks
+      ];
+
+      await this.appendBlocks(pageId, contentWithHeader);
+
+      const url = this.generatePageUrl(pageId);
+      console.log(`[NotionService] 個別調査ページ作成完了: ${url}`);
+      
+      return { pageId, url };
+
+    } catch (error) {
+      console.error(`[NotionService] 個別調査ページ作成エラー (${researchTitle}):`, error);
+      throw new Error(`個別調査ページ作成エラー: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

@@ -198,6 +198,21 @@ export class ResearchService {
 
             console.log(`[ResearchService] 調査${globalIndex + 1}完了: ${result.length}文字`);
 
+            // 個別調査結果をNotionに即座に保存
+            try {
+              console.log(`[ResearchService] 個別Notion保存開始: ${prompt.title}`);
+              const individualNotionResult = await this.notionService.createIndividualResearchPage(
+                request.businessName,
+                prompt.title,
+                result,
+                globalIndex + 1
+              );
+              console.log(`[ResearchService] 個別Notion保存完了: ${individualNotionResult.url}`);
+            } catch (notionError) {
+              console.error(`[ResearchService] 個別Notion保存エラー (${prompt.title}):`, notionError);
+              // Notion保存エラーは調査自体の失敗とはしない（継続）
+            }
+
             return {
               id: prompt.id,
               title: prompt.title,
@@ -281,23 +296,23 @@ export class ResearchService {
       );
       console.log('[ResearchService] 統合レポート生成完了');
 
-      // Notionページ作成
+      // 統合レポートページ作成
       onProgress({
         type: 'progress',
         step: this.researchPrompts.length + 2,
         total: this.researchPrompts.length + 2,
-        message: 'Notionページを作成中...',
-        researchType: 'Notion保存'
+        message: '統合レポートページを作成中...',
+        researchType: '統合レポート保存'
       });
 
-      console.log('[ResearchService] Notionページ作成開始');
+      console.log('[ResearchService] 統合レポートページ作成開始');
       const notionResult = await this.notionService.createResearchPage(
         request.businessName,
         request.serviceHypothesis,
         researchResults,
         integratedReport
       );
-      console.log('[ResearchService] Notionページ作成完了:', notionResult.url);
+      console.log('[ResearchService] 統合レポートページ作成完了:', notionResult.url);
 
       // 完了通知
       const completedAt = new Date();
@@ -308,8 +323,8 @@ export class ResearchService {
         step: this.researchPrompts.length + 2,
         total: this.researchPrompts.length + 2,
         message: actualResumeStep > 0 
-          ? `市場調査が完了しました！ (実行時間: ${duration}秒、ステップ${actualResumeStep}から再開)`
-          : `市場調査が完了しました！ (実行時間: ${duration}秒、並列処理で高速化)`,
+          ? `市場調査が完了しました！個別調査ページ${researchResults.length}件と統合レポートを作成 (実行時間: ${duration}秒、ステップ${actualResumeStep}から再開)`
+          : `市場調査が完了しました！個別調査ページ${researchResults.length}件と統合レポートを作成 (実行時間: ${duration}秒、並列処理で高速化)`,
         notionUrl: notionResult.url
       });
 
