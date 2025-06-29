@@ -54,4 +54,14 @@ jspm_packages/
 .yarn-integrity
 
 # TypeScript cache
-*.tsbuildinfo 
+*.tsbuildinfo
+
+# Temporary folders
+tmp/
+temp/
+
+# Railway specific
+.railway/
+
+# Debug logs
+debug.log
