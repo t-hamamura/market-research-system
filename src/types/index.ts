@@ -41,7 +41,7 @@ export interface ResearchResult {
   prompt: string;                    // 使用プロンプト
   result: string;                    // 調査結果
   timestamp: Date;                   // 実行時刻
-  status: 'pending' | 'completed' | 'failed'; // ステータス
+  status: 'pending' | 'completed' | 'failed' | 'skipped'; // ステータス（再開機能でskipped追加）
 }
 
 // 統合調査結果の型定義

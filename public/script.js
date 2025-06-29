@@ -18,7 +18,9 @@ let appState = {
   startTime: null,
   currentPhase: 1,
   completedBatches: 0,
-  estimatedTotalTime: 9 * 60 // 9分（秒単位）
+  estimatedTotalTime: 9 * 60, // 9分（秒単位）
+  lastFormData: null, // 再開用に前回のフォームデータを保存
+  failedStep: null // 失敗したステップ番号
 };
 
 // 調査プロンプト一覧（UI表示用）
@@ -295,14 +297,21 @@ function hideValidationErrors() {
 }
 
 // ===== 市場調査開始 =====
-function startResearch(formData) {
+function startResearch(formData, resumeFromStep = null) {
   console.log('[App] 市場調査開始:', formData.businessName);
+  if (resumeFromStep) {
+    console.log('[App] ステップ', resumeFromStep, 'から再開');
+  }
+  
+  // フォームデータを保存（再開用）
+  appState.lastFormData = JSON.parse(JSON.stringify(formData));
   
   // 開始時刻を記録
   appState.startTime = new Date();
   appState.isLoading = true;
-  appState.currentPhase = 1;
+  appState.currentPhase = resumeFromStep ? Math.ceil(resumeFromStep / 4) : 1;
   appState.completedBatches = 0;
+  appState.currentStep = resumeFromStep || 0;
   
   // UI状態を更新
   updateUIForResearchStart();
@@ -310,12 +319,12 @@ function startResearch(formData) {
   // 初期フェーズ状態を設定
   updatePhaseDisplay();
   
-  // Server-Sent Events接続
-  connectToResearchStream(formData);
+  // Server-Sent Events接続（再開ステップ付き）
+  connectToResearchStream(formData, resumeFromStep);
 }
 
 // ===== Server-Sent Events接続 =====
-function connectToResearchStream(formData) {
+function connectToResearchStream(formData, resumeFromStep = null) {
   try {
     console.log('[App] SSE接続開始');
     
@@ -324,13 +333,19 @@ function connectToResearchStream(formData) {
       appState.eventSource.close();
     }
     
+    // リクエストボディに再開ステップを含める
+    const requestBody = { ...formData };
+    if (resumeFromStep !== null) {
+      requestBody.resumeFromStep = resumeFromStep;
+    }
+    
     // EventSourceは直接POSTをサポートしないため、fetchでPOSTしてからSSEを受信
     fetch('/api/research/start', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(formData)
+      body: JSON.stringify(requestBody)
     }).then(response => {
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -676,6 +691,7 @@ function handleResearchError(message) {
   
   appState.error = message;
   appState.isLoading = false;
+  appState.failedStep = appState.currentStep; // 失敗したステップを記録
   
   showErrorSection(message);
 }
@@ -736,7 +752,34 @@ function showErrorSection(message) {
   elements.errorSection.classList.remove('hidden');
   
   // エラーメッセージの設定
-  elements.errorMessage.textContent = message || '予期しないエラーが発生しました。';
+  const fullMessage = message || '予期しないエラーが発生しました。';
+  
+  // 再開可能かどうかの判定
+  const canResume = appState.failedStep && appState.failedStep > 0 && appState.lastFormData;
+  
+  if (canResume) {
+    elements.errorMessage.innerHTML = `
+      <div>${fullMessage}</div>
+      <div style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #4A90C2;">
+        <strong>💡 ヒント:</strong> ステップ${appState.failedStep}から再開できます。<br>
+        下の「途中から再開」ボタンをクリックしてください。
+      </div>
+    `;
+    
+    // 再開ボタンを表示
+    if (elements.retryButton) {
+      elements.retryButton.textContent = '途中から再開';
+      elements.retryButton.style.background = '#10b981';
+    }
+  } else {
+    elements.errorMessage.textContent = fullMessage;
+    
+    // 通常のリトライボタンを表示
+    if (elements.retryButton) {
+      elements.retryButton.textContent = '最初から再実行';
+      elements.retryButton.style.background = '#4A90C2';
+    }
+  }
   
   // エラーセクションにスクロール
   elements.errorSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -766,7 +809,9 @@ function resetApplication() {
     startTime: null,
     currentPhase: 1,
     completedBatches: 0,
-    estimatedTotalTime: 9 * 60
+    estimatedTotalTime: 9 * 60,
+    lastFormData: null, // 再開用データもリセット
+    failedStep: null // 失敗ステップもリセット
   };
   
   // UIをリセット
@@ -811,14 +856,24 @@ function resetApplication() {
 function retryResearch() {
   console.log('[App] 調査リトライ');
   
-  // フォームデータを再取得
-  const formData = getFormData();
+  // 前回のフォームデータがあるかチェック
+  const formData = appState.lastFormData || getFormData();
+  
+  // 再開可能かどうかの判定
+  const canResume = appState.failedStep && appState.failedStep > 0 && appState.lastFormData;
   
   // エラーセクションを非表示
   elements.errorSection.classList.add('hidden');
   
-  // 調査を再開始
-  startResearch(formData);
+  if (canResume) {
+    console.log('[App] ステップ', appState.failedStep, 'から再開');
+    // 失敗したステップから再開
+    startResearch(formData, appState.failedStep);
+  } else {
+    console.log('[App] 最初から再実行');
+    // 最初から再実行
+    startResearch(formData);
+  }
 }
 
 // ===== システム状態の更新 =====

@@ -124,33 +124,45 @@ export class ResearchService {
    * 全市場調査を実行（並列処理対応）
    * @param request 調査リクエスト
    * @param onProgress 進行状況コールバック
+   * @param resumeFromStep 再開するステップ（省略時は最初から）
    * @returns 統合調査結果
    */
   async conductFullResearch(
     request: ResearchRequest,
-    onProgress: (event: ProgressEvent) => void
+    onProgress: (event: ProgressEvent) => void,
+    resumeFromStep?: number
   ): Promise<IntegratedResearchResult> {
     const startTime = new Date();
+    const actualResumeStep = resumeFromStep || 0;
     
     try {
       console.log(`[ResearchService] 市場調査開始（並列処理）: ${request.businessName}`);
+      if (actualResumeStep > 0) {
+        console.log(`[ResearchService] ステップ${actualResumeStep}から再開`);
+      }
       
       // 初期化メッセージ
       onProgress({
         type: 'progress',
-        step: 0,
-        total: this.researchPrompts.length + 2, // 16調査 + 統合レポート + Notion保存
-        message: '市場調査を開始します（並列処理モード）...',
+        step: actualResumeStep,
+        total: this.researchPrompts.length + 2,
+        message: actualResumeStep > 0 
+          ? `ステップ${actualResumeStep}から市場調査を再開します...`
+          : '市場調査を開始します（並列処理モード）...',
         researchType: '初期化'
       });
 
       // 16種類の調査を並列実行（バッチ処理）
       const researchResults: Array<{ id: number; title: string; result: string }> = [];
-      const batchSize = parseInt(process.env.PARALLEL_BATCH_SIZE || '2', 10); // デフォルト2に削減（API制限対策）
-      const batchInterval = parseInt(process.env.BATCH_INTERVAL || '5000', 10); // デフォルト5秒に延長
-      const batches = this.createBatches(this.researchPrompts, batchSize);
+      const batchSize = parseInt(process.env.PARALLEL_BATCH_SIZE || '2', 10);
+      const batchInterval = parseInt(process.env.BATCH_INTERVAL || '5000', 10);
+      
+      // 再開用: 完了済みの調査をスキップ
+      const remainingPrompts = this.researchPrompts.slice(actualResumeStep);
+      const batches = this.createBatches(remainingPrompts, batchSize);
       
       console.log(`[ResearchService] ${batches.length}バッチで並列実行開始（バッチサイズ: ${batchSize}, 間隔: ${batchInterval}ms）`);
+      console.log(`[ResearchService] 実行対象: ${remainingPrompts.length}調査 (${actualResumeStep}調査スキップ)`);
 
       for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
         const batch = batches[batchIndex];
@@ -160,7 +172,7 @@ export class ResearchService {
         
         // バッチ内の調査を並列実行（エラーハンドリング強化）
         const batchPromises = batch.map(async (prompt, promptIndex) => {
-          const globalIndex = batchIndex * batchSize + promptIndex;
+          const globalIndex = actualResumeStep + (batchIndex * batchSize) + promptIndex;
           
           try {
             // 進行状況通知（開始）
@@ -176,7 +188,7 @@ export class ResearchService {
             
             // 各プロミス内でも少し間隔を空ける（同時リクエスト負荷軽減）
             if (promptIndex > 0) {
-              await this.sleep(1000 * promptIndex); // プロミス内でも時差実行
+              await this.sleep(1000 * promptIndex);
             }
             
             // Deep Research機能があれば使用、なければ通常の調査
@@ -229,7 +241,7 @@ export class ResearchService {
           } else {
             // Promise.allSettled でもエラーが発生した場合の処理
             const promptIndex = index;
-            const globalIndex = batchIndex * batchSize + promptIndex;
+            const globalIndex = actualResumeStep + (batchIndex * batchSize) + promptIndex;
             const prompt = batch[promptIndex];
             
             console.error(`[ResearchService] 調査${globalIndex + 1}で致命的エラー:`, result.reason);
@@ -295,22 +307,43 @@ export class ResearchService {
         type: 'complete',
         step: this.researchPrompts.length + 2,
         total: this.researchPrompts.length + 2,
-        message: `市場調査が完了しました！ (実行時間: ${duration}秒、並列処理で高速化)`,
+        message: actualResumeStep > 0 
+          ? `市場調査が完了しました！ (実行時間: ${duration}秒、ステップ${actualResumeStep}から再開)`
+          : `市場調査が完了しました！ (実行時間: ${duration}秒、並列処理で高速化)`,
         notionUrl: notionResult.url
       });
 
-      // 統合結果を作成
+      // 統合結果を作成（再開時は部分的な結果も含む）
+      const allResults = this.researchPrompts.map((prompt, index) => {
+        if (index < actualResumeStep) {
+          // スキップした調査は「再開でスキップ」として記録
+          return {
+            id: prompt.id,
+            title: prompt.title,
+            prompt: prompt.prompt,
+            result: '【再開処理でスキップされました】\n\nこの調査は前回の実行で完了済みとして扱われました。',
+            timestamp: new Date(),
+            status: 'skipped' as const
+          };
+        } else {
+          // 実際に実行した調査
+          const actualIndex = index - actualResumeStep;
+          const result = researchResults[actualIndex];
+          return {
+            id: result.id,
+            title: result.title,
+            prompt: prompt.prompt,
+            result: result.result,
+            timestamp: new Date(),
+            status: 'completed' as const
+          };
+        }
+      });
+
       const result: IntegratedResearchResult = {
         businessName: request.businessName,
         serviceHypothesis: request.serviceHypothesis,
-        researchResults: researchResults.map((r, index) => ({
-          id: r.id,
-          title: r.title,
-          prompt: this.researchPrompts[index].prompt,
-          result: r.result,
-          timestamp: new Date(),
-          status: 'completed'
-        })),
+        researchResults: allResults,
         summary: integratedReport,
         notionPageId: notionResult.pageId,
         notionUrl: notionResult.url,
@@ -325,7 +358,7 @@ export class ResearchService {
       
       onProgress({
         type: 'error',
-        step: 0,
+        step: actualResumeStep,
         total: this.researchPrompts.length + 2,
         message: `市場調査でエラーが発生しました: ${error instanceof Error ? error.message : 'Unknown error'}`
       });

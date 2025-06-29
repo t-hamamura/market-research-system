@@ -92,14 +92,18 @@ export function createResearchRouter(researchService: ResearchService): Router {
   });
 
   /**
-   * 市場調査開始（Server-Sent Events）
+   * 市場調査開始（Server-Sent Events）途中再開機能付き
    * POST /api/research/start
    */
   router.post('/start', async (req: Request, res: Response): Promise<void> => {
     try {
       const researchRequest: ResearchRequest = req.body;
+      const resumeFromStep = req.body.resumeFromStep ? parseInt(req.body.resumeFromStep, 10) : undefined;
       
       console.log('[ResearchRouter] 調査開始リクエスト受信:', researchRequest.businessName);
+      if (resumeFromStep !== undefined) {
+        console.log('[ResearchRouter] 再開ステップ:', resumeFromStep);
+      }
 
       // リクエストバリデーション
       const validation = researchService.validateRequest(researchRequest);
@@ -145,8 +149,8 @@ export function createResearchRouter(researchService: ResearchService): Router {
       };
 
       try {
-        // 市場調査を実行
-        const result = await researchService.conductFullResearch(researchRequest, onProgress);
+        // 市場調査を実行（再開機能付き）
+        const result = await researchService.conductFullResearch(researchRequest, onProgress, resumeFromStep);
         console.log('[ResearchRouter] 調査完了:', result.businessName);
         
       } catch (error) {
@@ -155,9 +159,9 @@ export function createResearchRouter(researchService: ResearchService): Router {
         // エラーイベントを送信
         onProgress({
           type: 'error',
-          step: 0,
+          step: resumeFromStep || 0,
           total: 18,
-          message: `調査実行エラー: ${error instanceof Error ? error.message : 'Unknown error'}`
+          message: `調査実行エラー: ${error instanceof Error ? error.message : 'Unknown error'}。ステップ${resumeFromStep || 0}から再開できます。`
         });
       }
 

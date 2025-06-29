@@ -33,9 +33,9 @@ export class NotionService {
     try {
       console.log('[NotionService] Notionページ作成開始:', businessName);
 
-      // ページプロパティの設定
+      // ページプロパティの設定（実際のNotionデータベース構造に合わせて修正）
       const properties: any = {
-        'タイトル': {
+        '事業名': {
           title: [
             {
               text: {
@@ -43,32 +43,16 @@ export class NotionService {
               }
             }
           ]
-        }
-      };
-
-      // 作成日時とステータスは任意のプロパティとして追加（存在する場合のみ）
-      try {
-        properties['作成日時'] = {
-          date: {
-            start: new Date().toISOString()
-          }
-        };
-        console.log('[NotionService] 作成日時プロパティ設定完了');
-      } catch (e) {
-        console.log('[NotionService] 作成日時プロパティをスキップ:', e);
-      }
-
-      // ステータスプロパティの設定（デバッグ情報付き）
-      try {
-        properties['ステータス'] = {
+        },
+        'ステータス': {
           select: {
             name: '完了'
           }
-        };
-        console.log('[NotionService] ステータスプロパティ設定完了');
-      } catch (e) {
-        console.log('[NotionService] ステータスプロパティをスキップ:', e);
-      }
+        }
+      };
+
+      // 作成日時は自動設定されるプロパティのため、手動設定不要
+      console.log('[NotionService] プロパティ設定: 事業名、ステータス');
 
       // 基本ページ構造のみで作成（ヘッダーのみ）
       const initialChildren = [
