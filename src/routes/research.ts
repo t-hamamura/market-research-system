@@ -9,28 +9,68 @@ export function createResearchRouter(researchService: ResearchService): Router {
   const router = Router();
 
   /**
-   * ヘルスチェック
+   * ヘルスチェック（強化版）
    * GET /api/research/health
    */
   router.get('/health', async (req: Request, res: Response) => {
+    const startTime = Date.now();
+    
     try {
-      const serviceStatus = await researchService.testServices();
+      console.log('[HealthCheck] ヘルスチェック開始');
       
-      return res.json({
-        success: true,
+      // 基本的なサーバー情報
+      const serverInfo = {
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        version: process.version,
+        nodeEnv: process.env.NODE_ENV || 'development',
+        timestamp: new Date().toISOString()
+      };
+      
+      // サービス状態チェック（タイムアウト付き）
+      const healthCheckPromise = researchService.testServices();
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('ヘルスチェックタイムアウト')), 30000);
+      });
+      
+      const serviceStatus = await Promise.race([healthCheckPromise, timeoutPromise]) as any;
+      const responseTime = Date.now() - startTime;
+      
+      console.log(`[HealthCheck] 完了 (${responseTime}ms)`);
+      
+      // 全体的な健康状態を判定
+      const isHealthy = serviceStatus.gemini && serviceStatus.notion;
+      const status = isHealthy ? 'healthy' : 'degraded';
+      const httpStatus = isHealthy ? 200 : 503;
+      
+      return res.status(httpStatus).json({
+        success: isHealthy,
         data: {
-          status: 'healthy',
-          timestamp: new Date().toISOString(),
-          services: serviceStatus
+          status,
+          server: serverInfo,
+          services: serviceStatus,
+          responseTime: `${responseTime}ms`,
+          checks: {
+            gemini: serviceStatus.gemini ? 'OK' : 'FAIL',
+            notion: serviceStatus.notion ? 'OK' : 'FAIL'
+          }
         }
       });
+      
     } catch (error) {
-      console.error('[ResearchRouter] ヘルスチェックエラー:', error);
-      return res.status(500).json({
+      const responseTime = Date.now() - startTime;
+      console.error('[HealthCheck] エラー:', error);
+      
+      return res.status(503).json({
         success: false,
+        data: {
+          status: 'unhealthy',
+          responseTime: `${responseTime}ms`,
+          timestamp: new Date().toISOString()
+        },
         error: {
-          error: 'SERVICE_ERROR',
-          message: 'サービスの健康状態チェックに失敗しました',
+          error: 'HEALTH_CHECK_FAILED',
+          message: error instanceof Error ? error.message : 'ヘルスチェックに失敗しました',
           timestamp: new Date()
         }
       });

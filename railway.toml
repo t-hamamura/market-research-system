@@ -5,14 +5,17 @@ builder = "NIXPACKS"
 [deploy]
 startCommand = "npm start"
 healthcheckPath = "/api/research/health"
-healthcheckTimeout = 300
+healthcheckTimeout = 120
+healthcheckInterval = 60
 restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 3
+restartPolicyMaxRetries = 5
 
-[env]
-# NODE_ENV=production
-# PORT=3000
-# 必要な環境変数（Railway UI で設定）
+# Railway向け設定の追加
+[environment]
+NODE_ENV = "production"
+PORT = "3000"
+
+# 必要な環境変数はRailway UIで設定
 # GEMINI_API_KEY=your_gemini_api_key
-# NOTION_TOKEN=your_notion_token
+# NOTION_TOKEN=your_notion_token  
 # NOTION_DATABASE_ID=your_notion_database_id

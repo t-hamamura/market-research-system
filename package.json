@@ -8,7 +8,9 @@
     "build": "npm run clean && tsc",
     "start": "node dist/server.js",
     "clean": "rm -rf dist",
-    "test": "echo \"No tests specified\" && exit 0"
+    "test": "echo \"No tests specified\" && exit 0",
+    "postbuild": "echo \"Build completed. Checking dist directory...\" && ls -la dist/",
+    "prestart": "echo \"Starting server. Node version: $(node --version)\" && echo \"Environment: $NODE_ENV\""
   },
   "keywords": [
     "market-research", 

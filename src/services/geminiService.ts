@@ -47,17 +47,36 @@ export class GeminiService {
 
         console.log(`[GeminiService] 調査実行開始 (試行${attempt}/${maxRetries}): ${prompt.substring(0, 50)}...`);
         
-        // Gemini APIに問い合わせ
-        const result = await this.model.generateContent(fullPrompt);
+        // Gemini APIに問い合わせ（タイムアウト付き）
+        const requestPromise = this.model.generateContent(fullPrompt);
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Gemini APIリクエストがタイムアウトしました (90秒)')), 90000);
+        });
+        
+        const result = await Promise.race([requestPromise, timeoutPromise]) as any;
         const response = await result.response;
+        
+        // レスポンス詳細ログ（デバッグ用）
+        console.log(`[GeminiService] レスポンス取得成功 (試行${attempt})`);
+        
         const text = response.text();
-
-        if (!text || text.trim().length === 0) {
-          throw new Error('Gemini APIから空のレスポンスが返されました');
+        
+        // 空レスポンスのより詳細なチェック
+        if (!text) {
+          throw new Error('Gemini APIから null レスポンスが返されました');
+        }
+        
+        const trimmedText = text.trim();
+        if (trimmedText.length === 0) {
+          throw new Error('Gemini APIから空文字列レスポンスが返されました');
+        }
+        
+        if (trimmedText.length < 10) {
+          console.warn(`[GeminiService] 非常に短いレスポンス (${trimmedText.length}文字): "${trimmedText}"`);
         }
 
-        console.log(`[GeminiService] 調査完了 (試行${attempt}): ${text.length}文字の結果を取得`);
-        return text;
+        console.log(`[GeminiService] 調査完了 (試行${attempt}): ${trimmedText.length}文字の結果を取得`);
+        return trimmedText;
 
       } catch (error) {
         lastError = error instanceof Error ? error : new Error('Unknown error');

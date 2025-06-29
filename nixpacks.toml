@@ -2,14 +2,25 @@
 [phases.setup]
 nixPkgs = ["nodejs-18_x"]
 
-[phases.install]  
-cmds = ["npm install"]
+[phases.install]
+cmds = [
+  "echo 'Installing dependencies...'",
+  "npm ci --no-audit --no-fund",
+  "echo 'Dependencies installed successfully'"
+]
 
 [phases.build]
-cmds = ["npm run build"]
+cmds = [
+  "echo 'Building application...'",
+  "npm run build",
+  "echo 'Verifying build output...'",
+  "ls -la dist/",
+  "echo 'Build verification complete'"
+]
 
 [start]
-cmd = "npm start"
+cmd = "npm run prestart && npm start"
 
 [variables]
 NODE_ENV = "production"
+NPM_CONFIG_LOGLEVEL = "info"
