@@ -415,145 +415,6 @@ export class NotionService {
   }
 
   /**
-   * 統合レポートセクションのブロックを作成
-   * @param report 統合レポート
-   * @returns Notionブロック配列
-   */
-  private createIntegratedReportBlocks(report: string): any[] {
-    const blocks = [
-      {
-        object: 'block',
-        type: 'heading_2',
-        heading_2: {
-          rich_text: [
-            {
-              type: 'text',
-              text: {
-                content: '📊 統合レポート'
-              }
-            }
-          ]
-        }
-      } as any
-    ];
-
-    // マークダウンテキストをNotionブロックに変換
-    const reportBlocks = this.convertMarkdownToBlocks(report);
-    blocks.push(...reportBlocks);
-
-    return blocks;
-  }
-
-  /**
-   * プロパティブロックを作成（装飾強化版）
-   * @param label ラベル
-   * @param content 内容
-   * @returns Notionブロック
-   */
-  private createPropertyBlock(label: string, content: string): any {
-    // 内容を安全に短縮
-    const safeContent = this.truncateTextSafely(content);
-    
-    // ラベル部分とコンテンツ部分を分けて装飾
-    const richText = [
-      {
-        type: 'text',
-        text: {
-          content: label
-        },
-        annotations: {
-          bold: true,
-          color: 'blue'
-        }
-      },
-      {
-        type: 'text',
-        text: {
-          content: '\n'
-        }
-      },
-      ...this.parseTextToRichText(safeContent)
-    ];
-
-    return {
-      object: 'block',
-      type: 'callout',
-      callout: {
-        rich_text: richText,
-        icon: {
-          emoji: this.getPropertyIcon(label)
-        },
-        color: 'gray_background'
-      }
-    } as any;
-  }
-
-  /**
-   * プロパティラベルに応じたアイコンを取得
-   * @param label ラベル
-   * @returns 絵文字アイコン
-   */
-  private getPropertyIcon(label: string): string {
-    const iconMap: { [key: string]: string } = {
-      'コンセプト': '💡',
-      '解決したい顧客課題': '❗',
-      '狙っている業種・業界': '🏢',
-      '想定される利用者層': '👥',
-      '直接競合・間接競合': '⚔️',
-      '課金モデル': '💰',
-      '価格帯・価格設定の方向性': '💴',
-      '暫定UVP': '🎯',
-      '初期KPI': '📊',
-      '獲得チャネル仮説': '📈',
-      '規制・技術前提': '⚖️',
-      '想定コスト構造': '💸'
-    };
-
-    // ラベル内のキーワードで検索
-    for (const [key, icon] of Object.entries(iconMap)) {
-      if (label.includes(key)) {
-        return icon;
-      }
-    }
-
-    return '📝'; // デフォルトアイコン
-  }
-
-  /**
-   * 調査タイトルから調査種別を分類
-   * @param researchTitle 調査タイトル
-   * @returns 調査種別
-   */
-  private categorizeResearchType(researchTitle: string): string {
-    // 調査タイトルからカテゴリを推定
-    const categoryMap: { [key: string]: string } = {
-      '市場規模': '市場分析',
-      'PESTEL': '環境分析',
-      '競合': '競合分析',
-      '顧客セグメント': '顧客分析',
-      '顧客感情': '顧客分析',
-      'プロダクト市場適合性': '製品分析',
-      'マーケティング': 'マーケティング分析',
-      'ブランドポジショニング': 'ブランド分析',
-      'テクノロジー': '技術分析',
-      'パートナーシップ': '戦略分析',
-      'リスク': 'リスク分析',
-      'KPI': 'KPI分析',
-      '法務': '法的分析',
-      'リサーチ手法': '手法分析',
-      'PMF': '製品分析'
-    };
-
-    for (const [keyword, category] of Object.entries(categoryMap)) {
-      if (researchTitle.includes(keyword)) {
-        return category;
-      }
-    }
-
-    return '一般調査'; // デフォルト
-  }
-
-  /**
    * マークダウンテキストをNotionブロックに変換（JSON対応版）
    * @param jsonString Geminiから受け取ったJSON文字列
    * @returns Notionブロック配列
@@ -1254,5 +1115,39 @@ export class NotionService {
         color: 'gray_background',
       },
     } as any;
+  }
+
+  /**
+   * 調査タイトルから調査種別を分類
+   * @param researchTitle 調査タイトル
+   * @returns 調査種別
+   */
+  private categorizeResearchType(researchTitle: string): string {
+    // 調査タイトルからカテゴリを推定
+    const categoryMap: { [key: string]: string } = {
+      '市場規模': '市場分析',
+      'PESTEL': '環境分析',
+      '競合': '競合分析',
+      '顧客セグメント': '顧客分析',
+      '顧客感情': '顧客分析',
+      'プロダクト市場適合性': '製品分析',
+      'マーケティング': 'マーケティング分析',
+      'ブランドポジショニング': 'ブランド分析',
+      'テクノロジー': '技術分析',
+      'パートナーシップ': '戦略分析',
+      'リスク': 'リスク分析',
+      'KPI': 'KPI分析',
+      '法務': '法的分析',
+      'リサーチ手法': '手法分析',
+      'PMF': '製品分析'
+    };
+
+    for (const [keyword, category] of Object.entries(categoryMap)) {
+      if (researchTitle.includes(keyword)) {
+        return category;
+      }
+    }
+
+    return '一般調査'; // デフォルト
   }
 }
