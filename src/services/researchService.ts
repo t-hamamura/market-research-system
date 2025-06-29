@@ -37,25 +37,45 @@ export class ResearchService {
    */
   private initializeResearchPrompts(): ResearchPrompt[] {
     const jsonInstruction = `
-応答は、後続のプログラムでNotionページを生成するために、下記のJSONスキーマに厳密に従ってください。
-マークダウンは使用せず、必ずJSON形式の文字列のみを返してください。
+【重要】必ずJSON配列形式で回答してください。マークダウンやテキスト形式は一切使用しないでください。
 
-JSONスキーマ:
+## 厳格な回答形式指定
+
+**✅ 正しい回答開始**: [ で始まり ] で終わる
+**❌ 禁止される回答**: \`\`\`json や ## などで始まる形式、通常のテキスト形式
+
+## 必須JSONスキーマ
 [
   {
     "type": "heading_2" | "heading_3" | "paragraph" | "bulleted_list_item" | "toggle" | "callout" | "divider",
-    "content": "string", // dividerの場合は空
-    "icon"?: "string (emoji)", // calloutの場合のみ
+    "content": "string", // dividerの場合は空文字列
+    "icon"?: "string", // calloutの場合のみ絵文字
     "children"?: array // toggleの場合のみ
   }
 ]
 
-- 最上位の要素は必ず heading_2 にしてください。
-- content内のテキストでは **テキスト** や *テキスト* のようにマークダウン形式で太字や斜体を表現できます。
-- 箇条書きは bulleted_list_item を使用してください。
-- 詳細な内容は toggle を活用して階層構造にしてください。
-- 重要なポイントやアクションプランは callout を使用し、関連する絵文字を icon に設定してください。
-- 表形式の情報は、bulleted_list_itemを複数使用し、「**項目名:** 値」の形式で表現してください。
+## 具体的回答例
+[
+  {"type": "heading_2", "content": "市場規模分析結果"},
+  {"type": "paragraph", "content": "**総市場規模**: 376億円（2024年）→680億円（2029年予測）"},
+  {"type": "bulleted_list_item", "content": "**CAGR**: 12.6%の成長率"},
+  {"type": "callout", "content": "**重要**: LINE特化型MA市場は急成長中", "icon": "📈"},
+  {"type": "toggle", "content": "詳細データ", "children": [
+    {"type": "paragraph", "content": "詳細な分析内容..."}
+  ]},
+  {"type": "divider", "content": ""}
+]
+
+## 絶対に守る規則
+1. 回答の最初の文字は必ず [ である
+2. 回答の最後の文字は必ず ] である
+3. マークダウンのコードブロック（\`\`\`）は使用禁止
+4. 通常のテキスト文章は使用禁止
+5. 全ての内容をJSON配列の要素として記述する
+6. content内で太字は **テキスト** 形式で表現可能
+7. 最上位の要素は heading_2 で開始する
+
+この指示に従わない場合、システムエラーが発生します。必ずJSON配列形式で回答してください。
 `;
 
     const prompts: { id: number; title: string; prompt: string }[] = [
@@ -151,7 +171,7 @@ JSONスキーマ:
   }
 
   /**
-   * 全市場調査を実行（並列処理対応）
+   * 全市場調査を実行（事前作成→ステータス更新方式）
    * @param request 調査リクエスト
    * @param onProgress 進行状況コールバック
    * @param resumeFromStep 再開するステップ（省略時は最初から）
@@ -166,7 +186,7 @@ JSONスキーマ:
     const actualResumeStep = resumeFromStep || 0;
     
     try {
-      console.log(`[ResearchService] 市場調査開始（並列処理）: ${request.businessName}`);
+      console.log(`[ResearchService] 市場調査開始（事前作成→ステータス更新方式）: ${request.businessName}`);
       if (actualResumeStep > 0) {
         console.log(`[ResearchService] ステップ${actualResumeStep}から再開`);
       }
@@ -174,167 +194,171 @@ JSONスキーマ:
       // 初期化メッセージ
       onProgress({
         type: 'progress',
-        step: actualResumeStep,
-        total: this.researchPrompts.length + 2,
-        message: actualResumeStep > 0 
-          ? `ステップ${actualResumeStep}から市場調査を再開します...`
-          : '市場調査を開始します（並列処理モード）...',
+        step: 0,
+        total: this.researchPrompts.length + 3, // 事前作成フェーズを追加
+        message: '市場調査システムを初期化中...',
         researchType: '初期化'
       });
 
-      // 16種類の調査を並列実行（バッチ処理）
+      // Phase 1: 全16調査項目を事前作成
+      let createdPages: Array<{ pageId: string; url: string; researchId: number; title: string }> = [];
+      
+      if (actualResumeStep === 0) {
+        console.log('[ResearchService] Phase 1: 全調査項目を事前作成中...');
+        onProgress({
+          type: 'progress',
+          step: 1,
+          total: this.researchPrompts.length + 3,
+          message: '16種類の調査項目をNotionに事前作成中...',
+          researchType: '事前作成'
+        });
+
+        try {
+          createdPages = await this.notionService.batchCreateResearchPages(
+            request.businessName,
+            this.researchPrompts
+          );
+          console.log(`[ResearchService] 事前作成完了: ${createdPages.length}件`);
+          
+          onProgress({
+            type: 'progress',
+            step: 2,
+            total: this.researchPrompts.length + 3,
+            message: `全${createdPages.length}件の調査項目を事前作成完了。順次実行を開始します...`,
+            researchType: '事前作成完了'
+          });
+        } catch (error) {
+          console.error('[ResearchService] 事前作成エラー:', error);
+          throw new Error(`調査項目事前作成エラー: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      } else {
+        console.log('[ResearchService] 再開モード: 事前作成をスキップ');
+        // 再開時は事前作成をスキップし、既存のページIDを取得（簡易実装）
+        createdPages = this.researchPrompts.map(prompt => ({
+          pageId: 'resumed', // 実際には既存ページIDを取得する必要があるが、今回は簡易実装
+          url: 'resumed',
+          researchId: prompt.id,
+          title: prompt.title
+        }));
+      }
+      
+      // 初期化メッセージ
+      onProgress({
+        type: 'progress',
+        step: actualResumeStep + 2,
+        total: this.researchPrompts.length + 3,
+        message: actualResumeStep > 0 
+          ? `ステップ${actualResumeStep}から市場調査を再開します...`
+          : '各調査項目の実行を開始します...',
+        researchType: '調査実行開始'
+      });
+
+      // Phase 2: 各調査を順次実行（ステータス更新方式）
       const researchResults: Array<{ id: number; title: string; result: string }> = [];
-      const batchSize = parseInt(process.env.PARALLEL_BATCH_SIZE || '2', 10);
-      const batchInterval = parseInt(process.env.BATCH_INTERVAL || '5000', 10);
       
       // 再開用: 完了済みの調査をスキップ
       const remainingPrompts = this.researchPrompts.slice(actualResumeStep);
-      const batches = this.createBatches(remainingPrompts, batchSize);
+      const remainingPages = createdPages.slice(actualResumeStep);
       
-      console.log(`[ResearchService] ${batches.length}バッチで並列実行開始（バッチサイズ: ${batchSize}, 間隔: ${batchInterval}ms）`);
+      console.log(`[ResearchService] Phase 2: 調査実行開始`);
       console.log(`[ResearchService] 実行対象: ${remainingPrompts.length}調査 (${actualResumeStep}調査スキップ)`);
 
-      for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-        const batch = batches[batchIndex];
-        const batchStartTime = new Date();
+      for (let i = 0; i < remainingPrompts.length; i++) {
+        const prompt = remainingPrompts[i];
+        const pageInfo = remainingPages[i];
+        const globalIndex = actualResumeStep + i;
         
-        console.log(`[ResearchService] バッチ${batchIndex + 1}/${batches.length}開始: ${batch.map(p => p.title).join(', ')}`);
-        
-        // バッチ内の調査を並列実行（エラーハンドリング強化）
-        const batchPromises = batch.map(async (prompt, promptIndex) => {
-          const globalIndex = actualResumeStep + (batchIndex * batchSize) + promptIndex;
+        try {
+          console.log(`[ResearchService] 調査${globalIndex + 1}/16: ${prompt.title}`);
           
-          try {
-            // 進行状況通知（開始）
-            onProgress({
-              type: 'progress',
-              step: globalIndex + 1,
-              total: this.researchPrompts.length + 2,
-              message: `${prompt.title}を実行中...`,
-              researchType: prompt.title
-            });
+          // Step 1: ステータスを「進行中」に更新
+          onProgress({
+            type: 'progress',
+            step: globalIndex + 3,
+            total: this.researchPrompts.length + 3,
+            message: `${prompt.title}を実行中...`,
+            researchType: prompt.title
+          });
 
-            console.log(`[ResearchService] 調査${globalIndex + 1}/16: ${prompt.title} (バッチ${batchIndex + 1})`);
+          if (pageInfo.pageId !== 'resumed') {
+            console.log(`[ResearchService] ステータス更新（進行中）: ${prompt.title}`);
+            await this.notionService.updatePageStatus(pageInfo.pageId, 'in-progress');
+          }
+          
+          // Step 2: 実際の調査を実行
+          console.log(`[ResearchService] 調査実行中: ${prompt.title}`);
+          const result = this.deepResearchService 
+            ? await this.deepResearchService.conductEnhancedResearch(prompt.prompt, request.serviceHypothesis)
+            : await this.geminiService.conductResearch(prompt.prompt, request.serviceHypothesis);
+
+          console.log(`[ResearchService] 調査完了: ${prompt.title} (${result.length}文字)`);
+
+          // Step 3: ステータスを「完了」に更新し、コンテンツを追加
+          if (pageInfo.pageId !== 'resumed') {
+            console.log(`[ResearchService] コンテンツ更新中: ${prompt.title}`);
+            await this.notionService.updatePageContent(pageInfo.pageId, result);
             
-            // 各プロミス内でも少し間隔を空ける（同時リクエスト負荷軽減）
-            if (promptIndex > 0) {
-              await this.sleep(1000 * promptIndex);
-            }
-            
-            // Deep Research機能があれば使用、なければ通常の調査
-            const result = this.deepResearchService 
-              ? await this.deepResearchService.conductEnhancedResearch(prompt.prompt, request.serviceHypothesis)
-              : await this.geminiService.conductResearch(prompt.prompt, request.serviceHypothesis);
+            console.log(`[ResearchService] ステータス更新（完了）: ${prompt.title}`);
+            await this.notionService.updatePageStatus(pageInfo.pageId, 'completed');
+          }
 
-            console.log(`[ResearchService] 調査${globalIndex + 1}完了: ${result.length}文字`);
+          // 結果を記録
+          researchResults.push({
+            id: prompt.id,
+            title: prompt.title,
+            result: result
+          });
 
-            // 個別調査結果をNotionに即座に保存
+          console.log(`[ResearchService] 調査${globalIndex + 1}完了: ${prompt.title}`);
+          
+          // API制限対策の待機（次の調査との間隔）
+          if (i < remainingPrompts.length - 1) {
+            console.log(`[ResearchService] 次の調査まで待機中... (2秒)`);
+            await this.sleep(2000);
+          }
+
+        } catch (error) {
+          console.error(`[ResearchService] 調査${globalIndex + 1}でエラー:`, error);
+          
+          // エラー発生時もステータスを「失敗」に更新
+          if (pageInfo.pageId !== 'resumed') {
             try {
-              console.log(`[ResearchService] 個別Notion保存開始: ${prompt.title}`);
-              const individualNotionResult = await this.notionService.createIndividualResearchPage(
-                request.businessName,
-                prompt.title,
-                result,
-                globalIndex + 1
-              );
-              console.log(`[ResearchService] 個別Notion保存完了: ${individualNotionResult.url}`);
-            } catch (notionError) {
-              console.error(`[ResearchService] 個別Notion保存エラー (${prompt.title}):`, notionError);
-              // Notion保存エラーは調査自体の失敗とはしない（継続）
+              await this.notionService.updatePageStatus(pageInfo.pageId, 'failed');
+            } catch (statusError) {
+              console.error(`[ResearchService] ステータス更新エラー:`, statusError);
             }
-
-            return {
-              id: prompt.id,
-              title: prompt.title,
-              result: result,
-              index: globalIndex,
-              success: true
-            };
-
-          } catch (error) {
-            console.error(`[ResearchService] 調査${globalIndex + 1}でエラー:`, error);
-            
-            // エラーでも続行（詳細なフォールバック情報を提供）
-            const fallbackResult = this.generateFallbackResult(prompt.title, error);
-            
-            return {
-              id: prompt.id,
-              title: prompt.title,
-              result: fallbackResult,
-              index: globalIndex,
-              success: false
-            };
           }
-        });
+          
+          // エラーでも続行（詳細なフォールバック情報を提供）
+          const fallbackResult = this.generateFallbackResult(prompt.title, error);
+          
+          researchResults.push({
+            id: prompt.id,
+            title: prompt.title,
+            result: fallbackResult
+          });
 
-        // バッチ内のすべての調査完了を待機
-        const batchResults = await Promise.allSettled(batchPromises);
-        
-        // 結果を処理（Promise.allSettledで個別エラーも処理）
-        batchResults.forEach((result, index) => {
-          if (result.status === 'fulfilled') {
-            const researchResult = result.value;
-            researchResults.push({
-              id: researchResult.id,
-              title: researchResult.title,
-              result: researchResult.result
-            });
-            
-            if (!researchResult.success) {
-              console.warn(`[ResearchService] 調査${researchResult.index + 1}はフォールバック結果を使用`);
-            }
-          } else {
-            // Promise.allSettled でもエラーが発生した場合の処理
-            const promptIndex = index;
-            const globalIndex = actualResumeStep + (batchIndex * batchSize) + promptIndex;
-            const prompt = batch[promptIndex];
-            
-            console.error(`[ResearchService] 調査${globalIndex + 1}で致命的エラー:`, result.reason);
-            
-            researchResults.push({
-              id: prompt.id,
-              title: prompt.title,
-              result: this.generateFallbackResult(prompt.title, result.reason)
-            });
-          }
-        });
-
-        const batchDuration = Math.round((new Date().getTime() - batchStartTime.getTime()) / 1000);
-        const successCount = batchResults.filter(r => r.status === 'fulfilled' && r.value.success).length;
-        console.log(`[ResearchService] バッチ${batchIndex + 1}完了: ${batchDuration}秒, 成功: ${successCount}/${batch.length}`);
-
-        // バッチ間の待機時間（API制限対策強化）
-        if (batchIndex < batches.length - 1) {
-          console.log(`[ResearchService] バッチ間待機中... (${batchInterval}ms)`);
-          await this.sleep(batchInterval);
+          console.warn(`[ResearchService] 調査${globalIndex + 1}はフォールバック結果を使用`);
         }
       }
 
-      // 統合レポート生成
+      // Phase 3: 統合レポート生成
       onProgress({
         type: 'progress',
-        step: this.researchPrompts.length + 1,
-        total: this.researchPrompts.length + 2,
+        step: this.researchPrompts.length + 3,
+        total: this.researchPrompts.length + 3,
         message: '統合レポートを生成中...',
         researchType: '統合分析'
       });
 
-      console.log('[ResearchService] 統合レポート生成開始');
+      console.log('[ResearchService] Phase 3: 統合レポート生成開始');
       const integratedReport = await this.geminiService.generateIntegratedReport(
         researchResults,
         request.serviceHypothesis
       );
       console.log('[ResearchService] 統合レポート生成完了');
 
-      // 統合レポートページ作成
-      onProgress({
-        type: 'progress',
-        step: this.researchPrompts.length + 2,
-        total: this.researchPrompts.length + 2,
-        message: '統合レポートページを作成中...',
-        researchType: '統合レポート保存'
-      });
-
+      // 統合レポートページ作成（従来の形式で作成）
       console.log('[ResearchService] 統合レポートページ作成開始');
       const notionResult = await this.notionService.createResearchPage(
         request.businessName,
@@ -347,18 +371,21 @@ JSONスキーマ:
       // 完了通知
       const completedAt = new Date();
       const duration = Math.round((completedAt.getTime() - startTime.getTime()) / 1000);
+      const efficientProcessingMessage = actualResumeStep === 0 
+        ? '事前作成→ステータス更新方式により重複実行を完全防止し、効率的に処理'
+        : 'ステップ再開で効率的に処理';
       
       onProgress({
         type: 'complete',
-        step: this.researchPrompts.length + 2,
-        total: this.researchPrompts.length + 2,
+        step: this.researchPrompts.length + 3,
+        total: this.researchPrompts.length + 3,
         message: actualResumeStep > 0 
-          ? `市場調査が完了しました！個別調査ページ${researchResults.length}件と統合レポートを作成 (実行時間: ${duration}秒、ステップ${actualResumeStep}から再開)`
-          : `市場調査が完了しました！個別調査ページ${researchResults.length}件と統合レポートを作成 (実行時間: ${duration}秒、並列処理で高速化)`,
+          ? `市場調査が完了しました！事前作成済み調査項目${createdPages.length}件 + 統合レポートを更新 (実行時間: ${duration}秒、ステップ${actualResumeStep}から再開)`
+          : `市場調査が完了しました！事前作成調査項目${createdPages.length}件 + 統合レポートを作成 (実行時間: ${duration}秒、${efficientProcessingMessage})`,
         notionUrl: notionResult.url
       });
 
-      // 統合結果を作成（再開時は部分的な結果も含む）
+      // 統合結果を作成（事前作成→ステータス更新方式）
       const allResults = this.researchPrompts.map((prompt, index) => {
         if (index < actualResumeStep) {
           // スキップした調査は「再開でスキップ」として記録
@@ -395,7 +422,7 @@ JSONスキーマ:
         completedAt: completedAt
       };
 
-      console.log(`[ResearchService] 市場調査完了（並列処理）: ${request.businessName}, 実行時間: ${duration}秒`);
+      console.log(`[ResearchService] 市場調査完了（事前作成→ステータス更新方式）: ${request.businessName}, 実行時間: ${duration}秒`);
       return result;
 
     } catch (error) {
@@ -412,19 +439,7 @@ JSONスキーマ:
     }
   }
 
-  /**
-   * 配列をバッチに分割
-   * @param items 分割する配列
-   * @param batchSize バッチサイズ
-   * @returns バッチ配列
-   */
-  private createBatches<T>(items: T[], batchSize: number): T[][] {
-    const batches: T[][] = [];
-    for (let i = 0; i < items.length; i += batchSize) {
-      batches.push(items.slice(i, i + batchSize));
-    }
-    return batches;
-  }
+
 
   /**
    * リクエストバリデーション

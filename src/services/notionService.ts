@@ -1173,4 +1173,396 @@ export class NotionService {
       }
     } as any;
   }
+
+  /**
+   * 全16種類の調査項目を事前作成
+   * @param businessName 事業名
+   * @param researchPrompts 調査プロンプト配列
+   * @returns 作成されたページ情報
+   */
+  async batchCreateResearchPages(
+    businessName: string,
+    researchPrompts: Array<{ id: number; title: string; prompt: string }>
+  ): Promise<Array<{ pageId: string; url: string; researchId: number; title: string }>> {
+    try {
+      console.log(`[NotionService] 全調査項目の事前作成開始: ${businessName}`);
+      
+      const createdPages: Array<{ pageId: string; url: string; researchId: number; title: string }> = [];
+      
+      // データベース構造を確認
+      const databaseInfo = await this.getDatabaseProperties();
+      
+      for (const prompt of researchPrompts) {
+        try {
+          console.log(`[NotionService] 調査項目作成中: ${prompt.title}`);
+          
+          const properties: any = {};
+
+          // タイトルプロパティの設定
+          const titleProperty = this.findTitleProperty(databaseInfo);
+          if (titleProperty) {
+            properties[titleProperty] = {
+              title: [
+                {
+                  text: {
+                    content: businessName,
+                  },
+                },
+              ],
+            };
+          }
+
+          // ステータスプロパティの設定（未着手）
+          const statusProperty = this.findStatusProperty(databaseInfo);
+          if (statusProperty) {
+            const statusOptions = databaseInfo[statusProperty]?.select?.options || [];
+            const pendingOption = this.findPendingOption(statusOptions);
+            
+            if (pendingOption) {
+              properties[statusProperty] = {
+                select: {
+                  name: pendingOption.name
+                }
+              };
+            }
+          }
+
+          // 調査種別プロパティの設定
+          const researchTypeProperty = this.findResearchTypeProperty(databaseInfo);
+          if (researchTypeProperty) {
+            const researchCategory = this.categorizeResearchType(prompt.title);
+            properties[researchTypeProperty] = {
+              select: {
+                name: researchCategory
+              }
+            };
+          }
+
+          // 基本ページコンテンツ（未着手状態）
+          const pageContent = [
+            {
+              object: 'block',
+              type: 'heading_1',
+              heading_1: {
+                rich_text: [
+                  {
+                    type: 'text',
+                    text: {
+                      content: businessName
+                    }
+                  }
+                ]
+              }
+            } as any,
+            {
+              object: 'block',
+              type: 'paragraph',
+              paragraph: {
+                rich_text: [
+                  {
+                    type: 'text',
+                    text: {
+                      content: `ステータス: 未着手`
+                    }
+                  }
+                ]
+              }
+            } as any,
+            {
+              object: 'block',
+              type: 'paragraph',
+              paragraph: {
+                rich_text: [
+                  {
+                    type: 'text',
+                    text: {
+                      content: `作成日時: ${new Date().toLocaleString('ja-JP')}`
+                    }
+                  }
+                ]
+              }
+            } as any,
+            {
+              object: 'block',
+              type: 'paragraph',
+              paragraph: {
+                rich_text: [
+                  {
+                    type: 'text',
+                    text: {
+                      content: `調査種別: ${this.categorizeResearchType(prompt.title)}`
+                    }
+                  }
+                ]
+              }
+            } as any,
+            {
+              object: 'block',
+              type: 'divider',
+              divider: {}
+            } as any,
+            {
+              object: 'block',
+              type: 'heading_2',
+              heading_2: {
+                rich_text: [
+                  {
+                    type: 'text',
+                    text: {
+                      content: `${prompt.id}. ${prompt.title}`
+                    }
+                  }
+                ]
+              }
+            } as any,
+            {
+              object: 'block',
+              type: 'paragraph',
+              paragraph: {
+                rich_text: [
+                  {
+                    type: 'text',
+                    text: {
+                      content: `事業名: ${businessName}`
+                    }
+                  }
+                ]
+              }
+            } as any,
+            {
+              object: 'block',
+              type: 'paragraph',
+              paragraph: {
+                rich_text: [
+                  {
+                    type: 'text',
+                    text: {
+                      content: `作成日時: ${new Date().toLocaleString('ja-JP')}`
+                    }
+                  }
+                ]
+              }
+            } as any,
+            {
+              object: 'block',
+              type: 'divider',
+              divider: {}
+            } as any,
+            {
+              object: 'block',
+              type: 'callout',
+              callout: {
+                rich_text: [
+                  {
+                    type: 'text',
+                    text: {
+                      content: 'この調査項目は現在「未着手」状態です。調査が開始されると「進行中」に、完了すると「完了」に更新されます。'
+                    }
+                  }
+                ],
+                icon: {
+                  emoji: '⏳'
+                },
+                color: 'yellow_background'
+              }
+            } as any
+          ];
+
+          // ページを作成
+          const response = await this.notion.pages.create({
+            parent: {
+              database_id: this.config.databaseId
+            },
+            properties,
+            children: pageContent
+          });
+
+          const pageId = response.id;
+          const url = this.generatePageUrl(pageId);
+          
+          createdPages.push({
+            pageId,
+            url,
+            researchId: prompt.id,
+            title: prompt.title
+          });
+
+          console.log(`[NotionService] 調査項目作成完了: ${prompt.title} (${url})`);
+          
+          // API制限対策の待機
+          await this.sleep(200);
+          
+        } catch (error) {
+          console.error(`[NotionService] 調査項目作成エラー (${prompt.title}):`, error);
+          throw error;
+        }
+      }
+
+      console.log(`[NotionService] 全調査項目の事前作成完了: ${createdPages.length}件`);
+      return createdPages;
+      
+    } catch (error) {
+      console.error('[NotionService] バッチ作成エラー:', error);
+      throw new Error(`調査項目バッチ作成エラー: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * 未着手状態の選択肢を見つける
+   * @param options select プロパティの選択肢リスト
+   * @returns 未着手状態の選択肢またはnull
+   */
+  private findPendingOption(options: Array<{ name: string; id: string; color?: string }>): { name: string; id: string } | null {
+    // 複数のパターンをチェック
+    const pendingCandidates = ['未着手', 'Pending', 'Not Started', '開始前', 'ToDo', '⏳'];
+    
+    for (const candidate of pendingCandidates) {
+      const option = options.find(opt => opt.name === candidate);
+      if (option) {
+        return option;
+      }
+    }
+    
+    // デフォルトで最初の選択肢を使用
+    if (options.length > 0) {
+      console.log('[NotionService] デフォルトでステータス選択肢を使用:', options[0].name);
+      return options[0];
+    }
+    
+    return null;
+  }
+
+  /**
+   * 進行中状態の選択肢を見つける
+   * @param options select プロパティの選択肢リスト
+   * @returns 進行中状態の選択肢またはnull
+   */
+  private findInProgressOption(options: Array<{ name: string; id: string; color?: string }>): { name: string; id: string } | null {
+    // 複数のパターンをチェック
+    const inProgressCandidates = ['進行中', 'In Progress', 'Working', '実行中', 'Running', '🔄'];
+    
+    for (const candidate of inProgressCandidates) {
+      const option = options.find(opt => opt.name === candidate);
+      if (option) {
+        return option;
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * ページのステータスを更新
+   * @param pageId ページID
+   * @param status 新しいステータス ('pending' | 'in-progress' | 'completed' | 'failed')
+   * @returns 更新成功かどうか
+   */
+  async updatePageStatus(pageId: string, status: 'pending' | 'in-progress' | 'completed' | 'failed'): Promise<boolean> {
+    try {
+      console.log(`[NotionService] ページステータス更新開始: ${pageId} -> ${status}`);
+      
+      // データベース構造を確認
+      const databaseInfo = await this.getDatabaseProperties();
+      const statusProperty = this.findStatusProperty(databaseInfo);
+      
+      if (!statusProperty) {
+        console.warn('[NotionService] ステータスプロパティが見つかりません');
+        return false;
+      }
+
+      const statusOptions = databaseInfo[statusProperty]?.select?.options || [];
+      let targetOption = null;
+
+      // ステータスに応じて適切な選択肢を取得
+      switch (status) {
+        case 'pending':
+          targetOption = this.findPendingOption(statusOptions);
+          break;
+        case 'in-progress':
+          targetOption = this.findInProgressOption(statusOptions);
+          break;
+        case 'completed':
+          targetOption = this.findCompletedOption(statusOptions);
+          break;
+        case 'failed':
+          // 失敗状態の選択肢を探す
+          const failedCandidates = ['失敗', 'Failed', 'Error', 'エラー', '❌'];
+          for (const candidate of failedCandidates) {
+            const option = statusOptions.find(opt => opt.name === candidate);
+            if (option) {
+              targetOption = option;
+              break;
+            }
+          }
+          break;
+      }
+
+      if (!targetOption) {
+        console.warn(`[NotionService] ${status}に対応するステータス選択肢が見つかりません`);
+        return false;
+      }
+
+      // ページプロパティを更新
+      await this.notion.pages.update({
+        page_id: pageId,
+        properties: {
+          [statusProperty]: {
+            select: {
+              name: targetOption.name
+            }
+          }
+        }
+      });
+
+      console.log(`[NotionService] ページステータス更新完了: ${pageId} -> ${targetOption.name}`);
+      return true;
+      
+    } catch (error) {
+      console.error(`[NotionService] ページステータス更新エラー (${pageId}):`, error);
+      return false;
+    }
+  }
+
+  /**
+   * ページに調査結果コンテンツを追加
+   * @param pageId ページID
+   * @param researchResult 調査結果
+   * @returns 更新成功かどうか
+   */
+  async updatePageContent(pageId: string, researchResult: string): Promise<boolean> {
+    try {
+      console.log(`[NotionService] ページコンテンツ更新開始: ${pageId}`);
+      
+      // 調査結果ブロックを作成
+      const resultBlocks = this.createBlocksFromJSON(researchResult);
+      
+      // 調査結果ヘッダーを追加
+      const contentWithHeader = [
+        {
+          object: 'block',
+          type: 'heading_2',
+          heading_2: {
+            rich_text: [
+              {
+                type: 'text',
+                text: {
+                  content: '📋 調査結果'
+                }
+              }
+            ]
+          }
+        } as any,
+        ...resultBlocks
+      ];
+
+      await this.appendBlocks(pageId, contentWithHeader);
+      
+      console.log(`[NotionService] ページコンテンツ更新完了: ${pageId}`);
+      return true;
+      
+    } catch (error) {
+      console.error(`[NotionService] ページコンテンツ更新エラー (${pageId}):`, error);
+      return false;
+    }
+  }
 }
