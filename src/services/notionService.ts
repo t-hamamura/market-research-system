@@ -78,8 +78,22 @@ export class NotionService {
         console.warn('[NotionService] ステータスプロパティが見つかりません');
       }
 
+      // 調査種別プロパティの設定（新規追加）
+      const researchTypeProperty = this.findResearchTypeProperty(databaseInfo);
+      if (researchTypeProperty) {
+        properties[researchTypeProperty] = {
+          select: {
+            name: "統合調査レポート"
+          }
+        };
+        console.log(`[NotionService] 調査種別プロパティ設定: ${researchTypeProperty} = 統合調査レポート`);
+      } else {
+        // 調査種別プロパティが存在しない場合は作成を試行
+        console.log('[NotionService] 調査種別プロパティが存在しないため、後で個別レポートで設定します');
+      }
+
       // 作成日時は自動設定されるプロパティのため、手動設定不要
-      console.log('[NotionService] プロパティ設定: 事業名、ステータス');
+      console.log('[NotionService] プロパティ設定: 事業名、ステータス、調査種別');
 
       // 基本ページ構造のみで作成（ヘッダーのみ）
       const initialChildren = [
@@ -91,7 +105,11 @@ export class NotionService {
               {
                 type: 'text',
                 text: {
-                  content: `市場調査統合レポート：${businessName}`
+                  content: this.truncateTextForRichText(`市場調査統合レポート：${businessName}`)
+                },
+                annotations: {
+                  bold: true,
+                  color: "blue"
                 }
               }
             ]
@@ -99,16 +117,20 @@ export class NotionService {
         } as any,
         {
           object: 'block',
-          type: 'paragraph',
-          paragraph: {
+          type: 'callout',
+          callout: {
             rich_text: [
               {
                 type: 'text',
                 text: {
-                  content: `作成日時: ${new Date().toLocaleString('ja-JP')}`
+                  content: this.truncateTextForRichText(`作成日時: ${new Date().toLocaleString('ja-JP')}`)
                 }
               }
-            ]
+            ],
+            icon: {
+              emoji: '📊'
+            },
+            color: 'gray_background'
           }
         } as any,
         {
@@ -315,7 +337,7 @@ export class NotionService {
   }
 
   /**
-   * テキストを指定文字数で短縮
+   * テキストを指定文字数で短縮（改善版）
    * @param text 元のテキスト
    * @param maxLength 最大文字数
    * @returns 短縮されたテキスト
@@ -324,7 +346,48 @@ export class NotionService {
     if (text.length <= maxLength) {
       return text;
     }
-    return text.substring(0, maxLength) + '\n\n... (内容が長いため省略されました)';
+    
+    // より自然な位置で切り詰める（句読点や改行を探す）
+    let cutPoint = maxLength - 50; // 安全マージン
+    
+    // 句読点や改行で切る
+    const naturalBreaks = ['。', '！', '？', '\n', '.\n', '!\n', '?\n'];
+    for (const breakChar of naturalBreaks) {
+      const lastBreak = text.lastIndexOf(breakChar, cutPoint);
+      if (lastBreak > cutPoint - 200) { // 200文字以内にあれば採用
+        cutPoint = lastBreak + breakChar.length;
+        break;
+      }
+    }
+    
+    return text.substring(0, cutPoint) + '\n\n... (内容が長いため省略されました)';
+  }
+
+  /**
+   * テキストをNotion Rich Text用に安全に短縮
+   * @param text 元のテキスト
+   * @returns Rich Text用に短縮されたテキスト（最大1900文字）
+   */
+  private truncateTextSafely(text: string): string {
+    const maxLength = 1900; // Notionの2000文字制限より安全マージンを設ける
+    if (text.length <= maxLength) {
+      return text;
+    }
+    
+    // 自然な位置で切り詰める
+    let cutPoint = maxLength - 100;
+    
+    // 句読点や改行で切る
+    const naturalBreaks = ['。', '！', '？', '\n', '.\n', '!\n', '?\n'];
+    for (const breakChar of naturalBreaks) {
+      const lastBreak = text.lastIndexOf(breakChar, cutPoint);
+      if (lastBreak > cutPoint - 200) {
+        cutPoint = lastBreak + breakChar.length;
+        break;
+      }
+    }
+    
+    return text.substring(0, cutPoint) + '\n\n[内容が長いため省略されました]';
   }
 
   /**
@@ -411,29 +474,112 @@ export class NotionService {
   }
 
   /**
-   * プロパティブロックを作成
+   * プロパティブロックを作成（装飾強化版）
    * @param label ラベル
    * @param content 内容
    * @returns Notionブロック
    */
   private createPropertyBlock(label: string, content: string): any {
+    // 内容を安全に短縮
+    const safeContent = this.truncateTextSafely(content);
+    
+    // ラベル部分とコンテンツ部分を分けて装飾
+    const richText = [
+      {
+        type: 'text',
+        text: {
+          content: label
+        },
+        annotations: {
+          bold: true,
+          color: 'blue'
+        }
+      },
+      {
+        type: 'text',
+        text: {
+          content: '\n'
+        }
+      },
+      ...this.parseTextToRichText(safeContent)
+    ];
+
     return {
       object: 'block',
       type: 'callout',
       callout: {
-        rich_text: [
-          {
-            type: 'text',
-            text: {
-              content: `${label}\n${content}`
-            }
-          }
-        ],
+        rich_text: richText,
         icon: {
-          emoji: '📝'
-        }
+          emoji: this.getPropertyIcon(label)
+        },
+        color: 'gray_background'
       }
     } as any;
+  }
+
+  /**
+   * プロパティラベルに応じたアイコンを取得
+   * @param label ラベル
+   * @returns 絵文字アイコン
+   */
+  private getPropertyIcon(label: string): string {
+    const iconMap: { [key: string]: string } = {
+      'コンセプト': '💡',
+      '解決したい顧客課題': '❗',
+      '狙っている業種・業界': '🏢',
+      '想定される利用者層': '👥',
+      '直接競合・間接競合': '⚔️',
+      '課金モデル': '💰',
+      '価格帯・価格設定の方向性': '💴',
+      '暫定UVP': '🎯',
+      '初期KPI': '📊',
+      '獲得チャネル仮説': '📈',
+      '規制・技術前提': '⚖️',
+      '想定コスト構造': '💸'
+    };
+
+    // ラベル内のキーワードで検索
+    for (const [key, icon] of Object.entries(iconMap)) {
+      if (label.includes(key)) {
+        return icon;
+      }
+    }
+
+    return '📝'; // デフォルトアイコン
+  }
+
+  /**
+   * 調査タイトルから調査種別を分類
+   * @param researchTitle 調査タイトル
+   * @returns 調査種別
+   */
+  private categorizeResearchType(researchTitle: string): string {
+    // 調査タイトルからカテゴリを推定
+    const categoryMap: { [key: string]: string } = {
+      '市場規模': '市場分析',
+      'PESTEL': '環境分析',
+      '競合': '競合分析',
+      '顧客セグメント': '顧客分析',
+      '顧客感情': '顧客分析',
+      'プロダクト市場適合性': '製品分析',
+      'マーケティング': 'マーケティング分析',
+      'ブランドポジショニング': 'ブランド分析',
+      'テクノロジー': '技術分析',
+      'パートナーシップ': '戦略分析',
+      'リスク': 'リスク分析',
+      'KPI': 'KPI分析',
+      '法務': '法的分析',
+      'リサーチ手法': '手法分析',
+      'PMF': '製品分析'
+    };
+
+    for (const [keyword, category] of Object.entries(categoryMap)) {
+      if (researchTitle.includes(keyword)) {
+        return category;
+      }
+    }
+
+    return '一般調査'; // デフォルト
   }
 
   /**
@@ -506,54 +652,112 @@ export class NotionService {
   }
 
   /**
-   * 段落ブロックを作成
+   * 段落ブロックを作成（文章装飾対応版）
    * @param text テキスト
    * @returns Notionブロック
    */
   private createParagraphBlock(text: string): any {
-    // テキストが長すぎる場合は分割
-    const maxLength = 2000;
-    if (text.length <= maxLength) {
-      return {
-        object: 'block',
-        type: 'paragraph',
-        paragraph: {
-          rich_text: [
-            {
-              type: 'text',
-              text: {
-                content: text
-              }
-            }
-          ]
-        }
-      } as any;
-    } else {
-      // 長いテキストを分割
-      return {
-        object: 'block',
-        type: 'paragraph',
-        paragraph: {
-          rich_text: [
-            {
-              type: 'text',
-              text: {
-                content: text.substring(0, maxLength) + '...'
-              }
-            }
-          ]
-        }
-      } as any;
-    }
+    // Notion Rich Text用に安全に短縮
+    const truncatedText = this.truncateTextSafely(text);
+    
+    // マークダウン形式の装飾を解析してRichTextに変換
+    const richText = this.parseTextToRichText(truncatedText);
+    
+    return {
+      object: 'block',
+      type: 'paragraph',
+      paragraph: {
+        rich_text: richText
+      }
+    } as any;
   }
 
   /**
-   * H1見出しブロックを作成
+   * テキストをRichText形式に変換（装飾対応強化版）
+   * @param text プレーンテキスト
+   * @returns RichText配列
+   */
+  private parseTextToRichText(text: string): any[] {
+    const richTextArray: any[] = [];
+    
+    // 複数の装飾パターンを順次処理
+    const parts = this.parseMarkdownFormatting(text);
+    
+    for (const part of parts) {
+      if (part.content.length > 0) {
+        // 各パートを安全な長さに分割
+        const safeContent = this.truncateTextSafely(part.content);
+        
+        richTextArray.push({
+          type: 'text',
+          text: {
+            content: safeContent
+          },
+          annotations: part.annotations
+        });
+      }
+    }
+    
+    return richTextArray.length > 0 ? richTextArray : [{
+      type: 'text',
+      text: {
+        content: '（空のテキストブロック）'
+      }
+    }];
+  }
+
+  /**
+   * マークダウン形式の装飾を解析
+   * @param text テキスト
+   * @returns 装飾情報付きパート配列
+   */
+  private parseMarkdownFormatting(text: string): Array<{content: string, annotations: any}> {
+    const parts: Array<{content: string, annotations: any}> = [];
+    
+    // まず**bold**を処理
+    const boldParts = text.split(/(\*\*[^*]+?\*\*)/g);
+    
+    for (const boldPart of boldParts) {
+      if (boldPart.startsWith('**') && boldPart.endsWith('**')) {
+        // 太字部分
+        parts.push({
+          content: boldPart.slice(2, -2),
+          annotations: { bold: true }
+        });
+      } else {
+        // 通常テキスト（さらに他の装飾をチェック）
+        const italicParts = boldPart.split(/(\*[^*]+?\*)/g);
+        
+        for (const italicPart of italicParts) {
+          if (italicPart.startsWith('*') && italicPart.endsWith('*') && !italicPart.startsWith('**')) {
+            // 斜体部分
+            parts.push({
+              content: italicPart.slice(1, -1),
+              annotations: { italic: true }
+            });
+          } else {
+            // 最終的に通常テキスト
+            if (italicPart.length > 0) {
+              parts.push({
+                content: italicPart,
+                annotations: {}
+              });
+            }
+          }
+        }
+      }
+    }
+    
+    return parts.filter(part => part.content.length > 0);
+  }
+
+  /**
+   * H1見出しブロックを作成（装飾対応版）
    * @param text テキスト
    * @returns Notionブロック
    */
   private createHeading1Block(text: string): any {
-    const content = text.substring(0, 100);
+    const content = this.truncateTextForRichText(text);
     return {
       object: 'block',
       type: 'heading_1',
@@ -563,6 +767,10 @@ export class NotionService {
             type: 'text',
             text: {
               content: content
+            },
+            annotations: {
+              bold: true,
+              color: 'blue'
             }
           }
         ]
@@ -571,12 +779,12 @@ export class NotionService {
   }
 
   /**
-   * H2見出しブロックを作成
+   * H2見出しブロックを作成（装飾対応版）
    * @param text テキスト
    * @returns Notionブロック
    */
   private createHeading2Block(text: string): any {
-    const content = text.substring(0, 100);
+    const content = this.truncateTextForRichText(text);
     return {
       object: 'block',
       type: 'heading_2',
@@ -586,6 +794,10 @@ export class NotionService {
             type: 'text',
             text: {
               content: content
+            },
+            annotations: {
+              bold: true,
+              color: 'green'
             }
           }
         ]
@@ -594,12 +806,12 @@ export class NotionService {
   }
 
   /**
-   * H3見出しブロックを作成
+   * H3見出しブロックを作成（装飾対応版）
    * @param text テキスト
    * @returns Notionブロック
    */
   private createHeading3Block(text: string): any {
-    const content = text.substring(0, 100);
+    const content = this.truncateTextForRichText(text);
     return {
       object: 'block',
       type: 'heading_3',
@@ -609,6 +821,10 @@ export class NotionService {
             type: 'text',
             text: {
               content: content
+            },
+            annotations: {
+              bold: true,
+              color: 'orange'
             }
           }
         ]
@@ -617,45 +833,33 @@ export class NotionService {
   }
 
   /**
-   * 箇条書きリストアイテムブロックを作成
+   * 箇条書きリストアイテムブロックを作成（装飾対応版）
    * @param text テキスト
    * @returns Notionブロック
    */
   private createBulletedListItemBlock(text: string): any {
+    const richText = this.parseTextToRichText(this.truncateTextSafely(text));
     return {
       object: 'block',
       type: 'bulleted_list_item',
       bulleted_list_item: {
-        rich_text: [
-          {
-            type: 'text',
-            text: {
-              content: text.substring(0, 2000)
-            }
-          }
-        ]
+        rich_text: richText
       }
     } as any;
   }
 
   /**
-   * 番号付きリストアイテムブロックを作成
+   * 番号付きリストアイテムブロックを作成（装飾対応版）
    * @param text テキスト
    * @returns Notionブロック
    */
   private createNumberedListItemBlock(text: string): any {
+    const richText = this.parseTextToRichText(this.truncateTextSafely(text));
     return {
       object: 'block',
       type: 'numbered_list_item',
       numbered_list_item: {
-        rich_text: [
-          {
-            type: 'text',
-            text: {
-              content: text.substring(0, 2000)
-            }
-          }
-        ]
+        rich_text: richText
       }
     } as any;
   }
@@ -753,6 +957,19 @@ export class NotionService {
             }
           };
         }
+      }
+
+      // 調査種別プロパティの設定（個別調査）
+      const researchTypeProperty = this.findResearchTypeProperty(databaseInfo);
+      if (researchTypeProperty) {
+        // 調査タイトルから種別を推定
+        const researchCategory = this.categorizeResearchType(researchTitle);
+        properties[researchTypeProperty] = {
+          select: {
+            name: researchCategory
+          }
+        };
+        console.log(`[NotionService] 個別調査種別設定: ${researchCategory}`);
       }
 
       // 個別調査ページコンテンツ
@@ -945,5 +1162,42 @@ export class NotionService {
     }
     
     return null;
+  }
+
+  /**
+   * 調査種別プロパティを見つける
+   * @param properties プロパティ情報
+   * @returns 調査種別プロパティ名またはnull
+   */
+  private findResearchTypeProperty(properties: Record<string, any>): string | null {
+    // 複数のパターンをチェック
+    const researchTypeCandidates = [
+      '調査種別', 'Research Type', '調査種類', 'Type', 
+      'Category', 'カテゴリ', 'カテゴリー', '種別',
+      'Research Category', '調査分野', 'Field'
+    ];
+    
+    for (const candidate of researchTypeCandidates) {
+      if (properties[candidate] && properties[candidate].type === 'select') {
+        console.log(`[NotionService] 調査種別プロパティ発見: ${candidate}`);
+        return candidate;
+      }
+    }
+    
+    console.log('[NotionService] 調査種別プロパティが見つかりません。利用可能なプロパティ:', Object.keys(properties));
+    return null;
+  }
+
+  /**
+   * テキストをRich Text形式に短縮
+   * @param text 元のテキスト
+   * @returns Rich Text形式に短縮されたテキスト
+   */
+  private truncateTextForRichText(text: string): string {
+    const maxLength = 100;
+    if (text.length <= maxLength) {
+      return text;
+    }
+    return text.substring(0, maxLength) + '...';
   }
 }

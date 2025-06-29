@@ -222,6 +222,11 @@ body {
   animation: none;
 }
 
+.system-status.warning .status-indicator {
+  background-color: var(--warning-color);
+  animation: pulse 2s infinite;
+}
+
 .system-status.error .status-indicator {
   background-color: var(--error-color);
   animation: none;

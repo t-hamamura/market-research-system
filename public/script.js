@@ -112,25 +112,59 @@ function setupEventListeners() {
   });
 }
 
-// ===== システム健康状態チェック =====
+// ===== システム健康状態チェック（改善版） =====
 async function checkSystemHealth() {
   try {
     showLoading('システム接続を確認中...');
     
-    const response = await fetch('/health');
-    const data = await response.json();
+    // 複数のエンドポイントを試行
+    let healthData = null;
+    let healthSuccess = false;
     
-    // /healthエンドポイントのレスポンス形式に合わせて修正
-    if (data.status === 'ok') {
-      updateSystemStatus('success', 'システム正常');
-      console.log('[App] システム健康状態チェック成功:', data);
-    } else {
-      updateSystemStatus('error', 'システムエラー');
-      console.error('[App] システム健康状態チェック失敗:', data);
+    // 1. /healthエンドポイントを試行
+    try {
+      const healthResponse = await fetch('/health');
+      const healthDataResponse = await healthResponse.json();
+      
+      if (healthDataResponse.status === 'ok') {
+        healthData = healthDataResponse;
+        healthSuccess = true;
+        console.log('[App] /health エンドポイント成功:', healthDataResponse);
+      }
+    } catch (healthError) {
+      console.warn('[App] /health エンドポイント失敗:', healthError.message);
     }
+    
+    // 2. APIヘルスチェックも試行
+    try {
+      const apiResponse = await fetch('/api/research/health');
+      const apiData = await apiResponse.json();
+      
+      if (apiData.success) {
+        console.log('[App] /api/research/health エンドポイント成功:', apiData);
+        healthSuccess = true;
+        if (!healthData) {
+          healthData = { status: 'ok', data: apiData.data };
+        }
+      }
+    } catch (apiError) {
+      console.warn('[App] /api/research/health エンドポイント失敗:', apiError.message);
+    }
+    
+    // 結果判定
+    if (healthSuccess) {
+      updateSystemStatus('success', 'システム確認中...');
+      console.log('[App] システム健康状態チェック成功');
+    } else {
+      // ヘルスチェックが失敗しても、システムは続行可能として扱う
+      updateSystemStatus('warning', 'システム稼働中');
+      console.warn('[App] ヘルスチェック部分的失敗 - システムは続行可能');
+    }
+    
   } catch (error) {
     console.error('[App] システム健康状態チェックエラー:', error);
-    updateSystemStatus('error', '接続エラー');
+    // 軽微なエラーとして扱い、ユーザーの利用を阻害しない
+    updateSystemStatus('warning', 'システム確認中...');
   } finally {
     hideLoading();
   }
@@ -833,7 +867,7 @@ function handleResearchSuccess(event) {
   appState.isLoading = false;
 }
 
-// ===== 調査エラー処理 =====
+// ===== 調査エラー処理（改善版） =====
 function handleResearchError(message) {
   console.error('[App] 調査エラー:', message);
   
@@ -841,7 +875,26 @@ function handleResearchError(message) {
   appState.isLoading = false;
   appState.failedStep = appState.currentStep; // 失敗したステップを記録
   
-  showErrorSection(message);
+  // エラー内容を分析してより詳細なメッセージを生成
+  let enhancedMessage = message || '予期しないエラーが発生しました。';
+  
+  // 特定のエラーパターンに対する追加情報
+  if (message && message.includes('validation_error')) {
+    enhancedMessage = `入力データの検証でエラーが発生しました。\n\n${message}\n\n入力内容をご確認の上、再度お試しください。`;
+  } else if (message && (message.includes('network') || message.includes('fetch') || message.includes('Failed to fetch'))) {
+    enhancedMessage = `ネットワーク接続エラーが発生しました。\n\n原因: ${message}\n\nインターネット接続をご確認の上、再度お試しください。`;
+  } else if (message && message.includes('timeout')) {
+    enhancedMessage = `処理がタイムアウトしました。\n\n原因: ${message}\n\nサーバーが一時的に混雑している可能性があります。少し時間をおいて再度お試しください。`;
+  } else if (message && (message.includes('500') || message.includes('Internal Server Error'))) {
+    enhancedMessage = `サーバーエラーが発生しました。\n\n原因: ${message}\n\n一時的な問題の可能性があります。再度お試しいただくか、管理者にお問い合わせください。`;
+  } else if (message && message.includes('API')) {
+    enhancedMessage = `API連携でエラーが発生しました。\n\n原因: ${message}\n\nGemini APIまたはNotion APIとの通信に問題が発生しています。`;
+  } else if (message && message.includes('body failed validation')) {
+    enhancedMessage = `Notion連携でデータ形式エラーが発生しました。\n\n原因: ${message}\n\nシステムで自動修正を試行中です。再度お試しください。`;
+  }
+  
+  console.log(`[App] 強化されたエラーメッセージ: ${enhancedMessage}`);
+  showErrorSection(enhancedMessage);
 }
 
 // ===== 調査完了処理 =====
@@ -1024,24 +1077,28 @@ function retryResearch() {
   }
 }
 
-// ===== システム状態の更新 =====
+// ===== システム状態の更新（改善版） =====
 function updateSystemStatus(status, message) {
   const statusElement = elements.systemStatus;
-  const dotElement = statusElement.querySelector('.status-dot');
+  const statusMessage = document.getElementById('statusMessage');
   
-  if (dotElement) {
-    // 既存のステータスクラスを削除
-    dotElement.classList.remove('pending', 'success', 'error');
-    dotElement.classList.add(status);
+  if (!statusElement) {
+    console.warn('[App] システムステータス要素が見つかりません');
+    return;
   }
+  
+  // ステータス要素のクラスを更新
+  statusElement.classList.remove('success', 'warning', 'error', 'loading');
+  statusElement.classList.add(status);
   
   // メッセージを更新
-  const textNode = Array.from(statusElement.childNodes).find(node => node.nodeType === Node.TEXT_NODE);
-  if (textNode) {
-    textNode.textContent = message;
+  if (statusMessage) {
+    statusMessage.textContent = message;
   } else {
-    statusElement.appendChild(document.createTextNode(message));
+    console.warn('[App] ステータスメッセージ要素が見つかりません');
   }
+  
+  console.log(`[App] システムステータス更新: ${status} - ${message}`);
 }
 
 // ===== ローディング表示 =====
