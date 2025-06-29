@@ -39,7 +39,7 @@
         <div class="system-status" id="systemStatus">
             <span class="status-icon">🔄</span>
             <span class="status-text">システム接続確認中...</span>
-        </div>
+                </div>
 
         <!-- 事業名入力セクション -->
         <section class="business-name-section">
@@ -73,8 +73,8 @@
             <div class="loading-content">
                 <div class="loading-spinner"></div>
                 <div class="loading-text" id="loadingText">処理中...</div>
+                </div>
             </div>
-        </div>
 
         <!-- フォーム全体のセクション -->
         <section id="formSection" class="form-section">
@@ -82,14 +82,14 @@
             <div class="two-column-layout">
                 <!-- 左側：サービス仮説入力 -->
                 <section class="left-column">
-                    <div class="form-card">
-                        <h2 class="section-title">
+                <div class="form-card">
+                    <h2 class="section-title">
                             <span class="section-icon">📊</span>
-                            サービス仮説入力
-                        </h2>
-
-                        <form id="researchForm" class="research-form">
-                            <!-- サービス仮説フィールド -->
+                        サービス仮説入力
+                    </h2>
+                    
+                    <form id="researchForm" class="research-form">
+                        <!-- サービス仮説フィールド -->
                             <div class="form-group">
                                 <label for="concept" class="form-label required">
                                     コンセプト
@@ -304,7 +304,7 @@
                                 <button type="button" id="clearBulkButton" class="btn-secondary">
                                     <span class="btn-icon">🗑️</span>
                                     クリア
-                                </button>
+                            </button>
                             </div>
                         </div>
                     </div>
@@ -326,16 +326,16 @@
                 <!-- バリデーションエラー表示 -->
                 <div id="validationErrors" class="validation-errors hidden"></div>
             </section>
-        </section>
+            </section>
 
         <!-- 進行状況表示セクション -->
-        <section class="progress-section hidden" id="progressSection">
-            <div class="progress-card">
-                <h2 class="section-title">
+            <section class="progress-section hidden" id="progressSection">
+                <div class="progress-card">
+                    <h2 class="section-title">
                     <span class="section-icon">⚡</span>
                     AI市場調査実行中
-                </h2>
-                
+                    </h2>
+                    
                 <!-- 全体の進行状況 -->
                 <div class="overall-progress">
                     <div class="progress-header">
@@ -347,11 +347,11 @@
                             <div class="stat-item">
                                 <span class="stat-label">予想残り時間</span>
                                 <span class="stat-value" id="estimatedTime">計算中...</span>
-                            </div>
+                        </div>
                         </div>
                         <div class="progress-percentage" id="progressPercentage">0%</div>
                     </div>
-                    
+
                     <div class="progress-bar">
                         <div class="progress-fill" id="progressFill" style="width: 0%"></div>
                     </div>
@@ -600,67 +600,67 @@
                                 </div>
                             </div>
                         </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
         <!-- 結果表示セクション -->
-        <section class="result-section hidden" id="resultSection">
-            <div class="result-card">
-                <h2 class="section-title">
-                    <span class="section-icon">✅</span>
-                    調査完了
-                </h2>
-                
-                <div class="result-content">
-                    <div class="result-message">
+            <section class="result-section hidden" id="resultSection">
+                <div class="result-card">
+                    <h2 class="section-title">
+                        <span class="section-icon">✅</span>
+                        調査完了
+                    </h2>
+                    
+                    <div class="result-content">
+                        <div class="result-message">
                         <h3 id="resultTitle">市場調査が正常に完了しました</h3>
                         <p id="resultDescription">包括的な市場調査レポートがNotionページに保存されました。</p>
-                    </div>
-                    
-                    <div class="result-actions">
+                        </div>
+                        
+                        <div class="result-actions">
                         <a href="#" id="notionLink" class="btn-primary" target="_blank" rel="noopener">
                             <span class="btn-icon">📊</span>
                             <span class="btn-text">Notionレポートを確認</span>
                         </a>
                         
                         <button type="button" id="newResearchButton" class="btn-secondary">
-                            <span class="btn-icon">🔄</span>
+                                <span class="btn-icon">🔄</span>
                             新しい調査を開始
-                        </button>
+                            </button>
+                    </div>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
         <!-- エラー表示セクション -->
-        <section class="error-section hidden" id="errorSection">
-            <div class="error-card">
-                <h2 class="section-title error">
-                    <span class="section-icon">❌</span>
-                    エラーが発生しました
-                </h2>
-                
-                <div class="error-content">
-                    <div class="error-message">
-                        <p id="errorMessage">予期しないエラーが発生しました。</p>
-                    </div>
+            <section class="error-section hidden" id="errorSection">
+                <div class="error-card">
+                    <h2 class="section-title error">
+                        <span class="section-icon">❌</span>
+                        エラーが発生しました
+                    </h2>
                     
-                    <div class="error-actions">
-                        <button type="button" id="retryButton" class="btn-primary">
-                            <span class="btn-icon">🔄</span>
-                            再試行
-                        </button>
+                    <div class="error-content">
+                        <div class="error-message">
+                            <p id="errorMessage">予期しないエラーが発生しました。</p>
+                        </div>
                         
+                        <div class="error-actions">
+                        <button type="button" id="retryButton" class="btn-primary">
+                                <span class="btn-icon">🔄</span>
+                            再試行
+                            </button>
+                            
                         <button type="button" id="resetButton" class="btn-secondary">
-                            <span class="btn-icon">🏠</span>
+                                <span class="btn-icon">🏠</span>
                             最初に戻る
-                        </button>
+                            </button>
+                    </div>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
     </div>
 
     <!-- JavaScript -->

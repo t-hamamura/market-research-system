@@ -220,20 +220,34 @@ function createApp(researchService: ResearchService): express.Application {
  */
 async function startServer() {
   try {
+    console.log('='.repeat(60));
     console.log('🚀 市場調査自動化システム起動中...');
+    console.log('='.repeat(60));
     console.log(`📍 環境: ${process.env.NODE_ENV || 'development'}`);
     console.log(`📍 Node.js バージョン: ${process.version}`);
+    console.log(`📍 プロセスID: ${process.pid}`);
+    console.log(`📍 起動時刻: ${new Date().toISOString()}`);
+    console.log('='.repeat(60));
     
     // 環境変数の存在確認（デバッグ用）
+    console.log('📋 環境変数チェック開始');
+    console.log('-'.repeat(40));
     const envVars = ['GEMINI_API_KEY', 'NOTION_TOKEN', 'NOTION_DATABASE_ID'];
     envVars.forEach(envVar => {
       const value = process.env[envVar];
       if (value && value !== 'dummy-key' && value !== 'dummy-token' && value !== 'dummy-id') {
         console.log(`✅ ${envVar}: 設定済み (${value.substring(0, 8)}...)`);
       } else {
-        console.error(`❌ ${envVar}: 未設定または無効 (${value})`);
+        console.error(`❌ ${envVar}: 未設定または無効 (現在値: ${value})`);
       }
     });
+    console.log('-'.repeat(40));
+    
+    // 追加の環境変数も表示
+    console.log(`🔧 NODE_ENV: ${process.env.NODE_ENV || '未設定'}`);
+    console.log(`🔧 PORT: ${process.env.PORT || '未設定'}`);
+    console.log(`🔧 PARALLEL_BATCH_SIZE: ${process.env.PARALLEL_BATCH_SIZE || '未設定'}`);
+    console.log('-'.repeat(40));
     
     // 設定を作成
     const config = createServerConfig();
@@ -271,12 +285,16 @@ async function startServer() {
     
     // サーバーを起動（タイムアウト設定）
     const server = app.listen(config.port, '0.0.0.0', () => {
-      console.log('');
+      console.log('='.repeat(60));
       console.log('✅ 市場調査自動化システムが起動しました！');
-      console.log('');
+      console.log('='.repeat(60));
       console.log(`🌐 ウェブアプリ: http://0.0.0.0:${config.port}`);
       console.log(`⚡ API エンドポイント: http://0.0.0.0:${config.port}/api/research`);
-      console.log('');
+      console.log(`📊 ヘルスチェック: http://0.0.0.0:${config.port}/health`);
+      console.log(`📍 Railway URL: https://market-research-system-production.up.railway.app`);
+      console.log('='.repeat(60));
+      console.log('🔥 サーバー完全起動完了！');
+      console.log('='.repeat(60));
     });
     
     // サーバータイムアウト設定
