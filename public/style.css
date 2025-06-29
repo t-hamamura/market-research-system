@@ -57,6 +57,85 @@ body {
   min-height: 100vh;
 }
 
+/* ===== 旧SPIRITSヘッダー（互換性保持） ===== */
+.spirits-header {
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+  padding: 1rem 0;
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.spirits-header-content {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 var(--container-padding);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.spirits-logo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.spirits-tagline {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* ===== メインコンテナ（互換性保持） ===== */
+.main-container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 var(--container-padding);
+  min-height: 100vh;
+}
+
+/* ===== ヒーローセクション（互換性保持） ===== */
+.hero-section {
+  text-align: center;
+  margin: 2rem 0;
+  padding: 3rem 2rem;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+  border-radius: var(--border-radius-lg);
+  color: var(--text-white);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-subtitle {
+  font-size: 1.125rem;
+  opacity: 0.9;
+  margin-bottom: 0.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-description {
+  font-size: 1rem;
+  opacity: 0.8;
+  position: relative;
+  z-index: 1;
+}
+
 /* ===== コンテナ ===== */
 .container {
   max-width: var(--max-width);
@@ -673,10 +752,19 @@ body {
     --container-padding: 1rem;
   }
   
+  .spirits-header-content,
   .header-content {
     flex-direction: column;
     gap: 1rem;
     text-align: center;
+  }
+  
+  .hero-section {
+    padding: 2rem 1rem;
+  }
+  
+  .hero-title {
+    font-size: 1.5rem;
   }
   
   .progress-header {

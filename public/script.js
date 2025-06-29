@@ -1047,9 +1047,9 @@ function updateSystemStatus(status, message) {
 // ===== ローディング表示 =====
 function showLoading(message) {
   if (elements.loadingOverlay) {
-    const loadingText = elements.loadingOverlay.querySelector('.loading-text');
-    if (loadingText) {
-      loadingText.textContent = message || 'ロード中...';
+    const loadingMessage = elements.loadingOverlay.querySelector('#loadingMessage');
+    if (loadingMessage) {
+      loadingMessage.textContent = message || 'ロード中...';
     }
     elements.loadingOverlay.classList.remove('hidden');
   }
@@ -1154,38 +1154,38 @@ const FIELD_MAPPING = {
 
 // 一括入力機能のイベントリスナー設定
 function setupBulkInputListeners() {
-  const copyTemplateButton = document.getElementById('copyTemplateButton');
-  const parseBulkButton = document.getElementById('parseBulkButton');
-  const clearBulkButton = document.getElementById('clearBulkButton');
+  const copyTemplateBtn = document.getElementById('copyTemplateBtn');
+  const bulkParseBtn = document.getElementById('bulkParseBtn');
+  const clearBulkBtn = document.getElementById('clearBulkBtn');
   
   // 一括入力関連
-  if (copyTemplateButton) {
-    copyTemplateButton.addEventListener('click', copyTemplate);
+  if (copyTemplateBtn) {
+    copyTemplateBtn.addEventListener('click', copyTemplate);
   }
-  if (parseBulkButton) {
-    parseBulkButton.addEventListener('click', parseBulkText);
+  if (bulkParseBtn) {
+    bulkParseBtn.addEventListener('click', parseBulkText);
   }
-  if (clearBulkButton) {
-    clearBulkButton.addEventListener('click', clearBulkInput);
+  if (clearBulkBtn) {
+    clearBulkBtn.addEventListener('click', clearBulkInput);
   }
 }
 
 // テンプレートコピー機能
 function copyTemplate() {
-  const copyTemplateButton = document.getElementById('copyTemplateButton');
+  const copyTemplateBtn = document.getElementById('copyTemplateBtn');
   const bulkInput = document.getElementById('bulkInput');
   
-  if (!copyTemplateButton) return;
+  if (!copyTemplateBtn) return;
   
   navigator.clipboard.writeText(TEMPLATE_TEXT).then(() => {
     // ボタンの表示を一時的に変更
-    const originalText = copyTemplateButton.innerHTML;
-    copyTemplateButton.innerHTML = '<span class="btn-icon">✅</span>コピー完了';
-    copyTemplateButton.style.background = '#10b981';
+    const originalText = copyTemplateBtn.innerHTML;
+    copyTemplateBtn.innerHTML = '<span class="btn-icon">✅</span>コピー完了';
+    copyTemplateBtn.style.background = '#10b981';
     
     setTimeout(() => {
-      copyTemplateButton.innerHTML = originalText;
-      copyTemplateButton.style.background = '#4A90C2';
+      copyTemplateBtn.innerHTML = originalText;
+      copyTemplateBtn.style.background = '';
     }, 2000);
   }).catch(err => {
     console.error('テンプレートのコピーに失敗しました:', err);
