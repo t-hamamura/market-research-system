@@ -1,6 +1,7 @@
 /**
- * 市場調査自動化システム - フロントエンド JavaScript
- * Gemini 2.5とNotionを活用した16種類の市場調査自動実行システム
+ * SPIRITS AI市場調査システム - フロントエンド JavaScript
+ * Gemini AIとNotionを活用した16種類の市場調査自動実行システム
+ * Powered by SPIRITS
  */
 
 // ===== グローバル変数とアプリケーション状態 =====
@@ -56,7 +57,7 @@ const elements = {
 
 // ===== アプリケーション初期化 =====
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('[App] アプリケーション初期化開始');
+  console.log('[SPIRITS] システム初期化開始');
   
   // イベントリスナーを設定
   setupEventListeners();
@@ -67,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // 調査プロンプト一覧を取得
   loadResearchPrompts();
   
-  console.log('[App] アプリケーション初期化完了');
+  console.log('[SPIRITS] システム初期化完了');
 });
 
 // ===== イベントリスナー設定 =====
@@ -83,6 +84,9 @@ function setupEventListeners() {
   
   // リセットボタン
   elements.resetButton.addEventListener('click', resetApplication);
+  
+  // 一括入力機能
+  setupBulkInputListeners();
   
   // ページ離脱時の処理
   window.addEventListener('beforeunload', function(e) {
@@ -760,4 +764,238 @@ window.addEventListener('unhandledrejection', function(event) {
   }
 });
 
-console.log('[App] スクリプト読み込み完了'); 
+console.log('[SPIRITS] AI市場調査システム初期化完了');
+
+// ===== 一括入力機能の定数とテンプレート =====
+const TEMPLATE_TEXT = `コンセプト: 
+解決したい顧客課題: 
+狙っている業種・業界: 
+想定される利用者層: 
+直接競合・間接競合: 
+課金モデル: 
+価格帯・価格設定の方向性: 
+暫定UVP（Unique Value Proposition）: 
+初期KPI: 
+獲得チャネル仮説: 
+規制・技術前提: 
+想定コスト構造: `;
+
+// フィールドマッピング
+const FIELD_MAPPING = {
+    'コンセプト': 'concept',
+    '解決したい顧客課題': 'customerProblem',
+    '狙っている業種・業界': 'targetIndustry',
+    '想定される利用者層': 'targetUsers',
+    '直接競合・間接競合': 'competitors',
+    '課金モデル': 'revenueModel',
+    '価格帯・価格設定の方向性': 'pricingDirection',
+    '暫定UVP（Unique Value Proposition）': 'uvp',
+    '初期KPI': 'initialKpi',
+    '獲得チャネル仮説': 'acquisitionChannels',
+    '規制・技術前提': 'regulatoryTechPrereqs',
+    '想定コスト構造': 'costStructure'
+};
+
+// 現在のアクティブなタブを記録
+let activeTab = 'individual';
+
+// ===== 一括入力機能 =====
+
+// 一括入力機能のイベントリスナー設定
+function setupBulkInputListeners() {
+  const individualTab = document.getElementById('individualTab');
+  const bulkTab = document.getElementById('bulkTab');
+  const copyTemplateButton = document.getElementById('copyTemplateButton');
+  const parseBulkButton = document.getElementById('parseBulkButton');
+  const clearBulkButton = document.getElementById('clearBulkButton');
+  
+  // 要素が存在しない場合は何もしない
+  if (!individualTab || !bulkTab) return;
+  
+  // タブ切り替え
+  individualTab.addEventListener('click', () => switchTab('individual'));
+  bulkTab.addEventListener('click', () => switchTab('bulk'));
+  
+  // 一括入力関連
+  if (copyTemplateButton) {
+    copyTemplateButton.addEventListener('click', copyTemplate);
+  }
+  if (parseBulkButton) {
+    parseBulkButton.addEventListener('click', parseBulkText);
+  }
+  if (clearBulkButton) {
+    clearBulkButton.addEventListener('click', clearBulkInput);
+  }
+}
+
+// タブ切り替え機能
+function switchTab(tabName) {
+  activeTab = tabName;
+  
+  const individualTab = document.getElementById('individualTab');
+  const bulkTab = document.getElementById('bulkTab');
+  const individualPanel = document.getElementById('individualPanel');
+  const bulkPanel = document.getElementById('bulkPanel');
+  
+  if (!individualTab || !bulkTab || !individualPanel || !bulkPanel) return;
+  
+  // タブボタンの切り替え
+  if (tabName === 'individual') {
+    individualTab.classList.add('active');
+    bulkTab.classList.remove('active');
+    individualPanel.classList.add('active');
+    bulkPanel.classList.remove('active');
+  } else {
+    bulkTab.classList.add('active');
+    individualTab.classList.remove('active');
+    bulkPanel.classList.add('active');
+    individualPanel.classList.remove('active');
+  }
+  
+  // バリデーションエラーをクリア
+  hideValidationErrors();
+}
+
+// テンプレートコピー機能
+function copyTemplate() {
+  const copyTemplateButton = document.getElementById('copyTemplateButton');
+  const bulkInput = document.getElementById('bulkInput');
+  
+  if (!copyTemplateButton) return;
+  
+  navigator.clipboard.writeText(TEMPLATE_TEXT).then(() => {
+    // ボタンの表示を一時的に変更
+    const originalText = copyTemplateButton.innerHTML;
+    copyTemplateButton.innerHTML = '<span class="btn-icon">✅</span>コピー完了';
+    copyTemplateButton.style.background = '#10b981';
+    
+    setTimeout(() => {
+      copyTemplateButton.innerHTML = originalText;
+      copyTemplateButton.style.background = '#3b82f6';
+    }, 2000);
+  }).catch(err => {
+    console.error('テンプレートのコピーに失敗しました:', err);
+    // フォールバック: テキストエリアに直接セット
+    if (bulkInput) {
+      bulkInput.value = TEMPLATE_TEXT;
+      bulkInput.focus();
+      bulkInput.select();
+    }
+  });
+}
+
+// 一括テキストの解析機能
+function parseBulkText() {
+  const bulkInput = document.getElementById('bulkInput');
+  
+  if (!bulkInput) return;
+  
+  const bulkText = bulkInput.value.trim();
+  
+  if (!bulkText) {
+    showBulkValidationError('一括入力エリアにテキストを入力してください。');
+    return;
+  }
+  
+  try {
+    const parsed = parseTemplateText(bulkText);
+    
+    // 解析結果を個別フィールドに反映
+    Object.entries(parsed).forEach(([fieldName, value]) => {
+      const element = document.getElementById(fieldName);
+      if (element) {
+        element.value = value;
+      }
+    });
+    
+    // 個別入力タブに切り替え
+    switchTab('individual');
+    
+    // 成功メッセージ
+    showBulkSuccessMessage('一括入力の解析が完了しました。個別フィールドに反映されました。');
+    
+  } catch (error) {
+    showBulkValidationError(`テキストの解析に失敗しました: ${error.message}`);
+  }
+}
+
+// テンプレートテキストの解析
+function parseTemplateText(text) {
+  const lines = text.split('\n');
+  const parsed = {};
+  
+  let currentField = null;
+  let currentValue = '';
+  
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    
+    // フィールド行の検出（コロンを含む行）
+    if (trimmedLine.includes(':')) {
+      // 前のフィールドがあれば保存
+      if (currentField && FIELD_MAPPING[currentField]) {
+        parsed[FIELD_MAPPING[currentField]] = currentValue.trim();
+      }
+      
+      // 新しいフィールドを開始
+      const [fieldName, ...valueParts] = trimmedLine.split(':');
+      currentField = fieldName.trim();
+      currentValue = valueParts.join(':').trim();
+    } else if (currentField && trimmedLine) {
+      // 継続行（前のフィールドの続き）
+      currentValue += (currentValue ? '\n' : '') + trimmedLine;
+    }
+  }
+  
+  // 最後のフィールドを保存
+  if (currentField && FIELD_MAPPING[currentField]) {
+    parsed[FIELD_MAPPING[currentField]] = currentValue.trim();
+  }
+  
+  return parsed;
+}
+
+// 一括入力エリアのクリア
+function clearBulkInput() {
+  const bulkInput = document.getElementById('bulkInput');
+  
+  if (!bulkInput) return;
+  
+  bulkInput.value = '';
+  bulkInput.focus();
+  hideValidationErrors();
+}
+
+// 一括入力用バリデーションエラーの表示
+function showBulkValidationError(message) {
+  const validationErrors = elements.validationErrors || document.getElementById('validationErrors');
+  
+  if (!validationErrors) return;
+  
+  validationErrors.innerHTML = `
+    <div class="error-message">
+      <span class="error-icon">⚠️</span>
+      ${message}
+    </div>
+  `;
+  validationErrors.classList.remove('hidden');
+  validationErrors.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// 一括入力用成功メッセージの表示
+function showBulkSuccessMessage(message) {
+  const validationErrors = elements.validationErrors || document.getElementById('validationErrors');
+  
+  if (!validationErrors) return;
+  
+  validationErrors.innerHTML = `
+    <div class="success-message">
+      <span class="success-icon">✅</span>
+      ${message}
+    </div>
+  `;
+  validationErrors.classList.remove('hidden');
+  setTimeout(() => {
+    validationErrors.classList.add('hidden');
+  }, 3000);
+} 
