@@ -200,11 +200,12 @@ export class ResearchService {
         researchType: '初期化'
       });
 
-      // Phase 1: 全16調査項目を事前作成
+      // Phase 1: 全16調査項目 + 統合レポートを事前作成
       let createdPages: Array<{ pageId: string; url: string; researchId: number; title: string }> = [];
+      let integratedReportPageId: string | null = null;
       
       if (actualResumeStep === 0) {
-        console.log('[ResearchService] Phase 1: 全調査項目を事前作成中...');
+        console.log('[ResearchService] Phase 1: 全調査項目 + 統合レポートを事前作成中...');
         onProgress({
           type: 'progress',
           step: 1,
@@ -214,17 +215,34 @@ export class ResearchService {
         });
 
         try {
+          // 16種類の調査項目を事前作成
           createdPages = await this.notionService.batchCreateResearchPages(
             request.businessName,
             this.researchPrompts
           );
-          console.log(`[ResearchService] 事前作成完了: ${createdPages.length}件`);
+          console.log(`[ResearchService] 調査項目事前作成完了: ${createdPages.length}件`);
           
+          // 統合レポートページを事前作成
           onProgress({
             type: 'progress',
             step: 2,
             total: this.researchPrompts.length + 3,
-            message: `全${createdPages.length}件の調査項目を事前作成完了。順次実行を開始します...`,
+            message: '統合レポートページを事前作成中...',
+            researchType: '統合レポート事前作成'
+          });
+          
+          const integratedReportPage = await this.notionService.createIntegratedReportPage(
+            request.businessName,
+            request.serviceHypothesis
+          );
+          integratedReportPageId = integratedReportPage.pageId;
+          console.log(`[ResearchService] 統合レポート事前作成完了: ${integratedReportPage.url}`);
+          
+          onProgress({
+            type: 'progress',
+            step: 3,
+            total: this.researchPrompts.length + 3,
+            message: `全${createdPages.length}件の調査項目 + 統合レポートを事前作成完了。順次実行を開始します...`,
             researchType: '事前作成完了'
           });
         } catch (error) {
@@ -235,11 +253,12 @@ export class ResearchService {
         console.log('[ResearchService] 再開モード: 事前作成をスキップ');
         // 再開時は事前作成をスキップし、既存のページIDを取得（簡易実装）
         createdPages = this.researchPrompts.map(prompt => ({
-          pageId: 'resumed', // 実際には既存ページIDを取得する必要があるが、今回は簡易実装
+          pageId: 'resumed',
           url: 'resumed',
           researchId: prompt.id,
           title: prompt.title
         }));
+        integratedReportPageId = 'resumed';
       }
       
       // 初期化メッセージ
@@ -342,7 +361,7 @@ export class ResearchService {
         }
       }
 
-      // Phase 3: 統合レポート生成
+      // Phase 3: 統合レポート生成と更新
       onProgress({
         type: 'progress',
         step: this.researchPrompts.length + 3,
@@ -358,15 +377,31 @@ export class ResearchService {
       );
       console.log('[ResearchService] 統合レポート生成完了');
 
-      // 統合レポートページ作成（従来の形式で作成）
-      console.log('[ResearchService] 統合レポートページ作成開始');
-      const notionResult = await this.notionService.createResearchPage(
-        request.businessName,
-        request.serviceHypothesis,
-        researchResults,
-        integratedReport
-      );
-      console.log('[ResearchService] 統合レポートページ作成完了:', notionResult.url);
+      // 統合レポートページの内容を更新（事前作成済みページに内容追加）
+      console.log('[ResearchService] 統合レポートページ更新開始');
+      let notionResult;
+      
+      if (integratedReportPageId && integratedReportPageId !== 'resumed') {
+        // 事前作成したページの内容を更新
+        await this.notionService.updateIntegratedReportContent(integratedReportPageId, integratedReport);
+        await this.notionService.updatePageStatus(integratedReportPageId, 'completed');
+        
+        notionResult = {
+          pageId: integratedReportPageId,
+          url: this.notionService.generatePageUrl(integratedReportPageId)
+        };
+        console.log('[ResearchService] 事前作成統合レポートページ更新完了:', notionResult.url);
+      } else {
+        // フォールバック: 従来方式で作成
+        console.log('[ResearchService] フォールバック: 従来方式で統合レポート作成');
+        notionResult = await this.notionService.createResearchPage(
+          request.businessName,
+          request.serviceHypothesis,
+          researchResults,
+          integratedReport
+        );
+        console.log('[ResearchService] 従来方式統合レポート作成完了:', notionResult.url);
+      }
 
       // 完了通知
       const completedAt = new Date();

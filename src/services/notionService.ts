@@ -206,7 +206,7 @@ export class NotionService {
 
       // バッチ2: 統合レポートセクション
       console.log('[NotionService] 統合レポートセクション追加中...');
-      const integratedReportBlocks = this.createBlocksFromJSON(integratedReport);
+      const integratedReportBlocks = this.createBlocksFromMarkdown(integratedReport);
       await this.appendBlocks(pageId, integratedReportBlocks);
       await this.sleep(500);
 
@@ -239,7 +239,7 @@ export class NotionService {
       await this.sleep(500);
 
       for (const result of researchResults) {
-        const resultBlocks = this.createBlocksFromJSON(result.result);
+        const resultBlocks = this.createBlocksFromMarkdown(result.result);
         const toggleBlock = this.createToggleBlock(result.title, resultBlocks);
         await this.appendBlocks(pageId, toggleBlock);
         await this.sleep(500);
@@ -318,47 +318,57 @@ export class NotionService {
       return text;
     }
     
-    // より自然な位置で切り詰める（句読点や改行を探す）
-    let cutPoint = maxLength - 50; // 安全マージン
+    console.log(`[NotionService] 汎用テキスト短縮: ${text.length}文字 -> ${maxLength}文字`);
     
-    // 句読点や改行で切る
-    const naturalBreaks = ['。', '！', '？', '\n', '.\n', '!\n', '?\n'];
+    // より自然な位置で切り詰める（句読点や改行を探す）
+    let cutPoint = maxLength - 30; // 安全マージンを縮小（50->30）
+    
+    // 句読点や改行で切る（検索範囲を拡大）
+    const naturalBreaks = ['。', '！', '？', '\n', '.\n', '!\n', '?\n', '、', '；', ';'];
     for (const breakChar of naturalBreaks) {
       const lastBreak = text.lastIndexOf(breakChar, cutPoint);
-      if (lastBreak > cutPoint - 200) { // 200文字以内にあれば採用
+      if (lastBreak > cutPoint - 300) { // 検索範囲を拡大（200->300）
         cutPoint = lastBreak + breakChar.length;
         break;
       }
     }
     
-    return text.substring(0, cutPoint) + '\n\n... (内容が長いため省略されました)';
+    const truncatedText = text.substring(0, cutPoint) + '\n\n... (続きはNotionページで確認)';
+    console.log(`[NotionService] 短縮後: ${truncatedText.length}文字`);
+    
+    return truncatedText;
   }
 
   /**
    * テキストをNotion Rich Text用に安全に短縮
    * @param text 元のテキスト
-   * @returns Rich Text用に短縮されたテキスト（最大1900文字）
+   * @returns Rich Text用に短縮されたテキスト（最大1950文字）
    */
   private truncateTextSafely(text: string): string {
-    const maxLength = 1900; // Notionの2000文字制限より安全マージンを設ける
+    const maxLength = 1950; // Notionの2000文字制限ギリギリまで使用（50文字マージン）
     if (text.length <= maxLength) {
       return text;
     }
     
-    // 自然な位置で切り詰める
-    let cutPoint = maxLength - 100;
+    console.log(`[NotionService] テキスト長縮: ${text.length}文字 -> ${maxLength}文字`);
     
-    // 句読点や改行で切る
-    const naturalBreaks = ['。', '！', '？', '\n', '.\n', '!\n', '?\n'];
+    // 自然な位置で切り詰める（より長い範囲を保持）
+    let cutPoint = maxLength - 30; // マージンを短縮
+    
+    // 句読点や改行で切る（検索範囲を拡大）
+    const naturalBreaks = ['。', '！', '？', '\n', '.\n', '!\n', '?\n', '、', '；', ';'];
     for (const breakChar of naturalBreaks) {
       const lastBreak = text.lastIndexOf(breakChar, cutPoint);
-      if (lastBreak > cutPoint - 200) {
+      if (lastBreak > cutPoint - 300) { // 検索範囲を拡大（200->300）
         cutPoint = lastBreak + breakChar.length;
         break;
       }
     }
     
-    return text.substring(0, cutPoint) + '\n\n[内容が長いため省略されました]';
+    const truncatedText = text.substring(0, cutPoint) + '\n\n[一部省略 - 詳細はNotionページで確認]';
+    console.log(`[NotionService] 短縮後の文字数: ${truncatedText.length}文字`);
+    
+    return truncatedText;
   }
 
   /**
@@ -415,34 +425,111 @@ export class NotionService {
   }
 
   /**
-   * マークダウンテキストをNotionブロックに変換（JSON対応版）
-   * @param jsonString Geminiから受け取ったJSON文字列
+   * マークダウンテキストをNotionブロックに変換（Markdown対応版）
+   * @param markdownText Geminiから受け取ったMarkdown文字列
    * @returns Notionブロック配列
    */
-  private createBlocksFromJSON(jsonString: string): any[] {
+  private createBlocksFromMarkdown(markdownText: string): any[] {
     try {
-      const cleanedJsonString = this.cleanupJsonString(jsonString);
-      if (!cleanedJsonString) {
+      if (!markdownText || markdownText.trim().length === 0) {
         return [this.createParagraphBlock('AIからの応答が空でした。')];
       }
 
-      const blocksContent = JSON.parse(cleanedJsonString);
-
-      if (!Array.isArray(blocksContent)) {
-        console.warn('[NotionService] JSONのルートが配列ではありません。段落として扱います。');
-        return [this.createParagraphBlock(cleanedJsonString)];
+      console.log(`[NotionService] Markdown変換開始: ${markdownText.length}文字`);
+      
+      // Markdownテキストを行で分割
+      const lines = markdownText.split('\n');
+      const blocks: any[] = [];
+      
+      let currentListItems: any[] = [];
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmedLine = line.trim();
+        
+        // 空行はスキップ
+        if (trimmedLine.length === 0) {
+          // リストが終了した場合の処理
+          if (currentListItems.length > 0) {
+            blocks.push(...currentListItems);
+            currentListItems = [];
+          }
+          continue;
+        }
+        
+        // H1 見出し (# )
+        if (trimmedLine.startsWith('# ')) {
+          // リスト終了処理
+          if (currentListItems.length > 0) {
+            blocks.push(...currentListItems);
+            currentListItems = [];
+          }
+          blocks.push(this.createHeading1Block(trimmedLine.substring(2).trim()));
+        }
+        // H2 見出し (## )
+        else if (trimmedLine.startsWith('## ')) {
+          // リスト終了処理
+          if (currentListItems.length > 0) {
+            blocks.push(...currentListItems);
+            currentListItems = [];
+          }
+          blocks.push(this.createHeading2Block(trimmedLine.substring(3).trim()));
+        }
+        // H3 見出し (### )
+        else if (trimmedLine.startsWith('### ')) {
+          // リスト終了処理
+          if (currentListItems.length > 0) {
+            blocks.push(...currentListItems);
+            currentListItems = [];
+          }
+          blocks.push(this.createHeading3Block(trimmedLine.substring(4).trim()));
+        }
+        // 箇条書きリスト (- または * で始まる)
+        else if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
+          const listContent = trimmedLine.substring(2).trim();
+          currentListItems.push(this.createBulletedListItemBlock(listContent));
+        }
+        // 区切り線
+        else if (trimmedLine === '---' || trimmedLine === '***') {
+          // リスト終了処理
+          if (currentListItems.length > 0) {
+            blocks.push(...currentListItems);
+            currentListItems = [];
+          }
+          blocks.push({
+            object: 'block',
+            type: 'divider',
+            divider: {}
+          });
+        }
+        // 通常の段落
+        else {
+          // リスト終了処理
+          if (currentListItems.length > 0) {
+            blocks.push(...currentListItems);
+            currentListItems = [];
+          }
+          blocks.push(this.createParagraphBlock(trimmedLine));
+        }
       }
-
-      return this.createBlocksRecursive(blocksContent);
+      
+      // 最後にリストアイテムが残っている場合
+      if (currentListItems.length > 0) {
+        blocks.push(...currentListItems);
+      }
+      
+      console.log(`[NotionService] Markdown変換完了: ${blocks.length}ブロック作成`);
+      return blocks.length > 0 ? blocks : [this.createParagraphBlock('変換可能なコンテンツがありませんでした。')];
+      
     } catch (error) {
-      console.error('[NotionService] JSON解析エラー。フォールバックとしてテキスト表示します。', error);
+      console.error('[NotionService] Markdown変換エラー。フォールバックとしてテキスト表示します。', error);
       return [
         this.createCalloutBlock(
-          'JSON解析エラー',
-          'AIからの応答をJSONとして解析できませんでした。以下に元のテキストを表示します。',
+          'Markdown変換エラー',
+          'AIからの応答をMarkdownとして変換できませんでした。以下に元のテキストを表示します。',
           '⚠️'
         ),
-        this.createParagraphBlock(jsonString),
+        this.createParagraphBlock(markdownText),
       ];
     }
   }
@@ -940,7 +1027,7 @@ export class NotionService {
       console.log(`[NotionService] 個別調査基本ページ作成完了: ${pageId}`);
 
       // 調査結果コンテンツを追加
-      const resultBlocks = this.createBlocksFromJSON(researchResult);
+      const resultBlocks = this.createBlocksFromMarkdown(researchResult);
       
       // 調査結果ヘッダーを追加
       const contentWithHeader = [
@@ -1031,14 +1118,25 @@ export class NotionService {
    * @returns ステータスプロパティ名またはnull
    */
   private findStatusProperty(properties: Record<string, any>): string | null {
-    // 複数のパターンをチェック
-    const statusCandidates = ['ステータス', 'Status', '状態', 'State'];
+    // 複数のパターンをチェック（日本語と英語）
+    const statusCandidates = [
+      'ステータス', 'Status', '状態', 'State', '進行状況', 
+      'Progress', '完了状況', 'Completion', '状況', 'Condition'
+    ];
     
     for (const candidate of statusCandidates) {
       if (properties[candidate] && properties[candidate].type === 'select') {
+        console.log(`[NotionService] ステータスプロパティ発見: ${candidate}`);
         return candidate;
       }
     }
+    
+    // デバッグ用：利用可能なプロパティをログ出力
+    console.log('[NotionService] ステータスプロパティが見つかりません。利用可能なプロパティ:');
+    Object.keys(properties).forEach(key => {
+      const prop = properties[key];
+      console.log(`  - ${key}: ${prop.type} ${prop.type === 'select' ? `(選択肢: ${prop.select?.options?.map((o: any) => o.name).join(', ') || 'なし'})` : ''}`);
+    });
     
     return null;
   }
@@ -1050,21 +1148,37 @@ export class NotionService {
    */
   private findCompletedOption(options: Array<{ name: string; id: string; color?: string }>): { name: string; id: string } | null {
     // 複数のパターンをチェック
-    const completedCandidates = ['完了', 'Done', 'Completed', '終了', 'Finished', '✅'];
+    const completedCandidates = ['完了', 'Done', 'Completed', '終了', 'Finished', '✅', 'Success', '成功'];
+    
+    console.log(`[NotionService] 完了選択肢を検索中。利用可能な選択肢: [${options.map(o => o.name).join(', ')}]`);
     
     for (const candidate of completedCandidates) {
       const option = options.find(opt => opt.name === candidate);
       if (option) {
+        console.log(`[NotionService] 完了選択肢発見: ${option.name}`);
         return option;
       }
     }
     
-    // デフォルトで最初の選択肢を使用
-    if (options.length > 0) {
-      console.log('[NotionService] デフォルトでステータス選択肢を使用:', options[0].name);
-      return options[0];
+    // パーシャルマッチも試行（部分一致）
+    for (const candidate of completedCandidates) {
+      const option = options.find(opt => 
+        opt.name.includes(candidate) || candidate.includes(opt.name)
+      );
+      if (option) {
+        console.log(`[NotionService] 完了選択肢（部分一致）発見: ${option.name}`);
+        return option;
+      }
     }
     
+    // 最後の選択肢を完了として使用（通常、ステータスの最後は完了状態）
+    if (options.length > 0) {
+      const lastOption = options[options.length - 1];
+      console.log(`[NotionService] 最後の選択肢を完了として使用: ${lastOption.name}`);
+      return lastOption;
+    }
+    
+    console.warn('[NotionService] 完了状態の選択肢が見つかりません');
     return null;
   }
 
@@ -1118,11 +1232,12 @@ export class NotionService {
   }
 
   /**
-   * 調査タイトルから調査種別を分類
+   * 調査タイトルから調査種別を分類（ナンバー付き）
    * @param researchTitle 調査タイトル
-   * @returns 調査種別
+   * @param researchId 調査ID（1-16）
+   * @returns 調査種別（ナンバー付き）
    */
-  private categorizeResearchType(researchTitle: string): string {
+  private categorizeResearchType(researchTitle: string, researchId?: number): string {
     // 調査タイトルからカテゴリを推定
     const categoryMap: { [key: string]: string } = {
       '市場規模': '市場分析',
@@ -1142,13 +1257,21 @@ export class NotionService {
       'PMF': '製品分析'
     };
 
-    for (const [keyword, category] of Object.entries(categoryMap)) {
+    let category = '一般調査'; // デフォルト
+    
+    for (const [keyword, cat] of Object.entries(categoryMap)) {
       if (researchTitle.includes(keyword)) {
-        return category;
+        category = cat;
+        break;
       }
     }
 
-    return '一般調査'; // デフォルト
+    // ナンバー付きで返す（調査IDがある場合）
+    if (researchId) {
+      return `${researchId}. ${category}`;
+    }
+
+    return category;
   }
 
   /**
@@ -1230,7 +1353,7 @@ export class NotionService {
           // 調査種別プロパティの設定
           const researchTypeProperty = this.findResearchTypeProperty(databaseInfo);
           if (researchTypeProperty) {
-            const researchCategory = this.categorizeResearchType(prompt.title);
+            const researchCategory = this.categorizeResearchType(prompt.title, prompt.id);
             properties[researchTypeProperty] = {
               select: {
                 name: researchCategory
@@ -1290,7 +1413,7 @@ export class NotionService {
                   {
                     type: 'text',
                     text: {
-                      content: `調査種別: ${this.categorizeResearchType(prompt.title)}`
+                      content: `調査種別: ${this.categorizeResearchType(prompt.title, prompt.id)}`
                     }
                   }
                 ]
@@ -1414,21 +1537,36 @@ export class NotionService {
    */
   private findPendingOption(options: Array<{ name: string; id: string; color?: string }>): { name: string; id: string } | null {
     // 複数のパターンをチェック
-    const pendingCandidates = ['未着手', 'Pending', 'Not Started', '開始前', 'ToDo', '⏳'];
+    const pendingCandidates = ['未着手', 'Pending', 'Not Started', '開始前', 'ToDo', '⏳', '待機中', 'Waiting'];
+    
+    console.log(`[NotionService] 未着手選択肢を検索中。利用可能な選択肢: [${options.map(o => o.name).join(', ')}]`);
     
     for (const candidate of pendingCandidates) {
       const option = options.find(opt => opt.name === candidate);
       if (option) {
+        console.log(`[NotionService] 未着手選択肢発見: ${option.name}`);
+        return option;
+      }
+    }
+    
+    // パーシャルマッチも試行（部分一致）
+    for (const candidate of pendingCandidates) {
+      const option = options.find(opt => 
+        opt.name.includes(candidate) || candidate.includes(opt.name)
+      );
+      if (option) {
+        console.log(`[NotionService] 未着手選択肢（部分一致）発見: ${option.name}`);
         return option;
       }
     }
     
     // デフォルトで最初の選択肢を使用
     if (options.length > 0) {
-      console.log('[NotionService] デフォルトでステータス選択肢を使用:', options[0].name);
+      console.log(`[NotionService] デフォルト選択肢を未着手として使用: ${options[0].name}`);
       return options[0];
     }
     
+    console.warn('[NotionService] 未着手状態の選択肢が見つかりません');
     return null;
   }
 
@@ -1439,15 +1577,30 @@ export class NotionService {
    */
   private findInProgressOption(options: Array<{ name: string; id: string; color?: string }>): { name: string; id: string } | null {
     // 複数のパターンをチェック
-    const inProgressCandidates = ['進行中', 'In Progress', 'Working', '実行中', 'Running', '🔄'];
+    const inProgressCandidates = ['進行中', 'In Progress', 'Working', '実行中', 'Running', '🔄', '作業中', 'Processing'];
+    
+    console.log(`[NotionService] 進行中選択肢を検索中。利用可能な選択肢: [${options.map(o => o.name).join(', ')}]`);
     
     for (const candidate of inProgressCandidates) {
       const option = options.find(opt => opt.name === candidate);
       if (option) {
+        console.log(`[NotionService] 進行中選択肢発見: ${option.name}`);
         return option;
       }
     }
     
+    // パーシャルマッチも試行（部分一致）
+    for (const candidate of inProgressCandidates) {
+      const option = options.find(opt => 
+        opt.name.includes(candidate) || candidate.includes(opt.name)
+      );
+      if (option) {
+        console.log(`[NotionService] 進行中選択肢（部分一致）発見: ${option.name}`);
+        return option;
+      }
+    }
+    
+    console.warn('[NotionService] 進行中状態の選択肢が見つかりません');
     return null;
   }
 
@@ -1534,7 +1687,7 @@ export class NotionService {
       console.log(`[NotionService] ページコンテンツ更新開始: ${pageId}`);
       
       // 調査結果ブロックを作成
-      const resultBlocks = this.createBlocksFromJSON(researchResult);
+      const resultBlocks = this.createBlocksFromMarkdown(researchResult);
       
       // 調査結果ヘッダーを追加
       const contentWithHeader = [
@@ -1565,4 +1718,215 @@ export class NotionService {
       return false;
     }
   }
+
+  /**
+   * 統合レポートページを事前作成
+   * @param businessName 事業名
+   * @param serviceHypothesis サービス仮説
+   * @returns NotionページのID・URL
+   */
+  async createIntegratedReportPage(
+    businessName: string,
+    serviceHypothesis: ServiceHypothesis
+  ): Promise<{ pageId: string; url: string }> {
+    try {
+      console.log(`[NotionService] 統合レポートページ事前作成開始: ${businessName}`);
+
+      // データベース構造を確認
+      const databaseInfo = await this.getDatabaseProperties();
+      const properties: any = {};
+
+      // タイトルプロパティの設定
+      const titleProperty = this.findTitleProperty(databaseInfo);
+      if (titleProperty) {
+        properties[titleProperty] = {
+          title: [
+            {
+              text: {
+                content: businessName,
+              },
+            },
+          ],
+        };
+      }
+
+      // ステータスプロパティの設定（未着手）
+      const statusProperty = this.findStatusProperty(databaseInfo);
+      if (statusProperty) {
+        const statusOptions = databaseInfo[statusProperty]?.select?.options || [];
+        const pendingOption = this.findPendingOption(statusOptions);
+        
+        if (pendingOption) {
+          properties[statusProperty] = {
+            select: {
+              name: pendingOption.name
+            }
+          };
+        }
+      }
+
+      // 調査種別プロパティの設定（統合調査レポート）
+      const researchTypeProperty = this.findResearchTypeProperty(databaseInfo);
+      if (researchTypeProperty) {
+        properties[researchTypeProperty] = {
+          select: {
+            name: '統合調査レポート'
+          }
+        };
+      }
+
+      // 統合レポートページのコンテンツ（空の状態）
+      const pageContent = [
+        {
+          object: 'block',
+          type: 'heading_1',
+          heading_1: {
+            rich_text: [
+              {
+                type: 'text',
+                text: {
+                  content: `📊 ${businessName} - 総合市場調査レポート`
+                }
+              }
+            ]
+          }
+        } as any,
+        {
+          object: 'block',
+          type: 'paragraph',
+          paragraph: {
+            rich_text: [
+              {
+                type: 'text',
+                text: {
+                  content: `作成日時: ${new Date().toLocaleString('ja-JP')}`
+                }
+              }
+            ]
+          }
+        } as any,
+        {
+          object: 'block',
+          type: 'paragraph',
+          paragraph: {
+            rich_text: [
+              {
+                type: 'text',
+                text: {
+                  content: `調査種別: 統合調査レポート`
+                }
+              }
+            ]
+          }
+        } as any,
+        {
+          object: 'block',
+          type: 'divider',
+          divider: {}
+        } as any,
+        {
+          object: 'block',
+          type: 'callout',
+          callout: {
+            rich_text: [
+              {
+                type: 'text',
+                text: {
+                  content: '📋 このページは16種類の専門調査の統合レポートページです。全調査完了後に詳細な分析内容が更新されます。'
+                }
+              }
+            ],
+            icon: {
+              emoji: '📊'
+            },
+            color: 'blue_background'
+          }
+        } as any,
+        ...this.createServiceHypothesisBlocks(serviceHypothesis)
+      ];
+
+      // ページを作成
+      const response = await this.notion.pages.create({
+        parent: {
+          database_id: this.config.databaseId
+        },
+        properties,
+        children: pageContent
+      });
+
+      const pageId = response.id;
+      const url = this.generatePageUrl(pageId);
+      
+      console.log(`[NotionService] 統合レポートページ事前作成完了: ${url}`);
+      
+      return { pageId, url };
+
+    } catch (error) {
+      console.error(`[NotionService] 統合レポートページ事前作成エラー (${businessName}):`, error);
+      throw new Error(`統合レポートページ事前作成エラー: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * 統合レポートページの内容を更新
+   * @param pageId 統合レポートページID
+   * @param integratedReport 統合レポート内容
+   * @returns 更新成功かどうか
+   */
+  async updateIntegratedReportContent(pageId: string, integratedReport: string): Promise<boolean> {
+    try {
+      console.log(`[NotionService] 統合レポート内容更新開始: ${pageId}`);
+      
+      // 統合レポート結果ブロックを作成
+      const reportBlocks = this.createBlocksFromMarkdown(integratedReport);
+      
+      // 統合レポートヘッダーを追加
+      const contentWithHeader = [
+        {
+          object: 'block',
+          type: 'divider',
+          divider: {}
+        } as any,
+        {
+          object: 'block',
+          type: 'heading_2',
+          heading_2: {
+            rich_text: [
+              {
+                type: 'text',
+                text: {
+                  content: '🎯 統合調査結果・戦略提言'
+                }
+              }
+            ]
+          }
+        } as any,
+        {
+          object: 'block',
+          type: 'paragraph',
+          paragraph: {
+            rich_text: [
+              {
+                type: 'text',
+                text: {
+                  content: `統合レポート生成完了日時: ${new Date().toLocaleString('ja-JP')}`
+                }
+              }
+            ]
+          }
+        } as any,
+        ...reportBlocks
+      ];
+
+      await this.appendBlocks(pageId, contentWithHeader);
+      
+      console.log(`[NotionService] 統合レポート内容更新完了: ${pageId}`);
+      return true;
+      
+    } catch (error) {
+      console.error(`[NotionService] 統合レポート内容更新エラー (${pageId}):`, error);
+      return false;
+    }
+  }
 }
+

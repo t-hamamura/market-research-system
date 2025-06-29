@@ -531,7 +531,7 @@ function updatePhaseDisplay() {
   }
   
   if (elements.phaseCounter) {
-    elements.phaseCounter.textContent = `${appState.currentPhase}/4`;
+    elements.phaseCounter.textContent = `${appState.currentPhase}/3`;
   }
   
   if (elements.phaseDescription) {
@@ -542,16 +542,16 @@ function updatePhaseDisplay() {
   updatePhaseGroupStatus();
 }
 
-// ===== ステップからフェーズを更新（事前作成→ステータス更新方式対応） =====
+// ===== ステップからフェーズを更新（統合レポート事前作成対応） =====
 function updatePhaseFromStep(step) {
   let newPhase = 1;
   
-  if (step <= 2) {
-    newPhase = 1; // Phase 1: 事前作成フェーズ
-  } else if (step <= 18) {
+  if (step <= 3) {
+    newPhase = 1; // Phase 1: 事前作成フェーズ（調査項目 + 統合レポート）
+  } else if (step <= 19) {
     newPhase = 2; // Phase 2: 調査実行フェーズ（16種類の調査）
   } else {
-    newPhase = 3; // Phase 3: 統合レポート生成フェーズ
+    newPhase = 3; // Phase 3: 統合レポート更新フェーズ
   }
   
   if (newPhase !== appState.currentPhase) {
@@ -560,20 +560,20 @@ function updatePhaseFromStep(step) {
   }
 }
 
-// ===== フェーズデータの取得（事前作成→ステータス更新方式対応） =====
+// ===== フェーズデータの取得（統合レポート事前作成対応） =====
 function getPhaseData(phase) {
   const phases = {
     1: {
       title: 'Phase 1: 事前作成フェーズ',
-      description: '16種類の調査項目をNotionに事前作成し、進行状況の可視化を準備しています'
+      description: '16種類の調査項目と統合レポートページをNotionに事前作成し、進行状況の可視化を準備しています'
     },
     2: {
       title: 'Phase 2: 調査実行フェーズ',
       description: '各調査項目を順次実行し、リアルタイムでステータスを更新しています'
     },
     3: {
-      title: 'Phase 3: 統合レポート生成',
-      description: '全調査結果を統合し、包括的なNotionレポートを生成しています'
+      title: 'Phase 3: 統合レポート更新',
+      description: '事前作成した統合レポートページに全調査結果を統合し、包括的な分析内容を追加しています'
     }
   };
   
@@ -582,25 +582,27 @@ function getPhaseData(phase) {
 
 // ===== フェーズグループの状態更新（3フェーズ構成対応） =====
 function updatePhaseGroupStatus() {
+  // HTMLのdata-phase属性を使用してフェーズグループを取得
   for (let i = 1; i <= 3; i++) {
-    const phaseGroup = document.getElementById(`phase${i}`);
-    const phaseIcon = phaseGroup?.querySelector('.phase-status-icon');
+    const phaseGroup = document.querySelector(`.phase-group[data-phase="${i}"]`);
     
-    if (phaseGroup && phaseIcon) {
+    if (phaseGroup) {
       phaseGroup.classList.remove('active', 'completed');
       
       if (i < appState.currentPhase) {
         // 完了したフェーズ
         phaseGroup.classList.add('completed');
-        phaseIcon.textContent = '✅';
+        console.log(`[App] フェーズ${i}を完了状態に更新`);
       } else if (i === appState.currentPhase) {
         // 現在のフェーズ
         phaseGroup.classList.add('active');
-        phaseIcon.textContent = '🔄';
+        console.log(`[App] フェーズ${i}をアクティブ状態に更新`);
       } else {
         // 未開始のフェーズ
-        phaseIcon.textContent = '⏳';
+        console.log(`[App] フェーズ${i}は未開始状態を維持`);
       }
+    } else {
+      console.warn(`[App] フェーズグループ${i}が見つかりません`);
     }
   }
 }
@@ -717,45 +719,45 @@ function updateTimeEstimate() {
   }
 }
 
-// ===== 調査項目の状態更新（新UI対応） =====
+// ===== 調査項目の状態更新（統合レポート事前作成対応） =====
 function updateResearchItemsStatus(step, researchType) {
-  // 新しい16種類の調査項目マッピング（事前作成→ステータス更新方式対応）
+  // 調査項目マッピング（統合レポート事前作成対応）
   const researchItems = {
-    // Phase 1: 事前作成フェーズ（ステップ1-2）
-    1: 'initialization', // 初期化
-    2: 'pre_creation',   // 事前作成
+    // Phase 1: 事前作成フェーズ（ステップ1-3）
+    1: 'initialization',        // 初期化
+    2: 'pre_creation',         // 調査項目事前作成
+    3: 'integration_creation', // 統合レポート事前作成
     
-    // Phase 2: 調査実行フェーズ（ステップ3-18：16種類の調査）
-    3: 'market_size_research',           // 1. 市場規模と成長性の調査
-    4: 'pestel_analysis',                // 2. PESTEL分析の調査
-    5: 'competitor_product_analysis',    // 3. 競合の製品特徴・戦略分析
-    6: 'competitor_strategy_analysis',   // 4. 競合の経営戦略変遷・顧客離脱理由
-    7: 'customer_segment_analysis',      // 5. 顧客セグメント・意思決定プロセス分析
-    8: 'customer_emotion_analysis',      // 6. 顧客感情・潜在ニーズ・情報収集行動マッピング
-    9: 'product_market_fit_analysis',    // 7. プロダクト市場適合性と価格戦略
-    10: 'marketing_tactics_analysis',    // 8. マーケティング戦術分析
-    11: 'brand_positioning_analysis',    // 9. ブランドポジショニングとコミュニケーション
-    12: 'technology_security_analysis',  // 10. テクノロジートレンド・セキュリティ分析
-    13: 'partnership_strategy_analysis', // 11. パートナーシップ戦略とエコシステム形成
-    14: 'risk_scenario_analysis',        // 12. リスク・シナリオ分析
-    15: 'kpi_measurement_design',        // 13. KPI・測定方法の設計
-    16: 'legal_compliance_analysis',     // 14. 法務・コンプライアンスリスク分析
-    17: 'research_method_proposal',      // 15. 効果的なリサーチ手法の提案
-    18: 'pmf_research_design',           // 16. PMF前特化リサーチ設計
+    // Phase 2: 調査実行フェーズ（ステップ4-19：16種類の調査）
+    4: 'market_size_research',           // 1. 市場規模と成長性の調査
+    5: 'pestel_analysis',                // 2. PESTEL分析の調査
+    6: 'competitor_product_analysis',    // 3. 競合の製品特徴・戦略分析
+    7: 'competitor_strategy_analysis',   // 4. 競合の経営戦略変遷・顧客離脱理由
+    8: 'customer_segment_analysis',      // 5. 顧客セグメント・意思決定プロセス分析
+    9: 'customer_emotion_analysis',      // 6. 顧客感情・潜在ニーズ・情報収集行動マッピング
+    10: 'product_market_fit_analysis',   // 7. プロダクト市場適合性と価格戦略
+    11: 'marketing_tactics_analysis',    // 8. マーケティング戦術分析
+    12: 'brand_positioning_analysis',    // 9. ブランドポジショニングとコミュニケーション
+    13: 'technology_security_analysis',  // 10. テクノロジートレンド・セキュリティ分析
+    14: 'partnership_strategy_analysis', // 11. パートナーシップ戦略とエコシステム形成
+    15: 'risk_scenario_analysis',        // 12. リスク・シナリオ分析
+    16: 'kpi_measurement_design',        // 13. KPI・測定方法の設計
+    17: 'legal_compliance_analysis',     // 14. 法務・コンプライアンスリスク分析
+    18: 'research_method_proposal',      // 15. 効果的なリサーチ手法の提案
+    19: 'pmf_research_design',           // 16. PMF前特化リサーチ設計
     
-    // Phase 3: 統合レポート生成フェーズ（ステップ19）
-    19: 'integration_report'             // 統合レポート生成
+    // Phase 3: 統合レポート更新フェーズ（ステップ20）
+    20: 'integration_report'             // 統合レポート更新
   };
 
   console.log(`[UpdateResearchItems] ステップ${step}: ${researchType} の状態を更新`);
 
-  // Phase 1: 事前作成フェーズ（ステップ1-2）
-  if (step <= 2) {
-    // 事前作成中
+  // Phase 1: 事前作成フェーズ（ステップ1-3）
+  if (step <= 3) {
     if (step === 1) {
       updateResearchItemStatus('initialization', 'in-progress');
       // 全調査項目を未着手状態に設定
-      for (let i = 3; i <= 19; i++) {
+      for (let i = 4; i <= 20; i++) {
         const itemId = researchItems[i];
         if (itemId) {
           updateResearchItemStatus(itemId, 'pending');
@@ -764,13 +766,18 @@ function updateResearchItemsStatus(step, researchType) {
     } else if (step === 2) {
       updateResearchItemStatus('initialization', 'completed');
       updateResearchItemStatus('pre_creation', 'in-progress');
+    } else if (step === 3) {
+      updateResearchItemStatus('initialization', 'completed');
+      updateResearchItemStatus('pre_creation', 'completed');
+      updateResearchItemStatus('integration_creation', 'in-progress');
     }
   }
-  // Phase 2: 調査実行フェーズ（ステップ3-18）
-  else if (step <= 18) {
+  // Phase 2: 調査実行フェーズ（ステップ4-19）
+  else if (step <= 19) {
     // 事前作成完了
     updateResearchItemStatus('initialization', 'completed');
     updateResearchItemStatus('pre_creation', 'completed');
+    updateResearchItemStatus('integration_creation', 'completed');
     
     // 現在実行中の調査
     const currentItemId = researchItems[step];
@@ -779,7 +786,7 @@ function updateResearchItemsStatus(step, researchType) {
     }
     
     // 完了済みの調査（現在のステップより前）
-    for (let i = 3; i < step; i++) {
+    for (let i = 4; i < step; i++) {
       const itemId = researchItems[i];
       if (itemId) {
         updateResearchItemStatus(itemId, 'completed');
@@ -787,29 +794,30 @@ function updateResearchItemsStatus(step, researchType) {
     }
     
     // 未着手の調査（現在のステップより後）
-    for (let i = step + 1; i <= 18; i++) {
+    for (let i = step + 1; i <= 19; i++) {
       const itemId = researchItems[i];
       if (itemId) {
         updateResearchItemStatus(itemId, 'pending');
       }
     }
     
-    // 統合レポートは未着手
+    // 統合レポート更新は未着手
     updateResearchItemStatus('integration_report', 'pending');
   }
-  // Phase 3: 統合レポート生成フェーズ（ステップ19）
+  // Phase 3: 統合レポート更新フェーズ（ステップ20）
   else {
     // 全調査完了
     updateResearchItemStatus('initialization', 'completed');
     updateResearchItemStatus('pre_creation', 'completed');
-    for (let i = 3; i <= 18; i++) {
+    updateResearchItemStatus('integration_creation', 'completed');
+    for (let i = 4; i <= 19; i++) {
       const itemId = researchItems[i];
       if (itemId) {
         updateResearchItemStatus(itemId, 'completed');
       }
     }
     
-    // 統合レポート実行中
+    // 統合レポート更新中
     updateResearchItemStatus('integration_report', 'in-progress');
   }
 }
@@ -854,7 +862,7 @@ function handleResearchSuccess(event) {
   // プログレスバーを100%に
   elements.progressFill.style.width = '100%';
   elements.progressPercentage.textContent = '100%';
-  elements.progressCounter.textContent = `19/19`;
+  elements.progressCounter.textContent = `20/20`;
   
   // 現在のフェーズを最終完了に
   appState.currentPhase = 3;
@@ -1021,7 +1029,7 @@ function resetApplication() {
   appState = {
     isLoading: false,
     currentStep: 0,
-    totalSteps: 19, // 事前作成(2) + 16調査 + 統合レポート(1) = 19ステップ
+    totalSteps: 20, // 事前作成(3) + 16調査 + 統合レポート更新(1) = 20ステップ
     researchResults: [],
     error: null,
     notionUrl: null,
@@ -1058,7 +1066,7 @@ function resetApplication() {
   // 進行状況をリセット
   elements.progressFill.style.width = '0%';
   elements.progressPercentage.textContent = '0%';
-  elements.progressCounter.textContent = '0/19';
+  elements.progressCounter.textContent = '0/20';
   
   // 時間予測をリセット
   if (elements.estimatedTime) {
