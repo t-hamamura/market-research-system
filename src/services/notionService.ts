@@ -414,39 +414,31 @@ private createHeadingBlock(level: number, text: string): any {
     }
   ];
 
-  switch (level) {
-    case 1:
-      return {
-        object: 'block',
-        type: 'heading_1',
-        heading_1: {
-          rich_text: richText
-        }
-      };
-    case 2:
-      return {
-        object: 'block',
-        type: 'heading_2',
-        heading_2: {
-          rich_text: richText
-        }
-      };
-    case 3:
-      return {
-        object: 'block',
-        type: 'heading_3',
-        heading_3: {
-          rich_text: richText
-        }
-      };
-    default:
-      return {
-        object: 'block',
-        type: 'heading_2',
-        heading_2: {
-          rich_text: richText
-        }
-      };
+  if (level === 1) {
+    return {
+      object: 'block',
+      type: 'heading_1',
+      heading_1: {
+        rich_text: richText
+      }
+    };
+  } else if (level === 3) {
+    return {
+      object: 'block',
+      type: 'heading_3',
+      heading_3: {
+        rich_text: richText
+      }
+    };
+  } else {
+    // デフォルトはheading_2
+    return {
+      object: 'block',
+      type: 'heading_2',
+      heading_2: {
+        rich_text: richText
+      }
+    };
   }
 }
 
