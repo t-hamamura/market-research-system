@@ -1,5 +1,6 @@
 import { GeminiService } from './geminiService';
 import { NotionService } from './notionService';
+import { NotionBatchService } from './notionBatchService';
 import { DeepResearchService } from './deepResearchService';
 import { 
   ResearchRequest, 
@@ -17,16 +18,19 @@ import {
 export class ResearchService {
   private geminiService: GeminiService;
   private notionService: NotionService;
+  private notionBatchService: NotionBatchService;
   private deepResearchService?: DeepResearchService;
   private researchPrompts: ResearchPrompt[];
 
   constructor(
     geminiService: GeminiService, 
     notionService: NotionService,
+    notionBatchService: NotionBatchService,
     deepResearchService?: DeepResearchService
   ) {
     this.geminiService = geminiService;
     this.notionService = notionService;
+    this.notionBatchService = notionBatchService;
     this.deepResearchService = deepResearchService;
     this.researchPrompts = this.initializeResearchPrompts();
   }
@@ -216,7 +220,7 @@ export class ResearchService {
 
         try {
           // 16種類の調査項目を事前作成
-          createdPages = await this.notionService.batchCreateResearchPages(
+          createdPages = await this.notionBatchService.batchCreateResearchPages(
             request.businessName,
             this.researchPrompts
           );

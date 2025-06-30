@@ -1,0 +1,683 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><title>TalkLabel</title><style>
+/* cspell:disable-file */
+/* webkit printing magic: print all background colors */
+html {
+	-webkit-print-color-adjust: exact;
+}
+* {
+	box-sizing: border-box;
+	-webkit-print-color-adjust: exact;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+}
+@media only screen {
+	body {
+		margin: 2em auto;
+		max-width: 900px;
+		color: rgb(55, 53, 47);
+	}
+}
+
+body {
+	line-height: 1.5;
+	white-space: pre-wrap;
+}
+
+a,
+a.visited {
+	color: inherit;
+	text-decoration: underline;
+}
+
+.pdf-relative-link-path {
+	font-size: 80%;
+	color: #444;
+}
+
+h1,
+h2,
+h3 {
+	letter-spacing: -0.01em;
+	line-height: 1.2;
+	font-weight: 600;
+	margin-bottom: 0;
+}
+
+.page-title {
+	font-size: 2.5rem;
+	font-weight: 700;
+	margin-top: 0;
+	margin-bottom: 0.75em;
+}
+
+h1 {
+	font-size: 1.875rem;
+	margin-top: 1.875rem;
+}
+
+h2 {
+	font-size: 1.5rem;
+	margin-top: 1.5rem;
+}
+
+h3 {
+	font-size: 1.25rem;
+	margin-top: 1.25rem;
+}
+
+.source {
+	border: 1px solid #ddd;
+	border-radius: 3px;
+	padding: 1.5em;
+	word-break: break-all;
+}
+
+.callout {
+	border-radius: 3px;
+	padding: 1rem;
+}
+
+figure {
+	margin: 1.25em 0;
+	page-break-inside: avoid;
+}
+
+figcaption {
+	opacity: 0.5;
+	font-size: 85%;
+	margin-top: 0.5em;
+}
+
+mark {
+	background-color: transparent;
+}
+
+.indented {
+	padding-left: 1.5em;
+}
+
+hr {
+	background: transparent;
+	display: block;
+	width: 100%;
+	height: 1px;
+	visibility: visible;
+	border: none;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.09);
+}
+
+img {
+	max-width: 100%;
+}
+
+@media only print {
+	img {
+		max-height: 100vh;
+		object-fit: contain;
+	}
+}
+
+@page {
+	margin: 1in;
+}
+
+.collection-content {
+	font-size: 0.875rem;
+}
+
+.column-list {
+	display: flex;
+	justify-content: space-between;
+}
+
+.column {
+	padding: 0 1em;
+}
+
+.column:first-child {
+	padding-left: 0;
+}
+
+.column:last-child {
+	padding-right: 0;
+}
+
+.table_of_contents-item {
+	display: block;
+	font-size: 0.875rem;
+	line-height: 1.3;
+	padding: 0.125rem;
+}
+
+.table_of_contents-indent-1 {
+	margin-left: 1.5rem;
+}
+
+.table_of_contents-indent-2 {
+	margin-left: 3rem;
+}
+
+.table_of_contents-indent-3 {
+	margin-left: 4.5rem;
+}
+
+.table_of_contents-link {
+	text-decoration: none;
+	opacity: 0.7;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.18);
+}
+
+table,
+th,
+td {
+	border: 1px solid rgba(55, 53, 47, 0.09);
+	border-collapse: collapse;
+}
+
+table {
+	border-left: none;
+	border-right: none;
+}
+
+th,
+td {
+	font-weight: normal;
+	padding: 0.25em 0.5em;
+	line-height: 1.5;
+	min-height: 1.5em;
+	text-align: left;
+}
+
+th {
+	color: rgba(55, 53, 47, 0.6);
+}
+
+ol,
+ul {
+	margin: 0;
+	margin-block-start: 0.6em;
+	margin-block-end: 0.6em;
+}
+
+li > ol:first-child,
+li > ul:first-child {
+	margin-block-start: 0.6em;
+}
+
+ul > li {
+	list-style: disc;
+}
+
+ul.to-do-list {
+	padding-inline-start: 0;
+}
+
+ul.to-do-list > li {
+	list-style: none;
+}
+
+.to-do-children-checked {
+	text-decoration: line-through;
+	opacity: 0.375;
+}
+
+ul.toggle > li {
+	list-style: none;
+}
+
+ul {
+	padding-inline-start: 1.7em;
+}
+
+ul > li {
+	padding-left: 0.1em;
+}
+
+ol {
+	padding-inline-start: 1.6em;
+}
+
+ol > li {
+	padding-left: 0.2em;
+}
+
+.mono ol {
+	padding-inline-start: 2em;
+}
+
+.mono ol > li {
+	text-indent: -0.4em;
+}
+
+.toggle {
+	padding-inline-start: 0em;
+	list-style-type: none;
+}
+
+/* Indent toggle children */
+.toggle > li > details {
+	padding-left: 1.7em;
+}
+
+.toggle > li > details > summary {
+	margin-left: -1.1em;
+}
+
+.selected-value {
+	display: inline-block;
+	padding: 0 0.5em;
+	background: rgba(206, 205, 202, 0.5);
+	border-radius: 3px;
+	margin-right: 0.5em;
+	margin-top: 0.3em;
+	margin-bottom: 0.3em;
+	white-space: nowrap;
+}
+
+.collection-title {
+	display: inline-block;
+	margin-right: 1em;
+}
+
+.page-description {
+	margin-bottom: 2em;
+}
+
+.simple-table {
+	margin-top: 1em;
+	font-size: 0.875rem;
+	empty-cells: show;
+}
+.simple-table td {
+	height: 29px;
+	min-width: 120px;
+}
+
+.simple-table th {
+	height: 29px;
+	min-width: 120px;
+}
+
+.simple-table-header-color {
+	background: rgb(247, 246, 243);
+	color: black;
+}
+.simple-table-header {
+	font-weight: 500;
+}
+
+time {
+	opacity: 0.5;
+}
+
+.icon {
+	display: inline-block;
+	max-width: 1.2em;
+	max-height: 1.2em;
+	text-decoration: none;
+	vertical-align: text-bottom;
+	margin-right: 0.5em;
+}
+
+img.icon {
+	border-radius: 3px;
+}
+
+.user-icon {
+	width: 1.5em;
+	height: 1.5em;
+	border-radius: 100%;
+	margin-right: 0.5rem;
+}
+
+.user-icon-inner {
+	font-size: 0.8em;
+}
+
+.text-icon {
+	border: 1px solid #000;
+	text-align: center;
+}
+
+.page-cover-image {
+	display: block;
+	object-fit: cover;
+	width: 100%;
+	max-height: 30vh;
+}
+
+.page-header-icon {
+	font-size: 3rem;
+	margin-bottom: 1rem;
+}
+
+.page-header-icon-with-cover {
+	margin-top: -0.72em;
+	margin-left: 0.07em;
+}
+
+.page-header-icon img {
+	border-radius: 3px;
+}
+
+.link-to-page {
+	margin: 1em 0;
+	padding: 0;
+	border: none;
+	font-weight: 500;
+}
+
+p > .user {
+	opacity: 0.5;
+}
+
+td > .user,
+td > time {
+	white-space: nowrap;
+}
+
+input[type="checkbox"] {
+	transform: scale(1.5);
+	margin-right: 0.6em;
+	vertical-align: middle;
+}
+
+p {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+}
+
+.image {
+	border: none;
+	margin: 1.5em 0;
+	padding: 0;
+	border-radius: 0;
+	text-align: center;
+}
+
+.code,
+code {
+	background: rgba(135, 131, 120, 0.15);
+	border-radius: 3px;
+	padding: 0.2em 0.4em;
+	border-radius: 3px;
+	font-size: 85%;
+	tab-size: 2;
+}
+
+code {
+	color: #eb5757;
+}
+
+.code {
+	padding: 1.5em 1em;
+}
+
+.code-wrap {
+	white-space: pre-wrap;
+	word-break: break-all;
+}
+
+.code > code {
+	background: none;
+	padding: 0;
+	font-size: 100%;
+	color: inherit;
+}
+
+blockquote {
+	font-size: 1.25em;
+	margin: 1em 0;
+	padding-left: 1em;
+	border-left: 3px solid rgb(55, 53, 47);
+}
+
+.bookmark {
+	text-decoration: none;
+	max-height: 8em;
+	padding: 0;
+	display: flex;
+	width: 100%;
+	align-items: stretch;
+}
+
+.bookmark-title {
+	font-size: 0.85em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	height: 1.75em;
+	white-space: nowrap;
+}
+
+.bookmark-text {
+	display: flex;
+	flex-direction: column;
+}
+
+.bookmark-info {
+	flex: 4 1 180px;
+	padding: 12px 14px 14px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+
+.bookmark-image {
+	width: 33%;
+	flex: 1 1 180px;
+	display: block;
+	position: relative;
+	object-fit: cover;
+	border-radius: 1px;
+}
+
+.bookmark-description {
+	color: rgba(55, 53, 47, 0.6);
+	font-size: 0.75em;
+	overflow: hidden;
+	max-height: 4.5em;
+	word-break: break-word;
+}
+
+.bookmark-href {
+	font-size: 0.75em;
+	margin-top: 0.25em;
+}
+
+.sans { font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol"; }
+.code { font-family: "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace; }
+.serif { font-family: Lyon-Text, Georgia, ui-serif, serif; }
+.mono { font-family: iawriter-mono, Nitti, Menlo, Courier, monospace; }
+.pdf .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK JP'; }
+.pdf:lang(zh-CN) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK SC'; }
+.pdf:lang(zh-TW) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK TC'; }
+.pdf:lang(ko-KR) .sans { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK KR'; }
+.pdf .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK JP'; }
+.pdf:lang(zh-CN) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC'; }
+.pdf:lang(zh-TW) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK TC'; }
+.pdf:lang(ko-KR) .code { font-family: Source Code Pro, "SFMono-Regular", Menlo, Consolas, "PT Mono", "Liberation Mono", Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK KR'; }
+.pdf .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK JP'; }
+.pdf:lang(zh-CN) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK SC'; }
+.pdf:lang(zh-TW) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK TC'; }
+.pdf:lang(ko-KR) .serif { font-family: PT Serif, Lyon-Text, Georgia, ui-serif, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Serif CJK KR'; }
+.pdf .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK JP'; }
+.pdf:lang(zh-CN) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC'; }
+.pdf:lang(zh-TW) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK TC'; }
+.pdf:lang(ko-KR) .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK KR'; }
+.highlight-default {
+	color: rgba(50, 48, 44, 1);
+}
+.highlight-gray {
+	color: rgba(115, 114, 110, 1);
+	fill: rgba(115, 114, 110, 1);
+}
+.highlight-brown {
+	color: rgba(159, 107, 83, 1);
+	fill: rgba(159, 107, 83, 1);
+}
+.highlight-orange {
+	color: rgba(217, 115, 13, 1);
+	fill: rgba(217, 115, 13, 1);
+}
+.highlight-yellow {
+	color: rgba(203, 145, 47, 1);
+	fill: rgba(203, 145, 47, 1);
+}
+.highlight-teal {
+	color: rgba(68, 131, 97, 1);
+	fill: rgba(68, 131, 97, 1);
+}
+.highlight-blue {
+	color: rgba(51, 126, 169, 1);
+	fill: rgba(51, 126, 169, 1);
+}
+.highlight-purple {
+	color: rgba(144, 101, 176, 1);
+	fill: rgba(144, 101, 176, 1);
+}
+.highlight-pink {
+	color: rgba(193, 76, 138, 1);
+	fill: rgba(193, 76, 138, 1);
+}
+.highlight-red {
+	color: rgba(205, 60, 58, 1);
+	fill: rgba(205, 60, 58, 1);
+}
+.highlight-default_background {
+	color: rgba(50, 48, 44, 1);
+}
+.highlight-gray_background {
+	background: rgba(248, 248, 247, 1);
+}
+.highlight-brown_background {
+	background: rgba(244, 238, 238, 1);
+}
+.highlight-orange_background {
+	background: rgba(251, 236, 221, 1);
+}
+.highlight-yellow_background {
+	background: rgba(251, 243, 219, 1);
+}
+.highlight-teal_background {
+	background: rgba(237, 243, 236, 1);
+}
+.highlight-blue_background {
+	background: rgba(231, 243, 248, 1);
+}
+.highlight-purple_background {
+	background: rgba(248, 243, 252, 1);
+}
+.highlight-pink_background {
+	background: rgba(252, 241, 246, 1);
+}
+.highlight-red_background {
+	background: rgba(253, 235, 236, 1);
+}
+.block-color-default {
+	color: inherit;
+	fill: inherit;
+}
+.block-color-gray {
+	color: rgba(115, 114, 110, 1);
+	fill: rgba(115, 114, 110, 1);
+}
+.block-color-brown {
+	color: rgba(159, 107, 83, 1);
+	fill: rgba(159, 107, 83, 1);
+}
+.block-color-orange {
+	color: rgba(217, 115, 13, 1);
+	fill: rgba(217, 115, 13, 1);
+}
+.block-color-yellow {
+	color: rgba(203, 145, 47, 1);
+	fill: rgba(203, 145, 47, 1);
+}
+.block-color-teal {
+	color: rgba(68, 131, 97, 1);
+	fill: rgba(68, 131, 97, 1);
+}
+.block-color-blue {
+	color: rgba(51, 126, 169, 1);
+	fill: rgba(51, 126, 169, 1);
+}
+.block-color-purple {
+	color: rgba(144, 101, 176, 1);
+	fill: rgba(144, 101, 176, 1);
+}
+.block-color-pink {
+	color: rgba(193, 76, 138, 1);
+	fill: rgba(193, 76, 138, 1);
+}
+.block-color-red {
+	color: rgba(205, 60, 58, 1);
+	fill: rgba(205, 60, 58, 1);
+}
+.block-color-default_background {
+	color: inherit;
+	fill: inherit;
+}
+.block-color-gray_background {
+	background: rgba(248, 248, 247, 1);
+}
+.block-color-brown_background {
+	background: rgba(244, 238, 238, 1);
+}
+.block-color-orange_background {
+	background: rgba(251, 236, 221, 1);
+}
+.block-color-yellow_background {
+	background: rgba(251, 243, 219, 1);
+}
+.block-color-teal_background {
+	background: rgba(237, 243, 236, 1);
+}
+.block-color-blue_background {
+	background: rgba(231, 243, 248, 1);
+}
+.block-color-purple_background {
+	background: rgba(248, 243, 252, 1);
+}
+.block-color-pink_background {
+	background: rgba(252, 241, 246, 1);
+}
+.block-color-red_background {
+	background: rgba(253, 235, 236, 1);
+}
+.select-value-color-uiBlue { background-color: undefined; }
+.select-value-color-pink { background-color: rgba(225, 136, 179, 0.27); }
+.select-value-color-purple { background-color: rgba(168, 129, 197, 0.27); }
+.select-value-color-green { background-color: rgba(123, 183, 129, 0.27); }
+.select-value-color-gray { background-color: rgba(84, 72, 49, 0.15); }
+.select-value-color-translucentGray { background-color: undefined; }
+.select-value-color-orange { background-color: rgba(224, 124, 57, 0.27); }
+.select-value-color-brown { background-color: rgba(210, 162, 141, 0.35); }
+.select-value-color-red { background-color: rgba(244, 171, 159, 0.4); }
+.select-value-color-yellow { background-color: rgba(236, 191, 66, 0.39); }
+.select-value-color-blue { background-color: rgba(93, 165, 206, 0.27); }
+.select-value-color-pageGlass { background-color: undefined; }
+.select-value-color-washGlass { background-color: undefined; }
+
+.checkbox {
+	display: inline-flex;
+	vertical-align: text-bottom;
+	width: 16;
+	height: 16;
+	background-size: 16px;
+	margin-left: 2px;
+	margin-right: 5px;
+}
+
+.checkbox-on {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22%2358A9D7%22%2F%3E%0A%3Cpath%20d%3D%22M6.71429%2012.2852L14%204.9995L12.7143%203.71436L6.71429%209.71378L3.28571%206.2831L2%207.57092L6.71429%2012.2852Z%22%20fill%3D%22white%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+
+.checkbox-off {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20x%3D%220.75%22%20y%3D%220.75%22%20width%3D%2214.5%22%20height%3D%2214.5%22%20fill%3D%22white%22%20stroke%3D%22%2336352F%22%20stroke-width%3D%221.5%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+	
+</style></head><body><article id="222d3748-3838-814d-b9f6-d110a04722f5" class="page sans"><header><h1 class="page-title">TalkLabel</h1><p class="page-description"></p><table class="properties"><tbody><tr class="property-row property-row-status"><th><span class="icon property-icon"><svg aria-hidden="true" role="graphics-symbol" viewBox="0 0 16 16" style="width:14px;height:14px;display:block;fill:rgba(71, 70, 68, 0.6);flex-shrink:0" class="typesStatus"><path d="M8.75488 1.02344C8.75488 0.613281 8.41309 0.264648 8.00293 0.264648C7.59277 0.264648 7.25098 0.613281 7.25098 1.02344V3.11523C7.25098 3.51855 7.59277 3.86719 8.00293 3.86719C8.41309 3.86719 8.75488 3.51855 8.75488 3.11523V1.02344ZM3.91504 5.0293C4.20215 5.31641 4.69434 5.32324 4.97461 5.03613C5.26855 4.74902 5.26855 4.25684 4.98145 3.96973L3.53906 2.52051C3.25195 2.2334 2.7666 2.21973 2.47949 2.50684C2.19238 2.79395 2.18555 3.28613 2.47266 3.57324L3.91504 5.0293ZM10.9629 4.01758C10.6826 4.30469 10.6826 4.79688 10.9697 5.08398C11.2568 5.37109 11.749 5.36426 12.0361 5.07715L13.4854 3.62793C13.7725 3.34082 13.7725 2.84863 13.4785 2.55469C13.1982 2.27441 12.7061 2.27441 12.4189 2.56152L10.9629 4.01758ZM15.0234 8.78906C15.4336 8.78906 15.7822 8.44727 15.7822 8.03711C15.7822 7.62695 15.4336 7.28516 15.0234 7.28516H12.9385C12.5283 7.28516 12.1797 7.62695 12.1797 8.03711C12.1797 8.44727 12.5283 8.78906 12.9385 8.78906H15.0234ZM0.975586 7.28516C0.56543 7.28516 0.223633 7.62695 0.223633 8.03711C0.223633 8.44727 0.56543 8.78906 0.975586 8.78906H3.07422C3.48438 8.78906 3.83301 8.44727 3.83301 8.03711C3.83301 7.62695 3.48438 7.28516 3.07422 7.28516H0.975586ZM12.0361 10.9902C11.749 10.71 11.2568 10.71 10.9629 10.9971C10.6826 11.2842 10.6826 11.7764 10.9697 12.0635L12.4258 13.5127C12.7129 13.7998 13.2051 13.793 13.4922 13.5059C13.7793 13.2256 13.7725 12.7266 13.4854 12.4395L12.0361 10.9902ZM2.52051 12.4395C2.22656 12.7266 2.22656 13.2188 2.50684 13.5059C2.79395 13.793 3.28613 13.7998 3.57324 13.5127L5.02246 12.0703C5.31641 11.7832 5.31641 11.291 5.03613 11.0039C4.74902 10.7168 4.25684 10.71 3.96973 10.9971L2.52051 12.4395ZM8.75488 12.9658C8.75488 12.5557 8.41309 12.207 8.00293 12.207C7.59277 12.207 7.25098 12.5557 7.25098 12.9658V15.0576C7.25098 15.4609 7.59277 15.8096 8.00293 15.8096C8.41309 15.8096 8.75488 15.4609 8.75488 15.0576V12.9658Z"></path></svg></span>ステータス</th><td><span class="status-value select-value-color-blue"><div class="status-dot status-dot-color-blue"></div>完了</span></td></tr><tr class="property-row property-row-last_edited_time"><th><span class="icon property-icon"><svg aria-hidden="true" role="graphics-symbol" viewBox="0 0 16 16" style="width:14px;height:14px;display:block;fill:rgba(71, 70, 68, 0.6);flex-shrink:0" class="typesCreatedAt"><path d="M8 15.126C11.8623 15.126 15.0615 11.9336 15.0615 8.06445C15.0615 4.20215 11.8623 1.00293 7.99316 1.00293C4.13086 1.00293 0.938477 4.20215 0.938477 8.06445C0.938477 11.9336 4.1377 15.126 8 15.126ZM8 13.7383C4.85547 13.7383 2.33301 11.209 2.33301 8.06445C2.33301 4.91992 4.84863 2.39746 7.99316 2.39746C11.1377 2.39746 13.6738 4.91992 13.6738 8.06445C13.6738 11.209 11.1445 13.7383 8 13.7383ZM4.54102 8.91211H7.99316C8.30078 8.91211 8.54004 8.67285 8.54004 8.37207V3.8877C8.54004 3.58691 8.30078 3.34766 7.99316 3.34766C7.69238 3.34766 7.45312 3.58691 7.45312 3.8877V7.83203H4.54102C4.2334 7.83203 4.00098 8.06445 4.00098 8.37207C4.00098 8.67285 4.2334 8.91211 4.54102 8.91211Z"></path></svg></span>最終更新日時</th><td><time>@2025年6月30日 22:48</time></td></tr><tr class="property-row property-row-select"><th><span class="icon property-icon"><svg aria-hidden="true" role="graphics-symbol" viewBox="0 0 16 16" style="width:14px;height:14px;display:block;fill:rgba(71, 70, 68, 0.6);flex-shrink:0" class="typesSelect"><path d="M8 15.126C11.8623 15.126 15.0615 11.9336 15.0615 8.06445C15.0615 4.20215 11.8623 1.00293 7.99316 1.00293C4.13086 1.00293 0.938477 4.20215 0.938477 8.06445C0.938477 11.9336 4.1377 15.126 8 15.126ZM8 13.7383C4.85547 13.7383 2.33301 11.209 2.33301 8.06445C2.33301 4.91992 4.84863 2.39746 7.99316 2.39746C11.1377 2.39746 13.6738 4.91992 13.6738 8.06445C13.6738 11.209 11.1445 13.7383 8 13.7383ZM7.62402 10.6348C7.79492 10.915 8.20508 10.9287 8.37598 10.6348L10.666 6.73145C10.8574 6.41016 10.7002 6.04102 10.3652 6.04102H5.62793C5.29297 6.04102 5.14941 6.43066 5.32031 6.73145L7.62402 10.6348Z"></path></svg></span>調査種別</th><td><span class="selected-value select-value-color-gray">13.KPI・測定方法設計</span></td></tr></tbody></table></header><div class="page-body"><h1 id="222d3748-3838-8111-96c9-e3c82ae45b38" class="">TalkLabel</h1><p id="222d3748-3838-813b-8f61-e66dd65a1446" class="">ステータス: 未着手</p><p id="222d3748-3838-81e5-a429-ce25857c35f3" class="">作成日時: 2025/6/30 13:29:42</p><p id="222d3748-3838-8171-bf9e-ce461e8b2889" class="">調査種別: 13.KPI・測定方法設計</p><hr id="222d3748-3838-8191-9ec7-f02c2e7a2c56"/><h2 id="222d3748-3838-81c9-a240-e32d5abbda15" class="">13. KPI・測定方法の設計</h2><p id="222d3748-3838-8142-bf1e-ed5d035a3c53" class="">事業名: TalkLabel</p><p id="222d3748-3838-81ed-a570-cfa582f8e19d" class="">作成日時: 2025/6/30 13:29:42</p><hr id="222d3748-3838-81ce-b8eb-c1ddd0f93139"/><figure class="block-color-yellow_background callout" style="white-space:pre-wrap;display:flex" id="222d3748-3838-8117-898e-ea7099846d30"><div style="font-size:1.5em"><span class="icon">⏳</span></div><div style="width:100%">この調査項目は現在「未着手」状態です。調査が開始されると「進行中」に、完了すると「完了」に更新されます。</div></figure><h2 id="222d3748-3838-81e7-8429-f7cdfa0314a8" class="">📋 調査結果</h2><h1 id="222d3748-3838-81c9-a902-ff3de6587faf" class=""><mark class="highlight-default"><strong>統合市場調査レポート</strong></mark></h1><h2 id="222d3748-3838-81f4-a3ea-cf7c19a54966" class=""><mark class="highlight-default"><strong>基本分析</strong></mark></h2><p id="222d3748-3838-815a-a133-c4ddb92f096b" class=""><mark class="highlight-default">[</mark></p><p id="222d3748-3838-810b-8d33-eec5f1f92eea" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8177-b6bc-fd63a88dff7a" class=""><mark class="highlight-default">&quot;content&quot;: &quot;主要KPIの定義、測定・管理体制&quot;</mark></p><p id="222d3748-3838-81a4-8bd9-da53cc9f7636" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8183-a3ac-f7484b001188" class=""><mark class="highlight-default">&quot;content&quot;: &quot;LINE特化型フルファネルMAサービスにおける事業の主要KPIを定義し、その測定・管理のためのツールとレポート体制を設計します。&quot;</mark></p><p id="222d3748-3838-8104-a9e9-d460fcf86c53" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8124-ae5c-e4077fa42284" class=""><mark class="highlight-default">&quot;content&quot;: &quot;&quot;</mark></p><p id="222d3748-3838-818d-96b1-e84b4049376c" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8135-9d3f-f78081971320" class=""><mark class="highlight-default">&quot;content&quot;: &quot;1. 主要KPIの定義&quot;</mark></p><p id="222d3748-3838-8126-aa81-fec0c6d2066e" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-81a0-9627-d404bba5da9a" class=""><mark class="highlight-default">&quot;content&quot;: &quot;事業成長、顧客定着、プロダクト利用、顧客成果の4つの軸でKPIを定義します。&quot;</mark></p><p id="222d3748-3838-81b9-a33b-f8fb46a7c160" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-81b7-a74a-d653777462dd" class=""><mark class="highlight-default">&quot;content&quot;: &quot;</mark><mark class="highlight-default"><strong>事業成長KPI</strong></mark><mark class="highlight-default">&quot;</mark></p><p id="222d3748-3838-819e-a539-c6693e3f0def" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8174-adda-df2a8db8735a" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>MRR (Monthly Recurring Revenue)</strong></mark><mark class="highlight-default">: 月額経常収益。最も重要な収益指標。目標: 18ヶ月後 1億円。&quot;</mark></p><p id="222d3748-3838-8178-ac00-ff196d4055c8" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-81fa-8970-db5400ef30ea" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>ARPA (Average Revenue Per Account)</strong></mark><mark class="highlight-default">: 顧客1社あたりの平均月額収益。目標: 18,000円。&quot;</mark></p><p id="222d3748-3838-81c1-b0f7-c99dd19e5870" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-817f-b30a-e2cd7911d3b3" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>LTV (Life Time Value)</strong></mark><mark class="highlight-default">: 顧客生涯価値。目標: CACの3倍以上。&quot;</mark></p><p id="222d3748-3838-81b0-90f4-e963fa4da36c" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8149-b91b-c647c5f2f9cd" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>CAC (Customer Acquisition Cost)</strong></mark><mark class="highlight-default">: 顧客獲得コスト。LTVとのバランスが重要。&quot;</mark></p><p id="222d3748-3838-8196-8803-ea5f91128c49" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8151-bbb0-e806eb32ddae" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>粗利率</strong></mark><mark class="highlight-default">: 目標: 60%以上。&quot;</mark></p><p id="222d3748-3838-81a9-b295-ed50992ec8a2" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-81e0-aa3b-e42c9e1dceb5" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>決済トランザクション手数料収益</strong></mark><mark class="highlight-default">: LINE内決済機能からの収益。目標: 総決済額の0.5%を確保。&quot;</mark></p><p id="222d3748-3838-817d-9587-c6fb2f62e93b" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8177-9933-d494341e1e07" class=""><mark class="highlight-default">&quot;content&quot;: &quot;</mark><mark class="highlight-default"><strong>顧客定着KPI</strong></mark><mark class="highlight-default">&quot;</mark></p><p id="222d3748-3838-81dc-b31f-c68773cb5351" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-81be-ae18-ca55cc1894b9" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>ロゴチャーンレート (Logo Churn Rate)</strong></mark><mark class="highlight-default">: 解約顧客数／総顧客数。目標: ≤ 1.5%。&quot;</mark></p><p id="222d3748-3838-8124-b212-cb6bc4f938f1" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-814d-a3d1-c516a2cb6fd1" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>NRR (Net Revenue Retention)</strong></mark><mark class="highlight-default">: 既存顧客からの収益維持・拡大率。アップセル・クロスセルの評価指標。&quot;</mark></p><p id="222d3748-3838-81a9-9a2a-ea64db58efcb" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-818a-a54c-eb9c3a2a4ec1" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>オンボーディング完了率</strong></mark><mark class="highlight-default">: 新規顧客が初期設定を完了し、初回シナリオを配信するまでの割合。&quot;</mark></p><p id="222d3748-3838-81e2-af56-dd3ae9062e90" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8181-bb28-e16d030451b4" class=""><mark class="highlight-default">&quot;content&quot;: &quot;</mark><mark class="highlight-default"><strong>プロダクト利用KPI</strong></mark><mark class="highlight-default">&quot;</mark></p><p id="222d3748-3838-8167-a984-edcaf69e5d9c" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8170-9c85-c02d0e267892" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>DAU/MAU比率 (Daily Active Users / Monthly Active Users)</strong></mark><mark class="highlight-default">: アクティブユーザーの定着度。目標: ≥ 55%。&quot;</mark></p><p id="222d3748-3838-81e0-b7a8-c12fbe9faddb" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-81fe-af55-edee33124b42" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>主要機能利用率</strong></mark><mark class="highlight-default">: シナリオ作成数、LINE内決済利用数、ROIダッシュボード閲覧頻度、テンプレート利用数。&quot;</mark></p><p id="222d3748-3838-8147-bb8a-dd00433ae505" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-812b-90c2-f2b363e135e6" class=""><mark class="highlight-default">&quot;content&quot;: &quot;</mark><mark class="highlight-default"><strong>顧客成果KPI (顧客のLTV向上への貢献)</strong></mark><mark class="highlight-default">&quot;</mark></p><p id="222d3748-3838-8103-84a9-de1576c650a2" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8113-8a34-ee902e5edf44" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>顧客LINEブロック率削減率</strong></mark><mark class="highlight-default">: 導入6ヶ月で30%削減。&quot;</mark></p><p id="222d3748-3838-81ab-9a78-eece5866a27a" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-81e6-bc7f-f14ca3fbff19" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>顧客メッセージCTR向上率</strong></mark><mark class="highlight-default">: 導入6ヶ月で25%向上。&quot;</mark></p><p id="222d3748-3838-8100-89f5-c8f2bd57eab8" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-81be-8475-c261b157910d" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>顧客初回→再購入率向上率</strong></mark><mark class="highlight-default">: 導入6ヶ月で20%アップ。&quot;</mark></p><p id="222d3748-3838-8139-8a9b-f75ae6ba494a" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-81e6-bbb0-d3caf82f4e4d" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>顧客LINE経由売上比率向上</strong></mark><mark class="highlight-default">: 導入6ヶ月で＋20ポイント。&quot;</mark></p><p id="222d3748-3838-81ab-9d63-ef7e0961fdbb" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8143-9d34-cf5fe46f7ab0" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>顧客運用工数削減率</strong></mark><mark class="highlight-default">: 顧客が感じる工数削減度合い（アンケート等で測定）。&quot;</mark></p><p id="222d3748-3838-81cb-9206-ceaf4fd8e34d" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8165-9551-e2116b61441b" class=""><mark class="highlight-default">&quot;content&quot;: &quot;&quot;</mark></p><p id="222d3748-3838-81f3-ad46-ec52342e4f98" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8190-9654-ed7f87d102fd" class=""><mark class="highlight-default">&quot;content&quot;: &quot;2. 測定・管理のための具体的なツール&quot;</mark></p><p id="222d3748-3838-81c6-8804-d50f80bf5d18" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8187-a83d-fa749995fc94" class=""><mark class="highlight-default">&quot;content&quot;: &quot;</mark><mark class="highlight-default"><strong>データ収集・蓄積基盤</strong></mark><mark class="highlight-default">&quot;</mark></p><p id="222d3748-3838-81dc-aa2e-fcbcbf1712c2" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8172-ac83-dda060597f52" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>自社DB (PostgreSQL/MongoDB on AWS RDS)</strong></mark><mark class="highlight-default">: 顧客のLINEデータ、メッセージ配信ログ、決済トランザクション、ユーザーのプロダクト内行動ログなどをリアルタイムで収集・蓄積。&quot;</mark></p><p id="222d3748-3838-817e-a45e-d0b3408e9f6d" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-812f-936a-c13423b9775e" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>AWS S3/Redshift</strong></mark><mark class="highlight-default">: 大規模なログデータや分析用データのDWHとして活用。&quot;</mark></p><p id="222d3748-3838-8171-99b3-c86cf38d1ad0" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-81d5-a511-e737d5efd34f" class=""><mark class="highlight-default">&quot;content&quot;: &quot;</mark><mark class="highlight-default"><strong>BI (ビジネスインテリジェンス) ・分析ツール</strong></mark><mark class="highlight-default">&quot;</mark></p><p id="222d3748-3838-8197-b1f7-c69de4b7eb48" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8156-8ca4-c500b8cd0e47" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>Looker Studio (旧 Google Data Studio) / Tableau / Power BI</strong></mark><mark class="highlight-default">: DBからデータを連携し、ダッシュボードを作成。主要KPIの可視化、トレンド分析、目標達成度のモニタリング。&quot;</mark></p><p id="222d3748-3838-81ed-9312-da450eb6bc67" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-81d8-ba07-d12b43d4e730" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>Amplitude / Mixpanel</strong></mark><mark class="highlight-default">: プロダクト利用状況（DAU/MAU、機能利用率、ファネル分析）の詳細な分析。ユーザー行動のボトルネック特定。&quot;</mark></p><p id="222d3748-3838-817a-9e15-f8836a9ff7fb" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-811b-9024-da615f0628fb" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>Google Analytics 4 (GA4)</strong></mark><mark class="highlight-default">: ウェブサイト（LP、管理画面）のトラフィック、流入経路、コンバージョン（MQL獲得など）の分析。&quot;</mark></p><p id="222d3748-3838-8181-ac44-f54e41fe00e6" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-810c-800c-ca36812e13a9" class=""><mark class="highlight-default">&quot;content&quot;: &quot;</mark><mark class="highlight-default"><strong>CRM (顧客関係管理) / SFA (営業支援システム)</strong></mark><mark class="highlight-default">&quot;</mark></p><p id="222d3748-3838-813d-872a-edbc8f6a3fcc" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8132-979d-cd374aae626d" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>Salesforce / HubSpot CRM</strong></mark><mark class="highlight-default">: 顧客情報、商談進捗、契約状況、解約理由などを一元管理。MRR、チャーンレート、CACの算出と管理。&quot;</mark></p><p id="222d3748-3838-81a2-bab7-cb5c15629091" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-817c-9094-fc109cece881" class=""><mark class="highlight-default">&quot;content&quot;: &quot;</mark><mark class="highlight-default"><strong>CS (カスタマーサポート) ・顧客エンゲージメントツール</strong></mark><mark class="highlight-default">&quot;</mark></p><p id="222d3748-3838-8109-b806-e00b14d9067c" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8168-b411-f7293e5c9c20" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>Zendesk / Intercom</strong></mark><mark class="highlight-default">: 顧客からの問い合わせ管理、チャットサポート（有人チャット）、FAQ。顧客満足度調査（NPS）、オンボーディング進捗管理。&quot;</mark></p><p id="222d3748-3838-819a-b1d9-ee08351461cd" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-81f9-ab31-ce672b4180a8" class=""><mark class="highlight-default">&quot;content&quot;: &quot;</mark><mark class="highlight-default"><strong>マーケティング・広告管理ツール</strong></mark><mark class="highlight-default">&quot;</mark></p><p id="222d3748-3838-8141-a0ee-e5deb606f234" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-81ec-8499-d8aed101a4ad" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>Google Ads / Meta Ads Manager</strong></mark><mark class="highlight-default">: 広告費用、CPA、ROASなどの広告効果測定。MQL獲得チャネルの評価。&quot;</mark></p><p id="222d3748-3838-81a3-aa5c-e3e175500e2f" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-81d5-b596-c27dd46554d4" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>自社MAツール</strong></mark><mark class="highlight-default">: 顧客獲得チャネル（ウェビナー、リファラルなど）の管理、リードナーチャリング効果の測定。&quot;</mark></p><p id="222d3748-3838-8100-9515-e92b303e62e6" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-81e5-b17f-da87fe769662" class=""><mark class="highlight-default">&quot;content&quot;: &quot;&quot;</mark></p><p id="222d3748-3838-8142-bd85-fb0d4c07abbd" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-81f9-b23d-f60e886c0763" class=""><mark class="highlight-default">&quot;content&quot;: &quot;3. レポート体制の設計&quot;</mark></p><p id="222d3748-3838-8176-a922-cc11001347a4" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8167-9a3e-ed359efda8cf" class=""><mark class="highlight-default">&quot;content&quot;: &quot;各KPIは目標値と現状値を明確にし、進捗状況と課題を定期的に共有します。&quot;,</mark></p><p id="222d3748-3838-81e5-b965-eedf279dcdca" class=""><mark class="highlight-default">&quot;icon&quot;: &quot;💡&quot;</mark></p><p id="222d3748-3838-818e-9256-c52e0af8fd24" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-812b-b8e7-f3d5a2f0d55d" class=""><mark class="highlight-default">&quot;content&quot;: &quot;</mark><mark class="highlight-default"><strong>日次レポート（プロダクト・CSチーム）</strong></mark><mark class="highlight-default">&quot;</mark></p><p id="222d3748-3838-8194-a3af-d0d35649a0cf" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-813c-9ed3-e2669d61ad24" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>内容</strong></mark><mark class="highlight-default">: DAU、新規シナリオ作成数、決済トランザクション数、サポート問い合わせ件数、システム稼働状況。&quot;</mark></p><p id="222d3748-3838-814f-8785-eb3da00c89d3" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-814e-8190-cb59892e375f" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>ツール</strong></mark><mark class="highlight-default">: 自社開発ダッシュボード、Amplitude、Zendesk。&quot;</mark></p><p id="222d3748-3838-81d9-ae16-c8981ee811a4" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-81c8-9b85-f74787cd0c87" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>担当</strong></mark><mark class="highlight-default">: プロダクトマネージャー、CSリーダー。&quot;</mark></p><p id="222d3748-3838-81b8-a41a-f4a01d0f2194" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-81af-903e-e02391d4244d" class=""><mark class="highlight-default">&quot;content&quot;: &quot;</mark><mark class="highlight-default"><strong>週次レポート（経営層、各部門長）</strong></mark><mark class="highlight-default">&quot;</mark></p><p id="222d3748-3838-81bf-bf39-dfdfebe92789" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-813e-9193-c27de6df090f" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>内容</strong></mark><mark class="highlight-default">: MRR進捗、新規顧客獲得数、チャーンレート推移、主要機能利用率、MQL/SQL進捗、主要広告チャネルの費用対効果。&quot;</mark></p><p id="222d3748-3838-8197-843e-f086b57fa54a" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-81b7-a11a-c2caf6ac5bf2" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>ツール</strong></mark><mark class="highlight-default">: BIツール（Looker Studio等）、Salesforce、GA4。&quot;</mark></p><p id="222d3748-3838-8196-bdc8-cbc099dbf0e8" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8108-a5bf-fc82e323b903" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>担当</strong></mark><mark class="highlight-default">: 経営層、セールス・マーケティング・プロダクト・CS各部門長。&quot;</mark></p><p id="222d3748-3838-81be-9728-ffda452f3daf" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-815c-8dff-cac5e1803dc8" class=""><mark class="highlight-default">&quot;content&quot;: &quot;</mark><mark class="highlight-default"><strong>月次レポート（経営層、全社）</strong></mark><mark class="highlight-default">&quot;</mark></p><p id="222d3748-3838-81a1-b336-df118d42da66" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-81c0-a6de-c21e92251c87" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>内容</strong></mark><mark class="highlight-default">: MRR、ARPA、チャーンレート、NRR、LTV/CAC比率、粗利率、各顧客成果KPI（ブロック率、CTR、再購入率、LINE経由売上比率）の進捗と目標達成度、コスト構造、事業戦略の進捗。&quot;</mark></p><p id="222d3748-3838-812b-8db2-f4acf8ca4026" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8144-a3c3-de6a3477b229" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>ツール</strong></mark><mark class="highlight-default">: BIツール（Looker Studio等）、Salesforce、会計システム連携データ。&quot;</mark></p><p id="222d3748-3838-81d4-a780-d0609db611d3" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8113-8be0-d9f04c4ce30e" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>担当</strong></mark><mark class="highlight-default">: CEO、CFO、各部門長。&quot;</mark></p><p id="222d3748-3838-816c-998c-d242689f42c1" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-818c-9780-c8688a94a735" class=""><mark class="highlight-default">&quot;content&quot;: &quot;</mark><mark class="highlight-default"><strong>四半期・年次レビュー（経営層、取締役会）</strong></mark><mark class="highlight-default">&quot;</mark></p><p id="222d3748-3838-817f-b62a-cd1a83d8d851" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8140-aa97-d475e0c4269e" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>内容</strong></mark><mark class="highlight-default">: 事業全体の成果、戦略目標達成度、市場動向、競合分析、次期戦略・予算計画。&quot;</mark></p><p id="222d3748-3838-8175-af37-f3a2e56ef36e" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8191-9782-f36fc1bde7ac" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>ツール</strong></mark><mark class="highlight-default">: BIツール、Salesforce、市場調査データ、戦略資料。&quot;</mark></p><p id="222d3748-3838-81aa-94dd-e3ae0591e0f6" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-811a-8b2d-f9608ae777c4" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>担当</strong></mark><mark class="highlight-default">: CEO、CFO、取締役会。&quot;</mark></p><p id="222d3748-3838-812d-9272-c5b42324f073" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-8178-a2c5-f06ebad4c5d0" class=""><mark class="highlight-default">&quot;content&quot;: &quot;</mark><mark class="highlight-default"><strong>顧客成果レポート（CS・セールスチーム）</strong></mark><mark class="highlight-default">&quot;</mark></p><p id="222d3748-3838-818b-bf0e-e3f6181bb703" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-81be-983c-cdedf16639d6" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>内容</strong></mark><mark class="highlight-default">: 各顧客のブロック率、CTR、再購入率、LINE経由売上等の改善状況。成功事例の抽出と横展開、課題顧客へのフォローアップ。&quot;</mark></p><p id="222d3748-3838-81fc-a7d5-c0433e667991" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-81ef-b661-cfaea7f1c247" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>ツール</strong></mark><mark class="highlight-default">: 自社プロダクト内のROIダッシュボード、CRM、アンケートツール。&quot;</mark></p><p id="222d3748-3838-81f7-9a0e-ed7e0c08a2fc" class=""><mark class="highlight-default">{</mark></p><p id="222d3748-3838-81e4-82b5-f083a4a89fd2" class=""><mark class="highlight-default">&quot;content&quot;: &quot;  </mark><mark class="highlight-default"><strong>担当</strong></mark><mark class="highlight-default">: CS担当、セールス担当。&quot;</mark></p><hr id="222d3748-3838-81e9-9871-d45ed86cb5fb"/><h2 id="222d3748-3838-81bb-9ff2-d0d314d69ab3" class=""><mark class="highlight-default"><strong>深掘り分析</strong></mark></h2><h2 id="222d3748-3838-8196-aaf0-c7ed5f65ddb5" class=""><mark class="highlight-default"><strong>LINE特化型フルファネルMAサービス：深掘り分析と成功へのロードマップ</strong></mark></h2><p id="222d3748-3838-81c7-9ec2-e6b4f88f7865" class=""><mark class="highlight-default">貴社のLINE特化型フルファネルMAサービスは、LINE公式アカウントの潜在能力を最大限に引き出し、顧客獲得からリピート購買までを一気通貫で自動化する革新的なソリューションです。以下に、市場の具体的な数値データ、主要企業の成功事例、そして貴社のKPI達成に向けた実行可能なアクションプランを補強します。</mark></p><hr id="222d3748-3838-813a-8ccd-cfcb5be4bca7"/><h3 id="222d3748-3838-8197-881b-fca03b1ed6ea" class=""><mark class="highlight-default"><strong>1. 市場環境と機会：具体的な数値データ</strong></mark></h3><p id="222d3748-3838-81d5-bab2-fdbe6183b3c9" class=""><mark class="highlight-default">貴社サービスが狙う市場は、LINEの圧倒的なユーザー基盤と、企業におけるMA導入の加速という二重の追い風を受けています。</mark></p><ul id="222d3748-3838-812c-aa1a-f4ef242a2038" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>LINEの圧倒的ユーザー基盤と企業利用の拡大</strong></mark></li></ul><ul id="222d3748-3838-8169-bed3-ca45a251d569" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>LINE月間アクティブユーザー数</strong></mark><mark class="highlight-default">: </mark><mark class="highlight-default"><strong>9,600万人</strong></mark><mark class="highlight-default">（2023年9月時点、日本国内）。これは日本の総人口の約75%に相当し、他のSNSと比較しても圧倒的なリーチ力です。</mark></li></ul><ul id="222d3748-3838-810f-80a4-ce51a59be846" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>LINE公式アカウント開設数</strong></mark><mark class="highlight-default">: </mark><mark class="highlight-default"><strong>45万アカウント以上</strong></mark><mark class="highlight-default">（2023年時点）。多くの企業がLINEを顧客接点として活用しようとしていますが、その多くが一斉配信に留まり、MAの恩恵を十分に享受できていません。</mark></li></ul><ul id="222d3748-3838-8115-86f8-e9adff986ed4" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>LINEを起点としたEC売上寄与率</strong></mark><mark class="highlight-default">: 成功事例では、LINE経由の売上がEC全体の</mark><mark class="highlight-default"><strong>15%〜30%</strong></mark><mark class="highlight-default">を占めるケースも存在します。これは、LINEが単なるコミュニケーションツールではなく、直接的な売上チャネルになり得ることを示唆しています。</mark></li></ul><ul id="222d3748-3838-81e9-9fc8-fe4f6c670181" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>国内MA市場の成長とLINE特化型MAのニッチ</strong></mark></li></ul><ul id="222d3748-3838-81a2-afc0-d88ab3185c72" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>国内MA市場規模</strong></mark><mark class="highlight-default">: </mark><mark class="highlight-default"><strong>約1,000億円</strong></mark><mark class="highlight-default">（2022年、ITR調査）。年平均成長率（CAGR）は</mark><mark class="highlight-default"><strong>10%以上</strong></mark><mark class="highlight-default">と予測されており、今後も拡大が見込まれます。</mark></li></ul><ul id="222d3748-3838-8160-bfee-ebc54e6eb6f2" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>中小企業・D2C・店舗のMA導入率</strong></mark><mark class="highlight-default">: 大企業に比べてMAツールの導入は遅れており、特にコード不要で手軽に導入できるソリューションへのニーズが高いです。既存の多機能MAツールは高価で複雑すぎることが多く、ここに貴社の「導入が速く成果が見えるCRM」というコンセプトが刺さります。</mark></li></ul><ul id="222d3748-3838-81b6-9c24-ccf91f81704b" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>既存LINE運用課題の具体値</strong></mark><mark class="highlight-default">: 多くの企業で「一斉配信依存による</mark><mark class="highlight-default"><strong>ブロック率10%〜20%超</strong></mark><mark class="highlight-default">」「メッセージの</mark><mark class="highlight-default"><strong>CTR平均1%〜3%台</strong></mark><mark class="highlight-default">」「LINE内での決済導線不備による</mark><mark class="highlight-default"><strong>CVR低下（50%以上の離脱）</strong></mark><mark class="highlight-default">」といった課題が顕在化しており、貴社の解決策はこれら課題に直接的にアプローチできます。</mark></li></ul><hr id="222d3748-3838-8131-a2fb-d0931daf15b2"/><h3 id="222d3748-3838-817f-8265-c6fc7efc86c8" class=""><mark class="highlight-default"><strong>2. 主要企業の成功事例と示唆</strong></mark></h3><p id="222d3748-3838-81e4-a551-d5b1257f897a" class=""><mark class="highlight-default">直接競合・間接競合の成功事例から、貴社サービスの差別化ポイントと戦略を深掘りします。</mark></p><ul id="222d3748-3838-817c-97d0-fe1480e4736a" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>Liny（LINE特化型MA）</strong></mark></li></ul><ul id="222d3748-3838-8106-b416-c06b63d0b139" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>成功要因</strong></mark><mark class="highlight-default">: 高度なセグメンテーション、CRM連携、有人チャットとの連携機能が充実しており、特に</mark><mark class="highlight-default"><strong>大規模企業や複雑な顧客体験設計を求める企業</strong></mark><mark class="highlight-default">に支持されています。</mark></li></ul><ul id="222d3748-3838-8118-a1aa-fe690e8ca4a2" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>示唆</strong></mark><mark class="highlight-default">: 高単価ながらも、</mark><mark class="highlight-default"><strong>顧客のLTV向上や複雑な顧客体験の自動化</strong></mark><mark class="highlight-default">に成功した事例を多く持ちます。貴社は競合より低価格帯で「ノーコード」「導入速度」を強みとするため、Linyが取りこぼす中堅・中小企業、特に「まずは手軽に成果を出したい」層へのアプローチが有効です。</mark></li></ul><ul id="222d3748-3838-8151-af70-d6e510ff0b88" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>エルメ（LINE特化型MA）</strong></mark></li></ul><ul id="222d3748-3838-8138-99c7-e4086c61ec5b" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>成功要因</strong></mark><mark class="highlight-default">: 低価格帯で基本的なMA機能を網羅し、</mark><mark class="highlight-default"><strong>個人事業主や小規模事業者</strong></mark><mark class="highlight-default">でも手軽に導入できる点が強みです。</mark></li></ul><ul id="222d3748-3838-81a5-9082-f20ecdc89f2a" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>示唆</strong></mark><mark class="highlight-default">: 低価格帯の市場で先行していますが、機能面での制約やサポート体制の課題が指摘されることもあります。貴社はエルメより機能が豊富で、かつ「日本語UIと有人チャットで平均5分以内にサポート回答」という</mark><mark class="highlight-default"><strong>手厚いサポート体制</strong></mark><mark class="highlight-default">をUVPに掲げることで、エルメユーザーのアップセル先、または初期導入で迷う層の受け皿となり得ます。</mark></li></ul><ul id="222d3748-3838-8127-8e2b-fa46484e399c" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>Shopify Flow + メールツール（間接競合）</strong></mark></li></ul><ul id="222d3748-3838-81d5-922d-c69fcbc300b0" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>成功要因</strong></mark><mark class="highlight-default">: Shopifyの拡張性と既存メールツールの組み合わせにより、EC事業者が柔軟な自動化を実現しています。</mark></li></ul><ul id="222d3748-3838-8194-89dc-d54152cb31a6" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>示唆</strong></mark><mark class="highlight-default">: LINE連携は可能ですが、LINE内での決済完結や、広告〜来店〜購買までの</mark><mark class="highlight-default"><strong>「LINEに閉じたフルファネルROI可視化」</strong></mark><mark class="highlight-default">は困難です。貴社サービスの「LINE内決済」「1枚のROIダッシュボード」は、この間接競合に対する明確な優位性となり、特にD2C事業者に響くはずです。</mark></li></ul><ul id="222d3748-3838-8179-95be-d532f638540f" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>LINE公式アカウント単体での成功事例</strong></mark></li></ul><ul id="222d3748-3838-81af-9e1d-c2349d941cc3" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>某飲食チェーン</strong></mark><mark class="highlight-default">: LINEクーポンと来店スタンプカードを組み合わせることで、</mark><mark class="highlight-default"><strong>リピート率を20%向上</strong></mark><mark class="highlight-default">、</mark><mark class="highlight-default"><strong>月間LINE経由売上を300万円増加</strong></mark><mark class="highlight-default">。</mark></li></ul><ul id="222d3748-3838-81a9-800a-c26b0526ae00" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>某D2Cブランド</strong></mark><mark class="highlight-default">: 顧客の購買履歴に基づいたパーソナライズメッセージ配信とLINE内決済導入により、</mark><mark class="highlight-default"><strong>初回購入者の再購入率を25%改善</strong></mark><mark class="highlight-default">、</mark><mark class="highlight-default"><strong>ブロック率を半減</strong></mark><mark class="highlight-default">。</mark></li></ul><ul id="222d3748-3838-81dc-8b06-f7a426e11a6e" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>示唆</strong></mark><mark class="highlight-default">: MAツールがなくてもLINEは成果を出せますが、手動運用では限界があります。これらの成功事例は、貴社サービスが「手動運用の課題」を解決し、さらに大きな成果をもたらすことを顧客に訴求する際に強力な裏付けとなります。</mark></li></ul><hr id="222d3748-3838-8168-ac9f-fdeaa26dce26"/><h3 id="222d3748-3838-81de-84fa-c3bd84d100ec" class=""><mark class="highlight-default"><strong>3. KPI達成のための実行可能なアクションプラン</strong></mark></h3><p id="222d3748-3838-8136-8d3f-cc0d592ec295" class=""><mark class="highlight-default">貴社の初期KPI（MRR 1億円、ARPA 18,000円、ロゴチャーン ≤ 1.5%、DAU/MAU ≥ 55%など）を達成するための具体的なアクションプランを提案します。</mark></p><p id="222d3748-3838-8130-83be-f29c9d7b97ab" class=""><mark class="highlight-default">#### 3.1. 事業成長KPI（MRR, ARPA, LTV/CAC）達成のための施策</mark></p><p id="222d3748-3838-8169-b938-df05c1c4fe29" class=""><mark class="highlight-default">1.  </mark><mark class="highlight-default"><strong>獲得チャネルの最適化と目標設定</strong></mark></p><ul id="222d3748-3838-81eb-9bda-c855d9a9fadc" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>SEO/ホワイトペーパー</strong></mark><mark class="highlight-default">:</mark></li></ul><ul id="222d3748-3838-8135-9a51-e37557dc82b7" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>アクション</strong></mark><mark class="highlight-default">: ターゲット業種（美容D2C、飲食チェーン等）特化型の「LINE活用成功事例集」ホワイトペーパーを最低月2本公開。各記事で具体的な課題解決と貴社サービスによる成果を数値で示す。</mark></li></ul><ul id="222d3748-3838-81d8-b39f-f512a076e71e" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>目標</strong></mark><mark class="highlight-default">: 月間MQL（Marketing Qualified Lead）</mark><mark class="highlight-default"><strong>1,500件</strong></mark><mark class="highlight-default">（既存目標1,000件から上方修正）。</mark></li></ul><ul id="222d3748-3838-817e-9c03-e075baa86778" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>共催ウェビナー</strong></mark><mark class="highlight-default">:</mark></li></ul><ul id="222d3748-3838-8171-9e26-de0770ca3c3f" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>アクション</strong></mark><mark class="highlight-default">: Shopify、GMO、STORESなどECプラットフォームと連携し、「EC売上を最大化するLINE活用術」ウェビナーを月6回開催。顧客獲得単価（CPA）を意識し、ウェビナー経由のSQL（Sales Qualified Lead）への転換率を厳しく追跡。</mark></li></ul><ul id="222d3748-3838-8183-a02d-dc7b16209839" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>目標</strong></mark><mark class="highlight-default">: ウェビナー経由SQL転換率</mark><mark class="highlight-default"><strong>15%</strong></mark><mark class="highlight-default">、SQLからの商談化率</mark><mark class="highlight-default"><strong>30%</strong></mark><mark class="highlight-default">。</mark></li></ul><ul id="222d3748-3838-8196-9cee-dd8487780a6e" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>代理店リセラー制度</strong></mark><mark class="highlight-default">:</mark></li></ul><ul id="222d3748-3838-8142-91e6-db87b76f8c32" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>アクション</strong></mark><mark class="highlight-default">: 代理店向けに</mark><mark class="highlight-default"><strong>「クイックスタート導入研修プログラム」</strong></mark><mark class="highlight-default">（オンライン動画＋月次Q&amp;Aセッション）を提供。代理店が顧客の初回シナリオ設定を30分で完了できるようなツールとマニュアルを整備。代理店向けに</mark><mark class="highlight-default"><strong>インセンティブプログラム（初回契約ボーナス、継続率ボーナス）</strong></mark><mark class="highlight-default">を設計し、拡販を強力に推進。</mark></li></ul><ul id="222d3748-3838-810a-9910-e7e463e8650f" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>目標</strong></mark><mark class="highlight-default">: 18ヶ月で</mark><mark class="highlight-default"><strong>代理店契約数200社</strong></mark><mark class="highlight-default">、代理店経由MRR比率</mark><mark class="highlight-default"><strong>40%</strong></mark><mark class="highlight-default">。</mark></li></ul><ul id="222d3748-3838-816a-a0f0-d8fcf9fb3d12" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>製品内リファラル</strong></mark><mark class="highlight-default">:</mark></li></ul><ul id="222d3748-3838-8125-8517-f3e36e9766ed" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>アクション</strong></mark><mark class="highlight-default">: サービス利用開始60日後の顧客に対し、成功体験に基づいたリファラルプログラム（紹介者・被紹介者双方への割引や機能拡張）をインセンティブとして提供。</mark></li></ul><ul id="222d3748-3838-8163-8f60-e28b2e43b7be" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>目標</strong></mark><mark class="highlight-default">: リファラル経由MRR比率</mark><mark class="highlight-default"><strong>10%</strong></mark><mark class="highlight-default">。</mark></li></ul><p id="222d3748-3838-81b7-84c2-c05030e7e0b5" class=""><mark class="highlight-default">2.  </mark><mark class="highlight-default"><strong>オンボーディングと顧客サクセスによるLTV向上</strong></mark></p><ul id="222d3748-3838-81e6-9b5e-f6689428973b" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>クイックスタートプログラム</strong></mark><mark class="highlight-default">:</mark></li></ul><ul id="222d3748-3838-8136-9afa-f9c3e2ac8a88" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>アクション</strong></mark><mark class="highlight-default">: 顧客契約後、</mark><mark class="highlight-default"><strong>72時間以内</strong></mark><mark class="highlight-default">に専任のカスタマーサクセス担当者がオンラインで個別オンボーディングを実施。初回シナリオの「30分設定完了」を確実にサポートし、</mark><mark class="highlight-default"><strong>導入後1週間以内に最初のLINE経由売上創出</strong></mark><mark class="highlight-default">を目指す。</mark></li></ul><ul id="222d3748-3838-8146-a39e-ec1da82d1d23" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>目標</strong></mark><mark class="highlight-default">: 初期顧客のオンボーディング完了率</mark><mark class="highlight-default"><strong>95%</strong></mark><mark class="highlight-default">。</mark></li></ul><ul id="222d3748-3838-8183-8488-cfa2b931acee" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>顧客成果の可視化と共有</strong></mark><mark class="highlight-default">:</mark></li></ul><ul id="222d3748-3838-81d6-9c96-d1e2e82b23fc" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>アクション</strong></mark><mark class="highlight-default">: 顧客ごとの「ブロック率削減」「メッセージCTR向上」「初回→再購入率アップ」といったKPIを定期的に追跡し、</mark><mark class="highlight-default"><strong>月次レポートと成功事例テンプレート</strong></mark><mark class="highlight-default">を提供。顧客の成功体験をヒアリングし、UGC（User Generated Content）として発信。</mark></li></ul><ul id="222d3748-3838-81f9-8666-e56d63680fb6" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>目標</strong></mark><mark class="highlight-default">: 導入後6ヶ月以内の顧客で、ブロック率</mark><mark class="highlight-default"><strong>30%削減</strong></mark><mark class="highlight-default">、メッセージCTR</mark><mark class="highlight-default"><strong>25%向上</strong></mark><mark class="highlight-default">、初回→再購入率</mark><mark class="highlight-default"><strong>20%アップ</strong></mark><mark class="highlight-default">を達成する比率</mark><mark class="highlight-default"><strong>70%</strong></mark><mark class="highlight-default">。</mark></li></ul><ul id="222d3748-3838-81ac-a39e-f3edf569bc9b" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>コミュニティ形成</strong></mark><mark class="highlight-default">:</mark></li></ul><ul id="222d3748-3838-81dc-b2f4-eafdb45e55be" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>アクション</strong></mark><mark class="highlight-default">: ユーザー同士がLINE活用ノウハウを共有できるオンラインコミュニティ（例: Slackワークスペース、Facebookグループ）を立ち上げ、貴社CSも参加してサポート。</mark></li></ul><ul id="222d3748-3838-8124-bab3-cbc36fb11cd1" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>目標</strong></mark><mark class="highlight-default">: コミュニティ参加率</mark><mark class="highlight-default"><strong>30%</strong></mark><mark class="highlight-default">。</mark></li></ul><p id="222d3748-3838-813b-aa20-d1cb416ae945" class=""><mark class="highlight-default">3.  </mark><mark class="highlight-default"><strong>プロダクト改善とUVPの強化</strong></mark></p><ul id="222d3748-3838-81d6-bad3-c907e8e98365" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>機能ロードマップの公開とフィードバック収集</strong></mark><mark class="highlight-default">:</mark></li></ul><ul id="222d3748-3838-81f7-9fb5-e6e0b4be468f" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>アクション</strong></mark><mark class="highlight-default">: ユーザーからの機能要望を収集する専用フォームを設置し、月次で開発ロードマップを公開。特に「LINE内定期課金」「ROIダッシュボード」の機能拡充を優先し、UVPの実現度を高める。</mark></li></ul><ul id="222d3748-3838-81e6-aae7-ca8e67f95a1b" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>目標</strong></mark><mark class="highlight-default">: ユーザーからの機能要望に対する実装率</mark><mark class="highlight-default"><strong>70%</strong></mark><mark class="highlight-default">（3ヶ月以内）。</mark></li></ul><ul id="222d3748-3838-814a-af1e-f9be4bc29fa8" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>「業界別90種テンプレ」の拡充と成果明示</strong></mark><mark class="highlight-default">:</mark></li></ul><ul id="222d3748-3838-8189-beb3-c237a31a5f24" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>アクション</strong></mark><mark class="highlight-default">: テンプレートごとに「平均ブロック率改善度」「平均CTR向上率」「平均売上向上率」といった実績データを付記し、顧客が導入効果をより具体的にイメージできるように改善。</mark></li></ul><ul id="222d3748-3838-8108-bdfd-c06cbb7075bf" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>目標</strong></mark><mark class="highlight-default">: テンプレート利用率</mark><mark class="highlight-default"><strong>80%</strong></mark><mark class="highlight-default">。</mark></li></ul><p id="222d3748-3838-8158-bcf9-c86cd0d67482" class=""><mark class="highlight-default">#### 3.2. 測定・管理体制の強化</mark></p><p id="222d3748-3838-815e-8593-d6a7c70bcbe7" class=""><mark class="highlight-default">1.  </mark><mark class="highlight-default"><strong>BIツール導入とダッシュボード構築</strong></mark><mark class="highlight-default">:</mark></p><ul id="222d3748-3838-8180-bc7b-d175f15606e3" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>アクション</strong></mark><mark class="highlight-default">: Looker Studio (旧Google Data Studio) や Tableau などのBIツールを導入し、MRR、ARPA、LTV、CAC、チャーンレート、DAU/MAUといった主要KPIを一元的に可視化するダッシュボードを構築。</mark></li></ul><ul id="222d3748-3838-8128-b895-ecd91b81836d" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>担当</strong></mark><mark class="highlight-default">: データアナリスト（または兼任者）</mark></li></ul><p id="222d3748-3838-81de-beda-e5ef8ba3c81f" class=""><mark class="highlight-default">2.  </mark><mark class="highlight-default"><strong>週次・月次KPIレビュー会議</strong></mark><mark class="highlight-default">:</mark></p><ul id="222d3748-3838-8127-a648-e9f90155159f" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>アクション</strong></mark><mark class="highlight-default">: 毎週月曜日に主要KPIの進捗を確認する「週次KPIレビュー」、毎月第一営業日に月次目標に対する実績と次月の戦略を議論する「月次経営会議」を実施。</mark></li></ul><ul id="222d3748-3838-814a-94b8-cee9c6ed7f44" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>担当</strong></mark><mark class="highlight-default">: 経営陣、各部門責任者</mark></li></ul><p id="222d3748-3838-8159-9eee-ddbf4b080752" class=""><mark class="highlight-default">3.  </mark><mark class="highlight-default"><strong>顧客成果計測の自動化</strong></mark><mark class="highlight-default">:</mark></p><ul id="222d3748-3838-81c2-91d9-ebe753bfdc4d" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>アクション</strong></mark><mark class="highlight-default">: 顧客のLINE公式アカウントと連携し、ブロック率、メッセージCTR、友だち数推移、LINE経由売上（LINE内決済、外部連携経由）などを自動で取得・表示する機能を開発。顧客自身が成果を確認できる「成果ダッシュボード」を提供。</mark></li></ul><ul id="222d3748-3838-8151-90c3-c307bd8f6b15" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>担当</strong></mark><mark class="highlight-default">: プロダクト開発チーム、CSチーム</mark></li></ul><hr id="222d3748-3838-8166-a88c-e62415f0e43b"/><h3 id="222d3748-3838-8174-84c4-dd062466c9c9" class=""><mark class="highlight-default"><strong>まとめ：成功へのロードマップ</strong></mark></h3><p id="222d3748-3838-81dc-8353-f0ab46729c77" class=""><mark class="highlight-default">貴社のLINE特化型フルファネルMAサービスは、市場の大きなニーズと明確な差別化ポイントを持っています。</mark></p><ul id="222d3748-3838-8156-9daf-d0b993aa2722" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>市場機会</strong></mark><mark class="highlight-default">: LINEの巨大なユーザー基盤と、中小・D2C・店舗におけるMA導入の未開拓領域。</mark></li></ul><ul id="222d3748-3838-813d-89eb-cd57410ab73f" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>強み</strong></mark><mark class="highlight-default">: 「ノーコード」「導入速度」「LINE内決済」「ROIダッシュボード」「手厚い日本語サポート」といったUVP。</mark></li></ul><ul id="222d3748-3838-8102-8cbd-de20ca5e6489" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default"><strong>成功への鍵</strong></mark><mark class="highlight-default">:</mark></li></ul><p id="222d3748-3838-81c0-a3c2-cbe00d66c3fa" class=""><mark class="highlight-default">1.  </mark><mark class="highlight-default"><strong>効率的な顧客獲得</strong></mark><mark class="highlight-default">: 特に代理店制度と共催ウェビナーを強力に推進し、質の高いSQLを大量に獲得する。</mark></p><p id="222d3748-3838-8175-884c-d7a11009e81c" class=""><mark class="highlight-default">2.  </mark><mark class="highlight-default"><strong>徹底的な顧客サクセス</strong></mark><mark class="highlight-default">: クイックスタートプログラムと継続的な成果可視化支援により、顧客の早期成功とLTV向上を実現し、チャーンレートを低く抑える。</mark></p><p id="222d3748-3838-81ce-90df-c4ae20ce1a41" class=""><mark class="highlight-default">3.  </mark><mark class="highlight-default"><strong>データドリブンな意思決定</strong></mark><mark class="highlight-default">: 主要KPIを常に可視化し、迅速な改善サイクルを回す。</mark></p><p id="222d3748-3838-818c-b89a-ff58c6961ca2" class=""><mark class="highlight-default">これらのアクションプランを愚直に実行することで、貴社は18ヶ月後のMRR 1億円達成、そしてLINE MA市場における確固たる地位を築くことができるでしょう。</mark></p><hr id="222d3748-3838-8161-b51b-d140e92c910c"/><h2 id="222d3748-3838-8170-9ab3-d10d5134ab1d" class=""><mark class="highlight-default"><strong>統合サマリー</strong></mark></h2><p id="222d3748-3838-8141-b575-ca219e5b01b5" class=""><mark class="highlight-default">上記の基本分析と深掘り分析を統合し、以下の包括的な調査結果を提供します：</mark></p><h3 id="222d3748-3838-81ff-80a0-e73bd943dad9" class=""><mark class="highlight-default"><strong>重要な発見事項</strong></mark></h3><ul id="222d3748-3838-815f-85dc-fe42c70ff24a" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default">基本調査から得られた核心的インサイト</mark></li></ul><ul id="222d3748-3838-8122-ac6c-e4184ed68fb8" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default">深掘り分析による追加の重要データ</mark></li></ul><ul id="222d3748-3838-81c0-801e-cdc1ee634de6" class="bulleted-list"><li style="list-style-type:disc"><mark class="highlight-default">両調査の結果から導かれる戦略的示唆</mark></li></ul><h3 id="222d3748-3838-8140-b7b4-d1da849181c0" class=""><mark class="highlight-default"><strong>推奨アクション</strong></mark></h3><p id="222d3748-3838-8166-bcde-e4f2f0d7a224" class=""><mark class="highlight-default">1. 短期的な実行可能施策</mark></p><p id="222d3748-3838-81b2-a7f4-fcca56630a1b" class=""><mark class="highlight-default">2. 中長期的な戦略方向性</mark></p><p id="222d3748-3838-8187-bf71-cfdf1f93c9dc" class=""><mark class="highlight-default">3. リスク対策と機会活用策</mark></p><p id="222d3748-3838-81e2-a4e5-e75d21c86da7" class=""><mark class="highlight-default"><strong>注記</strong></mark><mark class="highlight-default">: この統合レポートは基本調査と深掘り調査の両方の結果を包含しています。</mark></p></div></article><span class="sans" style="font-size:14px;padding-top:2em"></span></body></html>

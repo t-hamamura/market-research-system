@@ -5,6 +5,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { GeminiService } from './services/geminiService';
 import { NotionService } from './services/notionService';
+import { NotionBatchService } from './services/notionBatchService';
 import { ResearchService } from './services/researchService';
 import { createResearchRouter, errorHandler } from './routes/research';
 import { ServerConfig } from './types';
@@ -75,6 +76,7 @@ async function initializeServices(config: ServerConfig, retryCount = 0): Promise
     // 基本サービス作成
     const geminiService = new GeminiService(config.gemini);
     const notionService = new NotionService(config.notion);
+    const notionBatchService = new NotionBatchService(config.notion);
 
     // DeepResearchService作成
     const deepResearchService = new DeepResearchService(geminiService);
@@ -83,6 +85,7 @@ async function initializeServices(config: ServerConfig, retryCount = 0): Promise
     const researchService = new ResearchService(
       geminiService, 
       notionService,
+      notionBatchService,  // 新しい一括作成サービスを追加
       deepResearchService  // Deep Research サービスを追加
     );
 
