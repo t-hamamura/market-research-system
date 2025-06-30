@@ -10,7 +10,7 @@ export class NotionBatchService {
   private config: NotionConfig;
 
   constructor(config: NotionConfig) {
-    this.notion = new Client({ auth: config.authToken });
+    this.notion = new Client({ auth: config.token });
     this.config = config;
   }
 
