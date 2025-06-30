@@ -8,7 +8,7 @@
 let appState = {
   isLoading: false,
   currentStep: 0,
-  totalSteps: 18,
+  totalSteps: 20,
   researchResults: [],
   error: null,
   notionUrl: null,
@@ -380,10 +380,15 @@ function startResearch(formData, resumeFromStep = null) {
   connectToResearchStream(formData, resumeFromStep);
 }
 
-// ===== Server-Sent Events接続 =====
+// ===== 改善されたSSE接続機能 =====
 function connectToResearchStream(formData, resumeFromStep = null) {
   try {
     console.log('[App] SSE接続開始');
+    
+    // 接続状態をリセット
+    appState.connectionRetryCount = 0;
+    appState.maxRetries = 3;
+    appState.isReconnecting = false;
     
     // 既存の接続があれば閉じる
     if (appState.eventSource) {
@@ -395,6 +400,13 @@ function connectToResearchStream(formData, resumeFromStep = null) {
     if (resumeFromStep !== null) {
       requestBody.resumeFromStep = resumeFromStep;
     }
+
+    // 接続タイムアウトを設定（30秒）
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      console.warn('[App] SSE接続タイムアウト（30秒）');
+      controller.abort();
+    }, 30000);
     
     // EventSourceは直接POSTをサポートしないため、fetchでPOSTしてからSSEを受信
     fetch('/api/research/start', {
@@ -402,8 +414,12 @@ function connectToResearchStream(formData, resumeFromStep = null) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(requestBody),
+      signal: controller.signal
     }).then(async response => {
+      // タイムアウトをクリア
+      clearTimeout(timeoutId);
+      
       if (!response.ok) {
         // エラーレスポンスの詳細を取得
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
@@ -435,11 +451,25 @@ function connectToResearchStream(formData, resumeFromStep = null) {
       // レスポンスストリームを読み込み
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
+      let lastActivityTime = Date.now();
+      
+      // ハートビート監視（60秒間活動がないと接続切断とみなす）
+      const heartbeatInterval = setInterval(() => {
+        const now = Date.now();
+        if (now - lastActivityTime > 60000) {
+          console.warn('[App] ハートビートタイムアウト - 接続を再試行します');
+          clearInterval(heartbeatInterval);
+          handleConnectionLoss(formData, resumeFromStep);
+        }
+      }, 10000);
       
       function readStream() {
         reader.read().then(({ done, value }) => {
+          lastActivityTime = Date.now(); // 活動時間を更新
+          
           if (done) {
             console.log('[App] SSEストリーム終了');
+            clearInterval(heartbeatInterval);
             handleResearchComplete();
             return;
           }
@@ -455,6 +485,7 @@ function connectToResearchStream(formData, resumeFromStep = null) {
                 handleProgressEvent(data);
               } catch (error) {
                 console.error('[App] SSEデータパースエラー:', error);
+                console.error('[App] 問題のあるデータ:', line);
               }
             }
           });
@@ -462,21 +493,44 @@ function connectToResearchStream(formData, resumeFromStep = null) {
           // 次のチャンクを読み込み
           readStream();
         }).catch(error => {
+          clearInterval(heartbeatInterval);
           console.error('[App] SSEストリーム読み込みエラー:', error);
-          handleResearchError(error.message);
+          
+          // ネットワークエラーの場合は再接続を試行
+          if (error.name === 'NetworkError' || error.message.includes('network') || error.message.includes('fetch')) {
+            console.log('[App] ネットワークエラーを検出 - 再接続を試行します');
+            handleConnectionLoss(formData, resumeFromStep);
+          } else {
+            handleResearchError(`接続エラー: ${error.message}`);
+          }
         });
       }
       
       readStream();
       
     }).catch(error => {
+      clearTimeout(timeoutId);
       console.error('[App] 調査開始エラー:', error);
-      handleResearchError(error.message);
+      
+      // AbortErrorの場合（タイムアウト）
+      if (error.name === 'AbortError') {
+        console.log('[App] 接続タイムアウト - 再接続を試行します');
+        handleConnectionLoss(formData, resumeFromStep);
+      } 
+      // ネットワークエラーの場合
+      else if (error.name === 'NetworkError' || error.message.includes('network') || error.message.includes('fetch')) {
+        console.log('[App] ネットワークエラー - 再接続を試行します');
+        handleConnectionLoss(formData, resumeFromStep);
+      } 
+      // その他のエラー
+      else {
+        handleResearchError(error.message);
+      }
     });
     
   } catch (error) {
     console.error('[App] SSE接続エラー:', error);
-    handleResearchError(error.message);
+    handleResearchError(`接続エラー: ${error.message}`);
   }
 }
 
@@ -1674,4 +1728,67 @@ function showBulkSuccessMessage(message) {
   setTimeout(() => {
     validationErrors.classList.add('hidden');
   }, 3000);
+}
+
+// ===== 接続切断時の処理 =====
+function handleConnectionLoss(formData, resumeFromStep) {
+  // 再接続回数をチェック
+  if (appState.connectionRetryCount >= appState.maxRetries) {
+    console.error('[App] 最大再接続回数に達しました');
+    handleResearchError('ネットワーク接続エラーが継続しています。しばらく待ってから「途中から再開」ボタンをお試しください。');
+    return;
+  }
+  
+  appState.connectionRetryCount++;
+  appState.isReconnecting = true;
+  
+  console.log(`[App] 接続再試行 ${appState.connectionRetryCount}/${appState.maxRetries}`);
+  
+  // 再接続までの待機時間（指数バックオフ）
+  const retryDelay = Math.min(1000 * Math.pow(2, appState.connectionRetryCount - 1), 10000);
+  
+  // 再接続中であることをユーザーに通知
+  showReconnectionStatus(retryDelay);
+  
+  setTimeout(() => {
+    console.log(`[App] ${retryDelay}ms待機後、再接続を実行`);
+    
+    // 現在のステップから再開を試行
+    const currentStep = appState.currentStep || resumeFromStep;
+    connectToResearchStream(formData, currentStep);
+  }, retryDelay);
+}
+
+// ===== 再接続状況の表示 =====
+function showReconnectionStatus(retryDelay) {
+  const retrySeconds = Math.ceil(retryDelay / 1000);
+  const message = `ネットワーク接続が切断されました。${retrySeconds}秒後に自動再接続します...\n\n📡 調査は${appState.isReconnecting ? 'バックエンドで継続中' : '一時停止中'}です`;
+  
+  // プログレス表示を更新
+  const progressDetails = document.querySelector('.progress-details');
+  if (progressDetails) {
+    progressDetails.innerHTML = `
+      <div class="current-phase">🔄 再接続中...</div>
+      <div class="current-status">${message}</div>
+    `;
+  }
+  
+  // カウントダウン表示
+  let countdown = retrySeconds;
+  const countdownInterval = setInterval(() => {
+    countdown--;
+    if (countdown <= 0) {
+      clearInterval(countdownInterval);
+      return;
+    }
+    
+    if (progressDetails) {
+      const currentStatusDiv = progressDetails.querySelector('.current-status');
+      if (currentStatusDiv) {
+        currentStatusDiv.textContent = `ネットワーク接続が切断されました。${countdown}秒後に自動再接続します...\n\n📡 調査はバックエンドで継続中です`;
+      }
+    }
+  }, 1000);
+  
+  console.log(`[App] 再接続カウントダウン開始: ${retrySeconds}秒`);
 } 

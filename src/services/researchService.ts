@@ -342,14 +342,42 @@ export class ResearchService {
 
           // Step 3: ステータスを「完了」に更新し、コンテンツを追加
           if (pageInfo.pageId !== 'resumed') {
-            console.log(`[ResearchService] コンテンツ更新中: ${prompt.title}`);
-            await this.notionService.updatePageContent(pageInfo.pageId, result);
-            
-            console.log(`[ResearchService] ステータス更新（完了）: ${prompt.title}`);
-            await this.notionService.updatePageStatus(pageInfo.pageId, 'completed');
+            try {
+              console.log(`[ResearchService] コンテンツ更新中: ${prompt.title}`);
+              const contentUpdateSuccess = await this.notionService.updatePageContent(pageInfo.pageId, result);
+              
+              if (contentUpdateSuccess) {
+                console.log(`[ResearchService] ステータス更新（完了）: ${prompt.title}`);
+                const statusUpdateSuccess = await this.notionService.updatePageStatus(pageInfo.pageId, 'completed');
+                
+                if (!statusUpdateSuccess) {
+                  console.warn(`[ResearchService] ステータス更新失敗（調査は継続）: ${prompt.title}`);
+                }
+              } else {
+                console.warn(`[ResearchService] コンテンツ更新失敗（調査は継続）: ${prompt.title}`);
+                
+                // コンテンツ更新に失敗してもステータスは失敗に更新
+                try {
+                  await this.notionService.updatePageStatus(pageInfo.pageId, 'failed');
+                  console.log(`[ResearchService] 失敗ステータス更新完了: ${prompt.title}`);
+                } catch (statusError) {
+                  console.error(`[ResearchService] 失敗ステータス更新もエラー: ${prompt.title}`, statusError);
+                }
+              }
+            } catch (notionError) {
+              console.error(`[ResearchService] Notion更新エラー (調査は継続): ${prompt.title}`, notionError);
+              
+              // Notionエラーでもステータスは失敗に更新を試行
+              try {
+                await this.notionService.updatePageStatus(pageInfo.pageId, 'failed');
+                console.log(`[ResearchService] エラー後の失敗ステータス更新完了: ${prompt.title}`);
+              } catch (statusError) {
+                console.error(`[ResearchService] エラー後のステータス更新も失敗: ${prompt.title}`, statusError);
+              }
+            }
           }
 
-          // 結果を記録
+          // 結果を記録（Notionエラーが発生しても調査結果は保持）
           researchResults.push({
             id: prompt.id,
             title: prompt.title,
@@ -367,12 +395,13 @@ export class ResearchService {
         } catch (error) {
           console.error(`[ResearchService] 調査${globalIndex + 1}でエラー:`, error);
           
-          // エラー発生時もステータスを「失敗」に更新
+          // エラー発生時もステータスを「失敗」に更新を試行
           if (pageInfo.pageId !== 'resumed') {
             try {
               await this.notionService.updatePageStatus(pageInfo.pageId, 'failed');
+              console.log(`[ResearchService] エラー時のステータス更新（失敗）完了: ${prompt.title}`);
             } catch (statusError) {
-              console.error(`[ResearchService] ステータス更新エラー:`, statusError);
+              console.error(`[ResearchService] エラー時のステータス更新も失敗: ${prompt.title}`, statusError);
             }
           }
           
@@ -385,7 +414,13 @@ export class ResearchService {
             result: fallbackResult
           });
 
-          console.warn(`[ResearchService] 調査${globalIndex + 1}はフォールバック結果を使用`);
+          console.warn(`[ResearchService] 調査${globalIndex + 1}はフォールバック結果を使用: ${prompt.title}`);
+          
+          // エラーが連続する場合の待機時間を延長
+          if (i < remainingPrompts.length - 1) {
+            console.log(`[ResearchService] エラー後の待機時間延長... (5秒)`);
+            await this.sleep(5000);
+          }
         }
       }
 
@@ -410,25 +445,77 @@ export class ResearchService {
       let notionResult;
       
       if (integratedReportPageId && integratedReportPageId !== 'resumed') {
-        // 事前作成したページの内容を更新
-        await this.notionService.updateIntegratedReportContent(integratedReportPageId, integratedReport);
-        await this.notionService.updatePageStatus(integratedReportPageId, 'completed');
-        
-        notionResult = {
-          pageId: integratedReportPageId,
-          url: this.notionService.generatePageUrl(integratedReportPageId)
-        };
-        console.log('[ResearchService] 事前作成統合レポートページ更新完了:', notionResult.url);
+        try {
+          // 事前作成したページの内容を更新
+          console.log('[ResearchService] 統合レポートコンテンツ更新中...');
+          const contentUpdateSuccess = await this.notionService.updateIntegratedReportContent(integratedReportPageId, integratedReport);
+          
+          if (contentUpdateSuccess) {
+            console.log('[ResearchService] 統合レポートステータス更新中...');
+            const statusUpdateSuccess = await this.notionService.updatePageStatus(integratedReportPageId, 'completed');
+            
+            if (statusUpdateSuccess) {
+              console.log('[ResearchService] 統合レポート更新完全成功');
+            } else {
+              console.warn('[ResearchService] 統合レポートステータス更新失敗（内容は更新済み）');
+            }
+          } else {
+            console.warn('[ResearchService] 統合レポートコンテンツ更新失敗');
+            
+            // コンテンツ更新失敗時はステータスを失敗に
+            try {
+              await this.notionService.updatePageStatus(integratedReportPageId, 'failed');
+              console.log('[ResearchService] 統合レポート失敗ステータス更新完了');
+            } catch (statusError) {
+              console.error('[ResearchService] 統合レポート失敗ステータス更新もエラー:', statusError);
+            }
+          }
+          
+          notionResult = {
+            pageId: integratedReportPageId,
+            url: this.notionService.generatePageUrl(integratedReportPageId)
+          };
+          console.log('[ResearchService] 事前作成統合レポートページ更新完了:', notionResult.url);
+          
+        } catch (notionError) {
+          console.error('[ResearchService] 統合レポート更新でNotionエラー:', notionError);
+          
+          // エラーでもページ情報は提供
+          notionResult = {
+            pageId: integratedReportPageId,
+            url: this.notionService.generatePageUrl(integratedReportPageId)
+          };
+          console.log('[ResearchService] エラー後も統合レポートページ情報を提供:', notionResult.url);
+          
+          // ステータスを失敗に更新を試行
+          try {
+            await this.notionService.updatePageStatus(integratedReportPageId, 'failed');
+            console.log('[ResearchService] エラー後の統合レポート失敗ステータス更新完了');
+          } catch (statusError) {
+            console.error('[ResearchService] エラー後の統合レポートステータス更新も失敗:', statusError);
+          }
+        }
       } else {
         // フォールバック: 従来方式で作成
-        console.log('[ResearchService] フォールバック: 従来方式で統合レポート作成');
-        notionResult = await this.notionService.createResearchPage(
-          request.businessName,
-          request.serviceHypothesis,
-          researchResults,
-          integratedReport
-        );
-        console.log('[ResearchService] 従来方式統合レポート作成完了:', notionResult.url);
+        try {
+          console.log('[ResearchService] フォールバック: 従来方式で統合レポート作成');
+          notionResult = await this.notionService.createResearchPage(
+            request.businessName,
+            request.serviceHypothesis,
+            researchResults,
+            integratedReport
+          );
+          console.log('[ResearchService] 従来方式統合レポート作成完了:', notionResult.url);
+        } catch (fallbackError) {
+          console.error('[ResearchService] フォールバック方式でもエラー:', fallbackError);
+          
+          // 最終的にエラーでも仮のページ情報を提供
+          notionResult = {
+            pageId: 'error-fallback',
+            url: 'https://www.notion.so/'
+          };
+          console.log('[ResearchService] 最終フォールバックとしてNotion基本URLを提供');
+        }
       }
 
       // 完了通知
@@ -501,8 +588,6 @@ export class ResearchService {
       throw error;
     }
   }
-
-
 
   /**
    * リクエストバリデーション

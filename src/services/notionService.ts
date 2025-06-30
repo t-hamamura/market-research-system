@@ -425,8 +425,8 @@ export class NotionService {
   }
 
   /**
-   * マークダウンテキストをNotionブロックに変換（Markdown対応版）
-   * @param markdownText Geminiから受け取ったMarkdown文字列
+   * マークダウンテキストをNotionブロックに変換（JSON対応版）
+   * @param markdownText Geminiから受け取ったMarkdown文字列またはJSON
    * @returns Notionブロック配列
    */
   private createBlocksFromMarkdown(markdownText: string): any[] {
@@ -435,117 +435,351 @@ export class NotionService {
         return [this.createParagraphBlock('AIからの応答が空でした。')];
       }
 
-      console.log(`[NotionService] Markdown変換開始: ${markdownText.length}文字`);
+      console.log(`[NotionService] コンテンツ変換開始: ${markdownText.length}文字`);
       
-      // Markdownテキストを行で分割
-      const lines = markdownText.split('\n');
-      const blocks: any[] = [];
+      // JSONレスポンスの検出と処理
+      const trimmedText = markdownText.trim();
       
-      let currentListItems: any[] = [];
+      // JSON配列形式の検出（開始が[、終了が]）
+      if (trimmedText.startsWith('[') && trimmedText.endsWith(']')) {
+        console.log('[NotionService] JSON配列形式を検出、Notionブロックに変換中...');
+        return this.convertJsonArrayToNotionBlocks(trimmedText);
+      }
       
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const trimmedLine = line.trim();
-        
-        // 空行はスキップ
-        if (trimmedLine.length === 0) {
-          // リストが終了した場合の処理
-          if (currentListItems.length > 0) {
-            blocks.push(...currentListItems);
-            currentListItems = [];
+      // JSONオブジェクト形式の検出（開始が{、終了が}）
+      if (trimmedText.startsWith('{') && trimmedText.endsWith('}')) {
+        console.log('[NotionService] JSONオブジェクト形式を検出、Notionブロックに変換中...');
+        try {
+          const jsonObject = JSON.parse(trimmedText);
+          return this.convertJsonObjectToNotionBlocks(jsonObject);
+        } catch (parseError) {
+          console.warn('[NotionService] JSONオブジェクトパースエラー、Markdownとして処理:', parseError);
+        }
+      }
+      
+      // ```json コードブロック形式の処理
+      const jsonCodeBlockMatch = trimmedText.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jsonCodeBlockMatch) {
+        console.log('[NotionService] JSONコードブロック形式を検出');
+        try {
+          const jsonContent = jsonCodeBlockMatch[1].trim();
+          if (jsonContent.startsWith('[')) {
+            return this.convertJsonArrayToNotionBlocks(jsonContent);
           }
+        } catch (parseError) {
+          console.warn('[NotionService] JSONコードブロックパースエラー:', parseError);
+        }
+      }
+      
+      // 通常のMarkdown処理
+      console.log('[NotionService] 通常のMarkdown形式として処理');
+      return this.convertMarkdownToNotionBlocks(trimmedText);
+      
+    } catch (error) {
+      console.error('[NotionService] コンテンツ変換エラー:', error);
+      return [
+        this.createParagraphBlock('⚠️ コンテンツの変換中にエラーが発生しました。'),
+        this.createParagraphBlock(`元のテキスト: ${markdownText.substring(0, 500)}...`)
+      ];
+    }
+  }
+
+  /**
+   * JSON配列をNotionブロックに変換
+   * @param jsonString JSON配列文字列
+   * @returns Notionブロック配列
+   */
+  private convertJsonArrayToNotionBlocks(jsonString: string): any[] {
+    try {
+      console.log('[NotionService] JSON配列パース開始');
+      const jsonArray = JSON.parse(jsonString);
+      
+      if (!Array.isArray(jsonArray)) {
+        console.warn('[NotionService] JSON配列ではありません、Markdownとして処理');
+        return this.convertMarkdownToNotionBlocks(jsonString);
+      }
+      
+      const notionBlocks: any[] = [];
+      
+      for (const item of jsonArray) {
+        if (!item || typeof item !== 'object' || !item.type || !item.content) {
+          console.warn('[NotionService] 無効なJSON項目をスキップ:', item);
           continue;
         }
         
-        // H1 見出し (# )
-        if (trimmedLine.startsWith('# ')) {
-          // リスト終了処理
-          if (currentListItems.length > 0) {
-            blocks.push(...currentListItems);
-            currentListItems = [];
-          }
-          blocks.push(this.createHeading1Block(trimmedLine.substring(2).trim()));
+        const block = this.convertJsonItemToNotionBlock(item);
+        if (block) {
+          notionBlocks.push(block);
         }
-        // H2 見出し (## )
-        else if (trimmedLine.startsWith('## ')) {
-          // リスト終了処理
-          if (currentListItems.length > 0) {
-            blocks.push(...currentListItems);
-            currentListItems = [];
-          }
-          blocks.push(this.createHeading2Block(trimmedLine.substring(3).trim()));
-        }
-        // H3 見出し (### )
-        else if (trimmedLine.startsWith('### ')) {
-          // リスト終了処理
-          if (currentListItems.length > 0) {
-            blocks.push(...currentListItems);
-            currentListItems = [];
-          }
-          blocks.push(this.createHeading3Block(trimmedLine.substring(4).trim()));
-        }
-        // 箇条書きリスト (- または * で始まる)
-        else if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
-          const listContent = trimmedLine.substring(2).trim();
-          currentListItems.push(this.createBulletedListItemBlock(listContent));
-        }
-        // 区切り線
-        else if (trimmedLine === '---' || trimmedLine === '***') {
-          // リスト終了処理
-          if (currentListItems.length > 0) {
-            blocks.push(...currentListItems);
-            currentListItems = [];
-          }
-          blocks.push({
+      }
+      
+      console.log(`[NotionService] JSON配列変換完了: ${notionBlocks.length}ブロック`);
+      return notionBlocks.length > 0 ? notionBlocks : [
+        this.createParagraphBlock('⚠️ 有効なコンテンツが見つかりませんでした。')
+      ];
+      
+    } catch (error) {
+      console.error('[NotionService] JSON配列パースエラー:', error);
+      return [
+        this.createParagraphBlock('⚠️ JSON形式の解析に失敗しました。'),
+        this.createParagraphBlock(`元のJSON: ${jsonString.substring(0, 300)}...`)
+      ];
+    }
+  }
+
+  /**
+   * JSON項目をNotionブロックに変換
+   * @param item JSON項目
+   * @returns Notionブロック
+   */
+  private convertJsonItemToNotionBlock(item: any): any | null {
+    try {
+      const { type, content, icon, children } = item;
+      
+      switch (type) {
+        case 'heading_1':
+          return {
+            object: 'block',
+            type: 'heading_1',
+            heading_1: {
+              rich_text: [
+                {
+                  type: 'text',
+                  text: {
+                    content: this.truncateTextForRichText(content)
+                  }
+                }
+              ]
+            }
+          };
+          
+        case 'heading_2':
+          return {
+            object: 'block',
+            type: 'heading_2',
+            heading_2: {
+              rich_text: [
+                {
+                  type: 'text',
+                  text: {
+                    content: this.truncateTextForRichText(content)
+                  }
+                }
+              ]
+            }
+          };
+          
+        case 'heading_3':
+          return {
+            object: 'block',
+            type: 'heading_3',
+            heading_3: {
+              rich_text: [
+                {
+                  type: 'text',
+                  text: {
+                    content: this.truncateTextForRichText(content)
+                  }
+                }
+              ]
+            }
+          };
+          
+        case 'paragraph':
+          return {
+            object: 'block',
+            type: 'paragraph',
+            paragraph: {
+              rich_text: this.parseTextToRichText(content)
+            }
+          };
+          
+        case 'bulleted_list_item':
+          return {
+            object: 'block',
+            type: 'bulleted_list_item',
+            bulleted_list_item: {
+              rich_text: this.parseTextToRichText(content)
+            }
+          };
+          
+        case 'callout':
+          return {
+            object: 'block',
+            type: 'callout',
+            callout: {
+              rich_text: this.parseTextToRichText(content),
+              icon: icon ? { emoji: icon } : { emoji: '💡' },
+              color: 'blue_background'
+            }
+          };
+          
+        case 'toggle':
+          const toggleChildren = children ? 
+            children.map((child: any) => this.convertJsonItemToNotionBlock(child)).filter(Boolean) : 
+            [];
+          return {
+            object: 'block',
+            type: 'toggle',
+            toggle: {
+              rich_text: this.parseTextToRichText(content),
+              children: toggleChildren
+            }
+          };
+          
+        case 'divider':
+          return {
             object: 'block',
             type: 'divider',
             divider: {}
-          });
-        }
-        // JSON形式データの検出とスキップ
-        else if (this.isJsonData(trimmedLine)) {
-          console.warn(`[NotionService] ⚠️ 不正なJSONデータを検出、スキップ: ${trimmedLine.substring(0, 50)}...`);
-          // JSONデータから有用な情報を抽出
-          const extractedContent = this.extractContentFromJson(trimmedLine);
-          if (extractedContent) {
-            blocks.push(this.createParagraphBlock(extractedContent));
-          }
-          // リスト終了処理
-          if (currentListItems.length > 0) {
-            blocks.push(...currentListItems);
-            currentListItems = [];
-          }
-        }
-        // 通常の段落
-        else {
-          // リスト終了処理
-          if (currentListItems.length > 0) {
-            blocks.push(...currentListItems);
-            currentListItems = [];
-          }
-          blocks.push(this.createParagraphBlock(trimmedLine));
-        }
+          };
+          
+        default:
+          console.warn(`[NotionService] 未対応のブロックタイプ: ${type}`);
+          return {
+            object: 'block',
+            type: 'paragraph',
+            paragraph: {
+              rich_text: this.parseTextToRichText(content || `未対応タイプ: ${type}`)
+            }
+          };
       }
-      
-      // 最後にリストアイテムが残っている場合
-      if (currentListItems.length > 0) {
-        blocks.push(...currentListItems);
-      }
-      
-      console.log(`[NotionService] Markdown変換完了: ${blocks.length}ブロック作成`);
-      return blocks.length > 0 ? blocks : [this.createParagraphBlock('変換可能なコンテンツがありませんでした。')];
-      
     } catch (error) {
-      console.error('[NotionService] Markdown変換エラー。フォールバックとしてテキスト表示します。', error);
-      return [
-        this.createCalloutBlock(
-          'Markdown変換エラー',
-          'AIからの応答をMarkdownとして変換できませんでした。以下に元のテキストを表示します。',
-          '⚠️'
-        ),
-        this.createParagraphBlock(markdownText),
-      ];
+      console.error('[NotionService] JSON項目変換エラー:', error);
+      return null;
     }
+  }
+
+  /**
+   * JSONオブジェクトをNotionブロックに変換
+   * @param jsonObject JSONオブジェクト
+   * @returns Notionブロック配列
+   */
+  private convertJsonObjectToNotionBlocks(jsonObject: any): any[] {
+    console.log('[NotionService] JSONオブジェクト変換開始');
+    
+    const blocks: any[] = [];
+    
+    // オブジェクトのキーと値をNotionブロックに変換
+    Object.entries(jsonObject).forEach(([key, value]) => {
+      // キーを見出しとして追加
+      blocks.push({
+        object: 'block',
+        type: 'heading_3',
+        heading_3: {
+          rich_text: [
+            {
+              type: 'text',
+              text: {
+                content: this.truncateTextForRichText(key)
+              }
+            }
+          ]
+        }
+      });
+      
+      // 値をパラグラフとして追加
+      const valueText = typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
+      blocks.push({
+        object: 'block',
+        type: 'paragraph',
+        paragraph: {
+          rich_text: this.parseTextToRichText(valueText)
+        }
+      });
+    });
+    
+    return blocks;
+  }
+
+  /**
+   * 通常のMarkdownをNotionブロックに変換
+   * @param markdownText Markdownテキスト
+   * @returns Notionブロック配列
+   */
+  private convertMarkdownToNotionBlocks(markdownText: string): any[] {
+    // 既存のMarkdown変換ロジックを使用
+    const lines = markdownText.split('\n');
+    const blocks: any[] = [];
+    
+    let currentListItems: any[] = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmedLine = line.trim();
+      
+      // 空行はスキップ
+      if (trimmedLine.length === 0) {
+        // リストが終了した場合の処理
+        if (currentListItems.length > 0) {
+          blocks.push(...currentListItems);
+          currentListItems = [];
+        }
+        continue;
+      }
+      
+      // H1 見出し (# )
+      if (trimmedLine.startsWith('# ')) {
+        // リスト終了処理
+        if (currentListItems.length > 0) {
+          blocks.push(...currentListItems);
+          currentListItems = [];
+        }
+        blocks.push(this.createHeading1Block(trimmedLine.substring(2).trim()));
+      }
+      // H2 見出し (## )
+      else if (trimmedLine.startsWith('## ')) {
+        // リスト終了処理
+        if (currentListItems.length > 0) {
+          blocks.push(...currentListItems);
+          currentListItems = [];
+        }
+        blocks.push(this.createHeading2Block(trimmedLine.substring(3).trim()));
+      }
+      // H3 見出し (### )
+      else if (trimmedLine.startsWith('### ')) {
+        // リスト終了処理
+        if (currentListItems.length > 0) {
+          blocks.push(...currentListItems);
+          currentListItems = [];
+        }
+        blocks.push(this.createHeading3Block(trimmedLine.substring(4).trim()));
+      }
+      // 箇条書きリスト (- または * で始まる)
+      else if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
+        const listContent = trimmedLine.substring(2).trim();
+        currentListItems.push(this.createBulletedListItemBlock(listContent));
+      }
+      // 区切り線
+      else if (trimmedLine === '---' || trimmedLine === '***') {
+        // リスト終了処理
+        if (currentListItems.length > 0) {
+          blocks.push(...currentListItems);
+          currentListItems = [];
+        }
+        blocks.push({
+          object: 'block',
+          type: 'divider',
+          divider: {}
+        });
+      }
+      // 通常のパラグラフ
+      else {
+        // リスト終了処理
+        if (currentListItems.length > 0) {
+          blocks.push(...currentListItems);
+          currentListItems = [];
+        }
+        blocks.push(this.createParagraphBlock(trimmedLine));
+      }
+    }
+    
+    // 最後にリストが残っている場合の処理
+    if (currentListItems.length > 0) {
+      blocks.push(...currentListItems);
+    }
+    
+    return blocks;
   }
 
   /**
@@ -1500,7 +1734,55 @@ export class NotionService {
   }
 
   /**
-   * 全16種類の調査項目を事前作成
+   * 既存の調査ページを検索（重複防止用）
+   * @param businessName 事業名
+   * @param researchTitle 調査タイトル
+   * @returns 既存ページのID、URLまたはnull
+   */
+  async findExistingResearchPage(
+    businessName: string, 
+    researchTitle: string
+  ): Promise<{ pageId: string; url: string } | null> {
+    try {
+      console.log(`[NotionService] 既存ページ検索: ${businessName} - ${researchTitle}`);
+      
+      const response = await this.notion.databases.query({
+        database_id: this.config.databaseId,
+        filter: {
+          and: [
+            {
+              property: '事業名',
+              title: {
+                contains: businessName
+              }
+            },
+            {
+              property: '調査種別',
+              select: {
+                equals: this.categorizeResearchType(researchTitle)
+              }
+            }
+          ]
+        }
+      });
+
+      if (response.results.length > 0) {
+        const existingPage = response.results[0];
+        const pageId = existingPage.id;
+        const url = this.generatePageUrl(pageId);
+        console.log(`[NotionService] 既存ページ発見: ${url}`);
+        return { pageId, url };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('[NotionService] 既存ページ検索エラー:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 全16種類の調査項目を事前作成（重複防止機能付き）
    * @param businessName 事業名
    * @param researchPrompts 調査プロンプト配列
    * @returns 作成されたページ情報
@@ -1510,16 +1792,43 @@ export class NotionService {
     researchPrompts: Array<{ id: number; title: string; prompt: string }>
   ): Promise<Array<{ pageId: string; url: string; researchId: number; title: string }>> {
     try {
-      console.log(`[NotionService] 全調査項目の事前作成開始: ${businessName}`);
+      console.log(`[NotionService] 全調査項目の事前作成開始（重複防止付き）: ${businessName}`);
       
       const createdPages: Array<{ pageId: string; url: string; researchId: number; title: string }> = [];
+      
+      // 重複チェック用の既存ページマップ作成
+      const existingPagesMap = new Map<number, { pageId: string; url: string }>();
+      
+      console.log('[NotionService] 既存ページの検索開始...');
+      for (const prompt of researchPrompts) {
+        const existingPage = await this.findExistingResearchPage(businessName, prompt.title);
+        if (existingPage) {
+          existingPagesMap.set(prompt.id, existingPage);
+          console.log(`[NotionService] 既存ページスキップ: ${prompt.title}`);
+        }
+      }
+      
+      console.log(`[NotionService] 既存ページ: ${existingPagesMap.size}件、新規作成対象: ${researchPrompts.length - existingPagesMap.size}件`);
       
       // データベース構造を確認
       const databaseInfo = await this.getDatabaseProperties();
       
       for (const prompt of researchPrompts) {
         try {
-          console.log(`[NotionService] 調査項目作成中: ${prompt.title}`);
+          // 既存ページがある場合はスキップ
+          if (existingPagesMap.has(prompt.id)) {
+            const existingPage = existingPagesMap.get(prompt.id)!;
+            createdPages.push({
+              pageId: existingPage.pageId,
+              url: existingPage.url,
+              researchId: prompt.id,
+              title: prompt.title
+            });
+            console.log(`[NotionService] 既存ページ使用: ${prompt.title}`);
+            continue;
+          }
+          
+          console.log(`[NotionService] 新規調査項目作成中: ${prompt.title}`);
           
           const properties: any = {};
 
@@ -1574,7 +1883,7 @@ export class NotionService {
             };
           }
 
-          // 基本ページコンテンツ（未着手状態）
+          // 基本ページコンテンツ（ステータス文字列を削除）
           const pageContent = [
             {
               object: 'block',
@@ -1585,20 +1894,6 @@ export class NotionService {
                     type: 'text',
                     text: {
                       content: businessName
-                    }
-                  }
-                ]
-              }
-            } as any,
-            {
-              object: 'block',
-              type: 'paragraph',
-              paragraph: {
-                rich_text: [
-                  {
-                    type: 'text',
-                    text: {
-                      content: `ステータス: 未着手`
                     }
                   }
                 ]
@@ -1692,7 +1987,7 @@ export class NotionService {
                   {
                     type: 'text',
                     text: {
-                      content: 'この調査項目は現在「未着手」状態です。調査が開始されると「進行中」に、完了すると「完了」に更新されます。'
+                      content: 'この調査項目は調査開始待機中です。進行状況はNotionのステータスプロパティで確認できます。'
                     }
                   }
                 ],
@@ -1723,7 +2018,7 @@ export class NotionService {
             title: prompt.title
           });
 
-          console.log(`[NotionService] 調査項目作成完了: ${prompt.title} (${url})`);
+          console.log(`[NotionService] 新規調査項目作成完了: ${prompt.title} (${url})`);
           
           // API制限対策の待機
           await this.sleep(200);
@@ -1734,7 +2029,15 @@ export class NotionService {
         }
       }
 
-      console.log(`[NotionService] 全調査項目の事前作成完了: ${createdPages.length}件`);
+      console.log(`[NotionService] 全調査項目の事前作成完了（重複防止付き）: ${createdPages.length}件`);
+      
+      // 重複チェック: 同じresearchIdが複数ないか確認
+      const uniqueIds = new Set(createdPages.map(p => p.researchId));
+      if (uniqueIds.size !== createdPages.length) {
+        console.error('[NotionService] 重複するresearchIDが検出されました:', createdPages);
+        throw new Error('調査項目の重複作成が検出されました');
+      }
+      
       return createdPages;
       
     } catch (error) {
@@ -2168,6 +2471,157 @@ export class NotionService {
       
     } catch (error) {
       console.error(`[NotionService] 統合レポート内容更新エラー (${pageId}):`, error);
+      return false;
+    }
+  }
+
+  /**
+   * ページコンテンツを更新（アーカイブエラー対応強化版）
+   * @param pageId ページID
+   * @param content マークダウンコンテンツ
+   * @returns 更新成功かどうか
+   */
+  async updatePageContent(pageId: string, content: string): Promise<boolean> {
+    try {
+      console.log(`[NotionService] ページコンテンツ更新開始: ${pageId}`);
+      
+      // コンテンツをNotionブロックに変換
+      const blocks = this.createBlocksFromMarkdown(content);
+      console.log(`[NotionService] 変換されたブロック数: ${blocks.length}`);
+
+      // 既存のページ内容を確認
+      let existingPage;
+      try {
+        existingPage = await this.notion.pages.retrieve({ page_id: pageId });
+        console.log(`[NotionService] ページ情報取得成功: ${pageId}`);
+      } catch (retrieveError) {
+        console.error(`[NotionService] ページ情報取得エラー: ${pageId}`, retrieveError);
+        return false;
+      }
+
+      // ページがアーカイブされていないかチェック
+      if (existingPage && 'archived' in existingPage && existingPage.archived) {
+        console.warn(`[NotionService] ページがアーカイブされています: ${pageId}`);
+        
+        // アーカイブを解除を試行
+        try {
+          await this.notion.pages.update({
+            page_id: pageId,
+            archived: false
+          });
+          console.log(`[NotionService] ページのアーカイブ解除完了: ${pageId}`);
+        } catch (unarchiveError) {
+          console.error(`[NotionService] アーカイブ解除失敗: ${pageId}`, unarchiveError);
+          return false;
+        }
+      }
+
+      // 既存のブロックを取得してクリア
+      try {
+        console.log(`[NotionService] 既存ブロック削除開始: ${pageId}`);
+        
+        let existingBlocks;
+        try {
+          const response = await this.notion.blocks.children.list({
+            block_id: pageId,
+            page_size: 100
+          });
+          existingBlocks = response.results;
+        } catch (listError: any) {
+          if (listError?.code === 'validation_error' && listError?.message?.includes('archived')) {
+            console.warn(`[NotionService] ブロック一覧取得でアーカイブエラー: ${pageId}`);
+            // アーカイブエラーの場合は新しいページとして扱う
+            existingBlocks = [];
+          } else {
+            throw listError;
+          }
+        }
+
+        // 既存ブロックを削除（アーカイブエラー対応）
+        if (existingBlocks && existingBlocks.length > 0) {
+          console.log(`[NotionService] 削除対象ブロック数: ${existingBlocks.length}`);
+          
+          for (const block of existingBlocks) {
+            try {
+              await this.notion.blocks.delete({ block_id: block.id });
+              console.log(`[NotionService] ブロック削除成功: ${block.id}`);
+            } catch (deleteError: any) {
+              if (deleteError?.code === 'validation_error' && deleteError?.message?.includes('archived')) {
+                console.warn(`[NotionService] アーカイブされたブロックをスキップ: ${block.id}`);
+                continue;
+              } else {
+                console.warn(`[NotionService] ブロック削除エラー (続行): ${block.id}`, deleteError);
+              }
+            }
+          }
+        }
+
+        console.log(`[NotionService] 既存ブロッククリア完了: ${pageId}`);
+      } catch (clearError) {
+        console.warn(`[NotionService] 既存ブロッククリアエラー (続行): ${pageId}`, clearError);
+        // ブロッククリアに失敗しても続行
+      }
+
+      // 新しいコンテンツを追加（小分けして追加）
+      console.log(`[NotionService] 新コンテンツ追加開始: ${pageId}`);
+      
+      // ブロックを20個ずつに分けて追加（API制限対応）
+      const BATCH_SIZE = 20;
+      
+      for (let i = 0; i < blocks.length; i += BATCH_SIZE) {
+        const batch = blocks.slice(i, i + BATCH_SIZE);
+        
+        try {
+          await this.notion.blocks.children.append({
+            block_id: pageId,
+            children: batch
+          });
+          console.log(`[NotionService] ブロックバッチ追加成功: ${i + 1}-${Math.min(i + BATCH_SIZE, blocks.length)}/${blocks.length}`);
+          
+          // API制限対策の待機
+          if (i + BATCH_SIZE < blocks.length) {
+            await this.sleep(500);
+          }
+        } catch (appendError: any) {
+          console.error(`[NotionService] ブロックバッチ追加エラー:`, appendError);
+          
+          // アーカイブエラーの場合は再試行
+          if (appendError?.code === 'validation_error' && appendError?.message?.includes('archived')) {
+            console.log(`[NotionService] アーカイブエラーにより再試行: ${pageId}`);
+            
+            // 短時間待機してから再試行
+            await this.sleep(2000);
+            
+            try {
+              await this.notion.blocks.children.append({
+                block_id: pageId,
+                children: batch
+              });
+              console.log(`[NotionService] 再試行でブロック追加成功: ${i + 1}-${Math.min(i + BATCH_SIZE, blocks.length)}`);
+            } catch (retryError) {
+              console.error(`[NotionService] 再試行でもブロック追加失敗:`, retryError);
+              // エラーでも処理を続行
+            }
+          }
+        }
+      }
+
+      console.log(`[NotionService] ページコンテンツ更新完了: ${pageId}`);
+      return true;
+
+    } catch (error: any) {
+      console.error(`[NotionService] ページコンテンツ更新エラー (${pageId}):`, error);
+      
+      // アーカイブエラーの場合は詳細ログ
+      if (error?.code === 'validation_error' && error?.message?.includes('archived')) {
+        console.error(`[NotionService] アーカイブエラー詳細:`, {
+          pageId,
+          code: error.code,
+          message: error.message,
+          requestId: error.request_id
+        });
+      }
+      
       return false;
     }
   }
