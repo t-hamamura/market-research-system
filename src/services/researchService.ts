@@ -191,8 +191,12 @@ export class ResearchService {
     
     try {
       console.log(`[ResearchService] 市場調査開始（事前作成→ステータス更新方式）: ${request.businessName}`);
+      console.log(`[ResearchService] resumeFromStep: ${resumeFromStep}, actualResumeStep: ${actualResumeStep}`);
+      
       if (actualResumeStep > 0) {
-        console.log(`[ResearchService] ステップ${actualResumeStep}から再開`);
+        console.log(`[ResearchService] ★再開モード★ ステップ${actualResumeStep}から再開`);
+      } else {
+        console.log(`[ResearchService] ★新規実行モード★ 最初から実行（事前作成フェーズ含む）`);
       }
       
       // 初期化メッセージ
@@ -208,8 +212,11 @@ export class ResearchService {
       let createdPages: Array<{ pageId: string; url: string; researchId: number; title: string }> = [];
       let integratedReportPageId: string | null = null;
       
+      console.log(`[ResearchService] 事前作成判定: actualResumeStep=${actualResumeStep}, 条件チェック: ${actualResumeStep === 0}`);
+      
       if (actualResumeStep === 0) {
-        console.log('[ResearchService] Phase 1: 全調査項目 + 統合レポートを事前作成中...');
+        console.log('[ResearchService] ===== Phase 1: 事前作成フェーズ開始 =====');
+        console.log('[ResearchService] 全調査項目 + 統合レポートを事前作成中...');
         onProgress({
           type: 'progress',
           step: 1,
@@ -219,14 +226,18 @@ export class ResearchService {
         });
 
         try {
+          console.log('[ResearchService] 16種類の調査項目を事前作成開始...');
+          
           // 16種類の調査項目を事前作成
           createdPages = await this.notionBatchService.batchCreateResearchPages(
             request.businessName,
             this.researchPrompts
           );
-          console.log(`[ResearchService] 調査項目事前作成完了: ${createdPages.length}件`);
+          console.log(`[ResearchService] ✅ 調査項目事前作成完了: ${createdPages.length}件`);
+          console.log(`[ResearchService] 作成されたページ詳細:`, createdPages.map(p => ({ id: p.researchId, title: p.title, pageId: p.pageId.substring(0, 8) })));
           
           // 統合レポートページを事前作成
+          console.log('[ResearchService] 統合レポートページを事前作成開始...');
           onProgress({
             type: 'progress',
             step: 2,
@@ -240,7 +251,8 @@ export class ResearchService {
             request.serviceHypothesis
           );
           integratedReportPageId = integratedReportPage.pageId;
-          console.log(`[ResearchService] 統合レポート事前作成完了: ${integratedReportPage.url}`);
+          console.log(`[ResearchService] ✅ 統合レポート事前作成完了: ${integratedReportPage.url}`);
+          console.log(`[ResearchService] 統合レポートページID: ${integratedReportPageId.substring(0, 8)}...`);
           
           onProgress({
             type: 'progress',
@@ -249,12 +261,16 @@ export class ResearchService {
             message: `全${createdPages.length}件の調査項目 + 統合レポートを事前作成完了。順次実行を開始します...`,
             researchType: '事前作成完了'
           });
+          
+          console.log('[ResearchService] ===== Phase 1: 事前作成フェーズ完了 =====');
         } catch (error) {
-          console.error('[ResearchService] 事前作成エラー:', error);
+          console.error('[ResearchService] ❌ 事前作成エラー:', error);
+          console.error('[ResearchService] エラー詳細:', error instanceof Error ? error.stack : 'スタックトレースなし');
           throw new Error(`調査項目事前作成エラー: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       } else {
-        console.log('[ResearchService] 再開モード: 事前作成をスキップ');
+        console.log('[ResearchService] ===== 再開モード: 事前作成スキップ =====');
+        console.log('[ResearchService] 再開時は事前作成をスキップし、既存のページIDを取得（簡易実装）');
         // 再開時は事前作成をスキップし、既存のページIDを取得（簡易実装）
         createdPages = this.researchPrompts.map(prompt => ({
           pageId: 'resumed',
@@ -263,6 +279,7 @@ export class ResearchService {
           title: prompt.title
         }));
         integratedReportPageId = 'resumed';
+        console.log(`[ResearchService] 再開用仮ページ情報作成完了: ${createdPages.length}件`);
       }
       
       // 初期化メッセージ

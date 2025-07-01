@@ -356,8 +356,14 @@ function hideValidationErrors() {
 // ===== 市場調査開始 =====
 function startResearch(formData, resumeFromStep = null) {
   console.log('[App] 市場調査開始:', formData.businessName);
+  console.log('[App] resumeFromStep パラメータ:', resumeFromStep);
+  console.log('[App] resumeFromStep タイプ:', typeof resumeFromStep);
+  console.log('[App] resumeFromStep null判定:', resumeFromStep === null);
+  
   if (resumeFromStep) {
-    console.log('[App] ステップ', resumeFromStep, 'から再開');
+    console.log('[App] ★再開モード★ ステップ', resumeFromStep, 'から再開');
+  } else {
+    console.log('[App] ★新規実行モード★ 最初から実行（resumeFromStep未指定）');
   }
   
   // フォームデータを保存（再開用）
@@ -397,10 +403,19 @@ function connectToResearchStream(formData, resumeFromStep = null) {
     
     // リクエストボディに再開ステップを含める
     const requestBody = { ...formData };
+    console.log('[App] ベースリクエストボディ:', requestBody);
+    
     if (resumeFromStep !== null) {
+      console.log('[App] resumeFromStep を追加:', resumeFromStep);
       requestBody.resumeFromStep = resumeFromStep;
+    } else {
+      console.log('[App] resumeFromStep は null なので追加しません');
     }
-
+    
+    console.log('[App] 最終リクエストボディ:', requestBody);
+    console.log('[App] resumeFromStep フィールド存在確認:', 'resumeFromStep' in requestBody);
+    console.log('[App] resumeFromStep 値確認:', requestBody.resumeFromStep);
+    
     // 接続タイムアウトを設定（30秒）
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
