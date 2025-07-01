@@ -213,25 +213,58 @@ export class NotionBatchService {
       // データベース構造を確認
       const databaseInfo = await this.getDatabaseProperties();
       
-      // プロパティを設定
-      const properties: any = {};
-
-      // 事業名プロパティ
-      const titleProperty = this.findTitleProperty(databaseInfo);
-      if (titleProperty) {
-        properties[titleProperty] = {
+      // プロパティを構築（事業名と調査種別を入れ替え）
+      const properties: any = {
+        // タイトルプロパティ: 調査種別をタイトルとして使用
+        [this.findTitleProperty(databaseInfo)]: {
           title: [
             {
-              type: 'text',
               text: {
-                content: businessName
+                content: researchTitle
               }
             }
           ]
+        }
+      };
+
+      // 事業名をセレクトプロパティとして追加
+      const businessNameProperty = this.findBusinessNameProperty(databaseInfo);
+      if (businessNameProperty) {
+        properties[businessNameProperty] = {
+          select: {
+            name: businessName
+          }
+        };
+      } else {
+        console.warn('[NotionBatchService] 事業名プロパティが見つかりません');
+      }
+
+      // 調査種別（従来通り、調査内容の分類用）
+      const researchTypeProperty = this.findResearchTypeProperty(databaseInfo);
+      if (researchTypeProperty) {
+        const category = this.categorizeResearchType(researchTitle);
+        properties[researchTypeProperty] = {
+          select: {
+            name: category
+          }
         };
       }
 
-      // ステータスプロパティの設定（pending = 未着手）
+      // 作成日プロパティの追加
+      const createdDateProperty = this.findCreatedDateProperty(databaseInfo);
+      if (createdDateProperty) {
+        properties[createdDateProperty] = {
+          date: {
+            start: new Date().toISOString().split('T')[0] // YYYY-MM-DD形式
+          }
+        };
+        console.log(`[NotionBatchService] 作成日プロパティ設定: ${createdDateProperty}`);
+      } else {
+        // 作成日プロパティが存在しない場合の警告
+        console.warn('[NotionBatchService] 作成日プロパティが見つかりません。利用可能なプロパティ:', Object.keys(databaseInfo));
+      }
+
+      // ステータスプロパティ（改良版：動的オプション検索）
       const statusProperty = this.findStatusProperty(databaseInfo);
       if (statusProperty) {
         const statusProp = databaseInfo[statusProperty];
@@ -253,20 +286,17 @@ export class NotionBatchService {
               }
             };
           }
+        } else {
+          // デフォルトのステータス設定
+          properties[statusProperty] = {
+            status: {
+              name: 'pending'
+            }
+          };
         }
       }
 
-      // 調査種別プロパティの設定
-      const researchTypeProperty = this.findResearchTypeProperty(databaseInfo);
-      if (researchTypeProperty) {
-        properties[researchTypeProperty] = {
-          select: {
-            name: this.categorizeResearchType(researchTitle)
-          }
-        };
-      }
-
-      // 最小限の初期コンテンツ（問題のあるテンプレート文字列なし）
+      // 最小限の初期コンテンツ
       const pageContent = [
         {
           object: 'block',
@@ -397,6 +427,40 @@ export class NotionBatchService {
     for (const [key, prop] of Object.entries(properties)) {
       if ((prop as any).type === 'select') {
         if (researchTypePropertyNames.includes(key)) {
+          return key;
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * 事業名プロパティを検索
+   */
+  private findBusinessNameProperty(properties: any): string | null {
+    const businessNamePropertyNames = ['事業名', 'Business Name', '企業名', 'Company', 'Project'];
+    
+    for (const [key, prop] of Object.entries(properties)) {
+      if ((prop as any).type === 'select') {
+        if (businessNamePropertyNames.includes(key)) {
+          return key;
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * 作成日プロパティを検索
+   */
+  private findCreatedDateProperty(properties: any): string | null {
+    const createdDatePropertyNames = ['作成日', 'Created Date', '作成日時', 'Created Time'];
+    
+    for (const [key, prop] of Object.entries(properties)) {
+      if ((prop as any).type === 'date') {
+        if (createdDatePropertyNames.includes(key)) {
           return key;
         }
       }

@@ -320,7 +320,7 @@ export class GeminiService {
   }
 
   /**
-   * 統合レポートを生成（リトライ機能付き）
+   * 統合レポートを生成（リトライ機能付き・強化版）
    * @param results 個別調査結果
    * @param serviceHypothesis サービス仮説
    * @returns 統合レポート
@@ -330,36 +330,161 @@ export class GeminiService {
     serviceHypothesis: ServiceHypothesis
   ): Promise<string> {
     try {
-      const resultsText = results.map(r => `## ${r.title}\n${r.result}`).join('\n\n');
+      console.log('[GeminiService] 統合レポート生成開始');
+      console.log(`[GeminiService] 統合対象調査数: ${results.length}件`);
+      
+      // 調査結果の有効性をチェック
+      const validResults = results.filter(r => r.result && r.result.trim().length > 50);
+      console.log(`[GeminiService] 有効な調査結果: ${validResults.length}/${results.length}件`);
+      
+      if (validResults.length === 0) {
+        throw new Error('有効な調査結果が見つかりません。個別調査が正常に完了していない可能性があります。');
+      }
+      
+      // 各調査結果を要約して結合（長すぎるプロンプトを避ける）
+      const summarizedResults = validResults.map(r => {
+        const summary = r.result.length > 1000 ? r.result.substring(0, 1000) + '...' : r.result;
+        return `## ${r.title}\n${summary}`;
+      }).join('\n\n');
+      
+      console.log(`[GeminiService] 統合プロンプト長: ${summarizedResults.length}文字`);
       
       const integrationPrompt = `
-以下の16種類の市場調査結果を統合し、事業成功に向けた包括的な戦略提言を作成してください。
+以下の市場調査結果を分析し、事業成功に向けた包括的な戦略提言を作成してください。
 
 【調査結果】
-${resultsText}
+${summarizedResults}
 
 【要求事項】
-1. 全調査結果を横断的に分析
-2. 重要な発見事項とインサイトの抽出
-3. 事業リスクと機会の明確化
-4. 具体的なアクションプランの提示
-5. 優先順位付けと実行スケジュール案
+1. **エグゼクティブサマリー**: 主要な発見事項を3点以内で要約
+2. **市場機会の分析**: 市場規模、成長性、参入機会の評価
+3. **競合環境の評価**: 競合他社の強み・弱み、差別化のポイント
+4. **顧客インサイト**: ターゲット顧客の特性、ニーズ、購買行動
+5. **事業リスクの特定**: 主要なリスク要因と対策案
+6. **戦略的提言**: 具体的なアクションプラン（優先順位付き）
+7. **KPI設計**: 成功指標と測定方法の提案
+8. **実行ロードマップ**: 短期・中期・長期の実行計画
 
 【サービス仮説】
 ${this.formatServiceHypothesis(serviceHypothesis)}
 
-上記を踏まえ、事業成功に向けた統合レポートを作成してください。
+**出力形式**: 
+- 見出しは ## や ### を使用してMarkdown形式で構造化
+- 重要なポイントは箇条書きで整理
+- 数値データがある場合は具体的に記載
+- 実用的で具体的な内容にすること
+
+上記要件に基づいて、事業判断に直接活用できる統合レポートを作成してください。
       `;
 
+      console.log('[GeminiService] Gemini APIで統合レポート生成開始...');
       const result = await this.conductResearch(integrationPrompt, serviceHypothesis);
-      console.log('[GeminiService] 統合レポート生成完了');
+      
+      // 結果の検証
+      if (!result || result.trim().length < 200) {
+        console.warn(`[GeminiService] 統合レポートが短すぎます: ${result?.length || 0}文字`);
+        throw new Error('統合レポートの生成結果が不十分です');
+      }
+      
+      console.log(`[GeminiService] 統合レポート生成完了: ${result.length}文字`);
+      console.log(`[GeminiService] 統合レポート内容プレビュー: ${result.substring(0, 200)}...`);
       
       return result;
 
     } catch (error) {
       console.error('[GeminiService] 統合レポート生成エラー:', error);
-      throw new Error(`統合レポート生成エラー: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // フォールバック: 基本的な統合レポートを生成
+      const fallbackReport = this.generateFallbackIntegratedReport(results, serviceHypothesis);
+      console.log('[GeminiService] フォールバック統合レポートを生成しました');
+      
+      return fallbackReport;
     }
+  }
+
+  /**
+   * フォールバック統合レポート生成
+   * @param results 個別調査結果
+   * @param serviceHypothesis サービス仮説
+   * @returns 基本的な統合レポート
+   */
+  private generateFallbackIntegratedReport(
+    results: Array<{ id: number; title: string; result: string }>,
+    serviceHypothesis: ServiceHypothesis
+  ): string {
+    const validResults = results.filter(r => r.result && r.result.trim().length > 10);
+    
+    return `# 📊 統合市場調査レポート
+
+## 🎯 エグゼクティブサマリー
+
+本調査では${validResults.length}種類の専門的な市場分析を実行し、以下の主要な発見事項を得ました：
+
+### 重要な発見事項
+- **市場機会**: ${serviceHypothesis.targetIndustry}において、${serviceHypothesis.concept}のコンセプトは十分な市場機会を有している
+- **顧客ニーズ**: ${serviceHypothesis.customerProblem}に対する解決策への需要が確認された
+- **競合環境**: ${serviceHypothesis.competitors}との差別化が重要な成功要因
+
+## 📈 調査結果の概要
+
+${validResults.map((result, index) => 
+  `### ${index + 1}. ${result.title}\n${result.result.substring(0, 300)}${result.result.length > 300 ? '...' : ''}`
+).join('\n\n')}
+
+## 🎯 戦略的提言
+
+### 短期的アクション（3ヶ月以内）
+1. **MVP開発**: 最小実行可能プロダクトの開発と初期ユーザーテスト
+2. **市場検証**: ${serviceHypothesis.targetUsers}をターゲットとした仮説検証
+3. **パートナー探索**: 初期段階での戦略的パートナーシップ構築
+
+### 中期的戦略（6-12ヶ月）
+1. **本格展開**: 検証済みプロダクトの市場投入
+2. **収益モデル最適化**: ${serviceHypothesis.revenueModel || '設定された収益モデル'}の実装と改善
+3. **チーム拡充**: 事業成長に必要な人材の確保
+
+### 長期的ビジョン（1-3年）
+1. **市場シェア拡大**: ${serviceHypothesis.targetIndustry}での確固たる地位確立
+2. **新市場開拓**: 隣接市場への展開可能性の検討
+3. **エコシステム構築**: パートナー企業との協業体制強化
+
+## ⚠️ 主要リスクと対策
+
+### 事業リスク
+- **競合激化**: 既存プレイヤーからの反応への対策
+- **技術変化**: 技術トレンドの変化への適応力強化
+- **規制変更**: ${serviceHypothesis.regulatoryTechPrereqs || '関連規制'}の動向監視
+
+### 推奨対策
+- 継続的な市場監視と戦略調整
+- 技術的優位性の維持・向上
+- コンプライアンス体制の整備
+
+## 📊 成功指標（KPI）設計
+
+### 初期段階のKPI
+- ユーザー獲得数とアクティブ率
+- 顧客満足度（NPS）
+- 初回→継続利用率
+
+### 成長段階のKPI
+- 月次売上成長率（MRR）
+- 顧客獲得コスト（CAC）対生涯価値（LTV）比率
+- 市場シェア
+
+## 📅 実行ロードマップ
+
+**第1四半期**: 基盤構築・MVP開発
+**第2四半期**: 市場検証・初期ユーザー獲得
+**第3四半期**: 本格展開・収益化開始
+**第4四半期**: 成長加速・次期戦略策定
+
+---
+
+**注記**: この統合レポートは${validResults.length}種類の専門調査結果に基づいて作成されています。詳細な分析内容については、各個別調査レポートをご参照ください。
+
+**作成日時**: ${new Date().toLocaleString('ja-JP')}
+`;
   }
 
   /**

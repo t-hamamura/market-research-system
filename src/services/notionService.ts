@@ -2268,12 +2268,12 @@ export class NotionService {
   }
 
   /**
-   * ページのステータスを更新
+   * ページのステータスを更新（強化版：複数のステータス形式に対応）
    * @param pageId ページID
-   * @param status 新しいステータス ('pending' | 'in-progress' | 'completed' | 'failed')
-   * @returns 更新成功かどうか
+   * @param status 新しいステータス（completed, in-progress, pending など）
+   * @returns 更新成功フラグ
    */
-  async updatePageStatus(pageId: string, status: 'pending' | 'in-progress' | 'completed' | 'failed'): Promise<boolean> {
+  async updatePageStatus(pageId: string, status: string): Promise<boolean> {
     try {
       console.log(`[NotionService] ページステータス更新開始: ${pageId} -> ${status}`);
       
@@ -2285,83 +2285,122 @@ export class NotionService {
         console.warn('[NotionService] ステータスプロパティが見つかりません');
         return false;
       }
-
-      // プロパティタイプとオプションを取得
+      
+      console.log(`[NotionService] ステータスプロパティ発見: "${statusProperty}"`);
+      
+      // ステータスプロパティの詳細情報を取得
       const statusProp = databaseInfo[statusProperty];
-      const statusOptions = statusProp?.type === 'select' ? statusProp.select?.options : 
-                           statusProp?.type === 'status' ? statusProp.status?.options : [];
+      const propertyType = statusProp?.type;
       
-      console.log(`[NotionService] ステータスプロパティタイプ: ${statusProp?.type}`);
-      console.log(`[NotionService] 利用可能な選択肢: [${statusOptions?.map((o: any) => o.name).join(', ') || 'なし'}]`);
+      console.log(`[NotionService] ステータスプロパティタイプ: ${propertyType}`);
       
-      let targetOption = null;
-
-      // ステータスに応じて適切な選択肢を取得
-      switch (status) {
-        case 'pending':
-          targetOption = this.findPendingOption(statusOptions || []);
+      // ステータス値のマッピング（複数言語・形式対応）
+      const statusMapping: { [key: string]: string[] } = {
+        'completed': ['completed', '完了', 'done', 'finished', 'Complete', '完了済み'],
+        'in-progress': ['in-progress', '進行中', 'in progress', 'working', 'doing', '実行中'],
+        'pending': ['pending', '未着手', 'not started', 'todo', '待機中', '開始前'],
+        'failed': ['failed', 'error', 'エラー', '失敗', 'Failed']
+      };
+      
+      // 現在の利用可能なオプションを取得
+      const availableOptions = propertyType === 'select' ? statusProp.select?.options : 
+                              propertyType === 'status' ? statusProp.status?.options : [];
+      
+      console.log(`[NotionService] 利用可能なステータスオプション:`, 
+        availableOptions?.map((opt: any) => opt.name) || 'none');
+      
+      // 最適なステータス値を検索
+      let targetStatusName: string | null = null;
+      const candidateNames = statusMapping[status] || [status];
+      
+      for (const candidate of candidateNames) {
+        const matchingOption = availableOptions?.find((opt: any) => 
+          opt.name === candidate || 
+          opt.name.toLowerCase() === candidate.toLowerCase()
+        );
+        
+        if (matchingOption) {
+          targetStatusName = matchingOption.name;
+          console.log(`[NotionService] ステータス値マッチング成功: "${candidate}" -> "${targetStatusName}"`);
           break;
-        case 'in-progress':
-          targetOption = this.findInProgressOption(statusOptions || []);
-          break;
-        case 'completed':
-          targetOption = this.findCompletedOption(statusOptions || []);
-          break;
-        case 'failed':
-          // 失敗状態の選択肢を探す
-          const failedCandidates = ['失敗', 'Failed', 'Error', 'エラー', '❌'];
-          for (const candidate of failedCandidates) {
-            const option = statusOptions?.find(opt => opt.name === candidate);
-            if (option) {
-              targetOption = option;
-              break;
-            }
-          }
-          break;
+        }
       }
-
-      if (!targetOption) {
-        console.warn(`[NotionService] ${status}に対応するステータス選択肢が見つかりません`);
+      
+      if (!targetStatusName) {
+        // フォールバック: 利用可能なオプションからそれらしいものを検索
+        for (const option of availableOptions || []) {
+          const optionName = option.name.toLowerCase();
+          if (status === 'completed' && (optionName.includes('完了') || optionName.includes('done') || optionName.includes('complete'))) {
+            targetStatusName = option.name;
+            break;
+          } else if (status === 'in-progress' && (optionName.includes('進行') || optionName.includes('progress') || optionName.includes('実行'))) {
+            targetStatusName = option.name;
+            break;
+          } else if (status === 'pending' && (optionName.includes('未着手') || optionName.includes('pending') || optionName.includes('開始前'))) {
+            targetStatusName = option.name;
+            break;
+          }
+        }
+        
+        if (targetStatusName) {
+          console.log(`[NotionService] フォールバック検索成功: "${status}" -> "${targetStatusName}"`);
+        }
+      }
+      
+      if (!targetStatusName) {
+        console.error(`[NotionService] ステータス値が見つかりません: "${status}"`);
+        console.error(`[NotionService] 利用可能オプション:`, availableOptions?.map((opt: any) => opt.name));
         return false;
       }
-
-      // selectとstatusでプロパティ更新方法が異なる
-      const propertyUpdate: any = {};
-      if (statusProp?.type === 'select') {
-        propertyUpdate[statusProperty] = {
+      
+      // プロパティ更新を実行
+      const updateData: any = {
+        properties: {}
+      };
+      
+      if (propertyType === 'select') {
+        updateData.properties[statusProperty] = {
           select: {
-            name: targetOption.name
+            name: targetStatusName
           }
         };
-      } else if (statusProp?.type === 'status') {
-        propertyUpdate[statusProperty] = {
+      } else if (propertyType === 'status') {
+        updateData.properties[statusProperty] = {
           status: {
-            name: targetOption.name
+            name: targetStatusName
           }
         };
+      } else {
+        console.error(`[NotionService] サポートされていないプロパティタイプ: ${propertyType}`);
+        return false;
       }
-
-      console.log(`[NotionService] プロパティ更新内容:`, JSON.stringify(propertyUpdate, null, 2));
-
-      // ページプロパティを更新
+      
+      console.log(`[NotionService] ステータス更新実行:`, JSON.stringify(updateData, null, 2));
+      
+      // Notion APIでページを更新
       await this.notion.pages.update({
         page_id: pageId,
-        properties: propertyUpdate
+        ...updateData
       });
-
-      console.log(`[NotionService] ページステータス更新完了: ${pageId} -> ${targetOption.name}`);
-      return true;
       
-    } catch (error) {
+      console.log(`[NotionService] ✅ ページステータス更新完了: ${pageId} -> ${targetStatusName}`);
+      return true;
+
+    } catch (error: any) {
       console.error(`[NotionService] ページステータス更新エラー (${pageId}):`, error);
+      
+      // 詳細エラー情報
+      if (error?.code) {
+        console.error(`[NotionService] Notion APIエラーコード: ${error.code}`);
+        console.error(`[NotionService] エラーメッセージ: ${error.message}`);
+      }
+      
       return false;
     }
   }
 
-
-
   /**
-   * 統合レポートページを事前作成
+   * 統合レポートページを事前作成（重複防止強化版）
    * @param businessName 事業名
    * @param serviceHypothesis サービス仮説
    * @returns NotionページのID・URL
@@ -2372,6 +2411,20 @@ export class NotionService {
   ): Promise<{ pageId: string; url: string }> {
     try {
       console.log(`[NotionService] 統合レポートページ事前作成開始: ${businessName}`);
+
+      // 🔍 重複チェック: 既存の統合レポートを検索
+      const existingIntegratedReport = await this.findExistingResearchPage(
+        businessName, 
+        '統合調査レポート'
+      );
+      
+      if (existingIntegratedReport) {
+        console.log(`[NotionService] 既存の統合レポート発見、重複作成をスキップ: ${existingIntegratedReport.url}`);
+        return {
+          pageId: existingIntegratedReport.pageId,
+          url: existingIntegratedReport.url
+        };
+      }
 
       // データベース構造を確認
       const databaseInfo = await this.getDatabaseProperties();
@@ -2509,7 +2562,7 @@ export class NotionService {
       const pageId = response.id;
       const url = this.generatePageUrl(pageId);
       
-      console.log(`[NotionService] 統合レポートページ事前作成完了: ${url}`);
+      console.log(`[NotionService] 統合レポートページ事前作成完了（重複防止済み）: ${url}`);
       
       return { pageId, url };
 
@@ -2732,5 +2785,3 @@ export class NotionService {
     }
   }
 }
-
-

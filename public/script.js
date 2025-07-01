@@ -571,24 +571,81 @@ function handleProgressEvent(event) {
 }
 
 // ===== 進行状況の更新 =====
-function updateProgress(event) {
-  appState.currentStep = event.step;
-  appState.totalSteps = event.total;
+function updateProgress(data) {
+  // HTMLに存在する要素IDを使用
+  const progressFill = document.getElementById('progressFill');
+  const progressPercentage = document.getElementById('progressPercentage');
+  const progressCounter = document.getElementById('progressCounter');
+  const estimatedTime = document.getElementById('estimatedTime');
+  const currentPhaseText = document.getElementById('currentPhaseText');
+  const phaseDescription = document.getElementById('phaseDescription');
+  
+  // 基本的な進行状況を計算
+  const percentage = Math.round((data.step / data.total) * 100);
+  const isCompleted = data.step >= data.total;
+  
+  console.log(`[Progress] ステップ ${data.step}/${data.total} (${percentage}%) - ${data.message}`);
   
   // プログレスバーの更新
-  const percentage = Math.round((event.step / event.total) * 100);
-  elements.progressFill.style.width = `${percentage}%`;
-  elements.progressPercentage.textContent = `${percentage}%`;
-  elements.progressCounter.textContent = `${event.step}/${event.total}`;
+  if (progressFill) {
+    progressFill.style.width = `${percentage}%`;
+    
+    // 完了時の色変更
+    if (isCompleted) {
+      progressFill.style.backgroundColor = '#28a745'; // 緑色
+    } else {
+      progressFill.style.backgroundColor = '#4A90C2'; // 青色
+    }
+  }
   
-  // フェーズの更新
-  updatePhaseFromStep(event.step);
+  // パーセント表示の更新
+  if (progressPercentage) {
+    progressPercentage.textContent = `${percentage}%`;
+  }
+  
+  // カウンター表示の更新
+  if (progressCounter) {
+    progressCounter.textContent = `${data.step}/${data.total}`;
+  }
+  
+  // フェーズ情報の更新
+  if (currentPhaseText && phaseDescription) {
+    let phaseInfo = getPhaseInfo(data.step);
+    currentPhaseText.textContent = phaseInfo.title;
+    
+    if (data.type === 'progress' && data.researchType) {
+      const researchIcon = getResearchIcon(data.researchType);
+      phaseDescription.innerHTML = `${researchIcon} ${data.message}`;
+    } else {
+      phaseDescription.textContent = phaseInfo.description;
+    }
+  }
+  
+  // 調査項目の状態更新
+  updateResearchItemsStatus(data.step, data.researchType);
   
   // 時間予測の更新
   updateTimeEstimate();
   
-  // 調査項目の状態更新
-  updateResearchItemsStatus(event.step, event.researchType);
+  // 完了状況の全体管理
+  if (isCompleted && appState.isLoading) {
+    appState.isLoading = false;
+    console.log('[Progress] 全調査完了 - UI状態をリセット');
+    
+    // 完了表示
+    if (estimatedTime) {
+      estimatedTime.textContent = '完了！';
+    }
+    
+    // 完了サマリー表示
+    setTimeout(() => {
+      showCompletionSummary(data);
+    }, 1000);
+  }
+  
+  // アプリケーション状態の更新
+  appState.currentStep = data.step;
+  appState.lastProgressUpdate = new Date();
 }
 
 // ===== フェーズ表示の更新 =====
@@ -1422,40 +1479,81 @@ const TEMPLATE_TEXT = `コンセプト：
 規制・技術前提：
 想定コスト構造：`;
 
-// フィールドマッピング（複数の表記に対応）
+// フィールドマッピング（複数の表記に対応・拡張版）
 const FIELD_MAPPING = {
+    // 基本的なフィールド名
     'コンセプト': 'concept',
+    'Concept': 'concept',
+    'concept': 'concept',
+    
     '解決したい顧客課題': 'customerProblem',
+    '顧客課題': 'customerProblem',
+    'customerProblem': 'customerProblem',
+    'Customer Problem': 'customerProblem',
+    
     '狙っている業種・業界': 'targetIndustry',
+    '業種・業界': 'targetIndustry',
+    '業種': 'targetIndustry',
+    '業界': 'targetIndustry',
+    'targetIndustry': 'targetIndustry',
+    'Target Industry': 'targetIndustry',
+    
     '想定される利用者層': 'targetUsers',
+    '利用者層': 'targetUsers',
+    'targetUsers': 'targetUsers',
+    'Target Users': 'targetUsers',
+    
     '直接競合・間接競合': 'competitors',
     '競合': 'competitors',
+    'competitors': 'competitors',
+    'Competitors': 'competitors',
+    
     '課金モデル': 'revenueModel',
     'revenueModel': 'revenueModel',
+    'Revenue Model': 'revenueModel',
+    
     '価格帯・価格設定の方向性': 'pricingDirection',
     '価格設定': 'pricingDirection',
     '価格戦略': 'pricingDirection',
+    '価格帯': 'pricingDirection',
+    'pricingDirection': 'pricingDirection',
+    'Pricing Direction': 'pricingDirection',
+    
     '暫定UVP（Unique Value Proposition）': 'uvp',
     '暫定UVP': 'uvp',
     'UVP': 'uvp',
+    'uvp': 'uvp',
     '独自価値提案': 'uvp',
+    'Unique Value Proposition': 'uvp',
+    
     '初期KPI': 'initialKpi',
     'KPI': 'initialKpi',
+    'initialKpi': 'initialKpi',
+    'Initial KPI': 'initialKpi',
     '目標指標': 'initialKpi',
+    
     '獲得チャネル仮説': 'acquisitionChannels',
     '獲得チャネル': 'acquisitionChannels',
+    'acquisitionChannels': 'acquisitionChannels',
+    'Acquisition Channels': 'acquisitionChannels',
     'チャネル戦略': 'acquisitionChannels',
+    
     '規制・技術前提': 'regulatoryTechPrereqs',
     '技術前提': 'regulatoryTechPrereqs',
     '規制要件': 'regulatoryTechPrereqs',
+    'regulatoryTechPrereqs': 'regulatoryTechPrereqs',
+    'Regulatory Tech Prerequisites': 'regulatoryTechPrereqs',
+    
     '想定コスト構造': 'costStructure',
     'コスト構造': 'costStructure',
-    'コスト': 'costStructure'
+    'コスト': 'costStructure',
+    'costStructure': 'costStructure',
+    'Cost Structure': 'costStructure'
 };
 
-// フィールド名の正規化関数（強化版）
+// フィールド名の正規化関数（強化版・デバッグ改善）
 function normalizeFieldName(fieldName) {
-  console.log(`[BulkInput] 正規化前: "${fieldName}"`);
+  console.log(`[BulkInput] 🔍 正規化前: "${fieldName}"`);
   
   // 1. 基本のトリム
   let normalized = fieldName.trim();
@@ -1472,8 +1570,16 @@ function normalizeFieldName(fieldName) {
   // 5. 連続する空白を単一の空白に
   normalized = normalized.replace(/\s+/g, ' ').trim();
   
-  console.log(`[BulkInput] 正規化後: "${normalized}"`);
-  console.log(`[BulkInput] マッピング存在確認: ${FIELD_MAPPING[normalized] ? '✅ 存在' : '❌ 不存在'}`);
+  console.log(`[BulkInput] ✨ 正規化後: "${normalized}"`);
+  
+  // 6. フィールドマッピングを確認
+  const mappedField = FIELD_MAPPING[normalized];
+  if (mappedField) {
+    console.log(`[BulkInput] ✅ マッピング発見: "${normalized}" -> "${mappedField}"`);
+  } else {
+    console.log(`[BulkInput] ❌ マッピング未発見: "${normalized}"`);
+    console.log(`[BulkInput] 📋 利用可能なマッピング:`, Object.keys(FIELD_MAPPING));
+  }
   
   return normalized;
 }
@@ -1556,17 +1662,19 @@ function copyTemplate() {
   });
 }
 
-// 一括テキストの解析機能
+// 一括テキストの解析機能（強化版）
 function parseBulkText() {
   const bulkInput = document.getElementById('bulkInput');
   
   if (!bulkInput) {
-    console.error('[BulkInput] bulkInput要素が見つかりません');
+    console.error('[BulkInput] ❌ bulkInput要素が見つかりません');
+    showBulkValidationError('一括入力エリアが見つかりません。ページをリロードしてお試しください。');
     return;
   }
   
   const bulkText = bulkInput.value.trim();
-  console.log('[BulkInput] 入力テキスト:', bulkText);
+  console.log('[BulkInput] 📝 入力テキスト長:', bulkText.length);
+  console.log('[BulkInput] 📝 入力テキスト（最初の200文字）:', bulkText.substring(0, 200));
   
   if (!bulkText) {
     showBulkValidationError('一括入力エリアにテキストを入力してください。');
@@ -1574,38 +1682,77 @@ function parseBulkText() {
   }
   
   try {
+    console.log('[BulkInput] 🚀 解析開始...');
     const parsed = parseTemplateText(bulkText);
     let reflectedCount = 0;
+    const failedFields = [];
+    
+    console.log('[BulkInput] 🔄 フィールド反映開始...');
     
     // 解析結果を個別フィールドに反映
     Object.entries(parsed).forEach(([fieldName, value]) => {
-      console.log(`[BulkInput] フィールド反映試行: ${fieldName} = "${value}"`);
-      const element = document.getElementById(fieldName);
+      console.log(`[BulkInput] 🎯 フィールド反映試行: ${fieldName} = "${value.substring(0, 100)}${value.length > 100 ? '...' : ''}"`);
+      
+      // フィールド要素を検索（複数の方法で試行）
+      let element = document.getElementById(fieldName);
+      
+      if (!element) {
+        // name属性でも検索
+        element = document.querySelector(`[name="${fieldName}"]`);
+      }
+      
+      if (!element) {
+        // data-field属性でも検索
+        element = document.querySelector(`[data-field="${fieldName}"]`);
+      }
+      
       if (element) {
+        const oldValue = element.value;
         element.value = value;
         reflectedCount++;
         console.log(`[BulkInput] ✅ フィールド反映成功: ${fieldName}`);
+        console.log(`[BulkInput] 📝 変更前: "${oldValue.substring(0, 50)}${oldValue.length > 50 ? '...' : ''}"`);
+        console.log(`[BulkInput] 📝 変更後: "${value.substring(0, 50)}${value.length > 50 ? '...' : ''}"`);
+        
+        // 変更イベントを手動で発火（バリデーション等のため）
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+        element.dispatchEvent(new Event('change', { bubbles: true }));
       } else {
         console.warn(`[BulkInput] ❌ フィールド要素が見つかりません: ${fieldName}`);
+        failedFields.push(fieldName);
+        
+        // デバッグ用: 利用可能な要素ID一覧を確認
+        const availableIds = Array.from(document.querySelectorAll('input[id], textarea[id]')).map(el => el.id);
+        console.log(`[BulkInput] 📋 利用可能なフィールドID:`, availableIds);
       }
     });
     
-    console.log(`[BulkInput] 反映完了: ${reflectedCount}件`);
+    console.log(`[BulkInput] 🎉 反映完了: ${reflectedCount}件成功, ${failedFields.length}件失敗`);
     
     if (reflectedCount > 0) {
       // 成功メッセージ
-      showBulkSuccessMessage(`一括入力の解析が完了しました。${reflectedCount}件のフィールドに反映されました。`);
+      let successMessage = `一括入力の解析が完了しました。${reflectedCount}件のフィールドに反映されました。`;
+      if (failedFields.length > 0) {
+        successMessage += `\n\n未反映フィールド (${failedFields.length}件): ${failedFields.join(', ')}`;
+      }
+      showBulkSuccessMessage(successMessage);
+      
+      // フォーカスを最初のフィールドに移動
+      const firstField = document.getElementById('businessName');
+      if (firstField) {
+        firstField.focus();
+      }
     } else {
-      showBulkValidationError('有効なフィールドが見つかりませんでした。テンプレート形式を確認してください。');
+      showBulkValidationError('有効なフィールドが見つかりませんでした。テンプレート形式を確認してください。\n\n利用可能なフィールド名:\n' + Object.keys(FIELD_MAPPING).slice(0, 10).join('\n'));
     }
     
   } catch (error) {
-    console.error('[BulkInput] 解析エラー:', error);
-    showBulkValidationError(`テキストの解析に失敗しました: ${error.message}`);
+    console.error('[BulkInput] ❌ 解析エラー:', error);
+    showBulkValidationError(`テキストの解析に失敗しました: ${error.message}\n\nテンプレート形式を確認してください。`);
   }
 }
 
-// テンプレートテキストの解析（強化版: 複数行リスト対応）
+// テンプレートテキストの解析（強化版: デバッグ改善 + フィールド認識向上）
 function parseTemplateText(text) {
   const lines = text.split('\n');
   const parsed = {};
@@ -1613,22 +1760,22 @@ function parseTemplateText(text) {
   let currentField = null;
   let currentValue = '';
   
-  console.log('[BulkInput] 解析開始 - 総行数:', lines.length);
+  console.log('[BulkInput] 🚀 解析開始 - 総行数:', lines.length);
+  console.log('[BulkInput] 📝 解析対象テキスト（最初の500文字）:', text.substring(0, 500));
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmedLine = line.trim();
     
-    console.log(`[BulkInput] 行${i + 1}: "${line}"`);
+    console.log(`[BulkInput] 📄 行${i + 1}: "${line}"`);
     
     // 空行の場合
     if (!trimmedLine) {
-      console.log(`[BulkInput] 行${i + 1}: 空行をスキップ`);
+      console.log(`[BulkInput] ⏭️ 行${i + 1}: 空行をスキップ`);
       // 空行は、現在のフィールドに既に内容がある場合のみ改行として追加
-      // これにより、フィールド開始直後の空行は無視される
       if (currentField && currentValue.trim()) {
         currentValue += '\n';
-        console.log(`[BulkInput] 行${i + 1}: 改行を追加`);
+        console.log(`[BulkInput] ➕ 行${i + 1}: 改行を追加`);
       }
       continue;
     }
@@ -1642,17 +1789,14 @@ function parseTemplateText(text) {
       const fieldValue = trimmedLine.substring(colonIndex + 1).trim();
       
       // フィールド検出の条件を強化
-      // 1. 行の先頭から始まる（箇条書き記号は除く）
-      // 2. コロンより前の部分が50文字以下
-      // 3. 箇条書き記号（*, -, •）で始まっていない、または知られたフィールド名
       const isListItem = /^[\s]*[*\-•][\s]/.test(trimmedLine);
       const fieldNameLength = fieldName.length;
       
       // フィールド名を正規化
       const normalizedFieldName = normalizeFieldName(fieldName);
       
-      console.log(`[BulkInput] 行${i + 1}: フィールド候補 "${fieldName}" -> 正規化 "${normalizedFieldName}"`);
-      console.log(`[BulkInput] 行${i + 1}: 箇条書き判定=${isListItem}, 文字数=${fieldNameLength}`);
+      console.log(`[BulkInput] 🔎 行${i + 1}: フィールド候補 "${fieldName}" -> 正規化 "${normalizedFieldName}"`);
+      console.log(`[BulkInput] 🔍 行${i + 1}: 箇条書き判定=${isListItem}, 文字数=${fieldNameLength}`);
       
       // FIELD_MAPPINGに存在するかチェック + 箇条書きでない場合のみフィールドとして認識
       const isValidField = FIELD_MAPPING[normalizedFieldName] && (!isListItem || fieldNameLength <= 50);
@@ -1662,7 +1806,7 @@ function parseTemplateText(text) {
         if (currentField && FIELD_MAPPING[currentField]) {
           const finalValue = currentValue.trim();
           parsed[FIELD_MAPPING[currentField]] = finalValue;
-          console.log(`[BulkInput] ✅ フィールド保存: ${currentField} -> ${FIELD_MAPPING[currentField]} = "${finalValue}"`);
+          console.log(`[BulkInput] 💾 フィールド保存: ${currentField} -> ${FIELD_MAPPING[currentField]} = "${finalValue.substring(0, 100)}${finalValue.length > 100 ? '...' : ''}"`);
         }
         
         // 新しいフィールドを開始
@@ -1670,20 +1814,21 @@ function parseTemplateText(text) {
         currentValue = fieldValue; // コロンの後の値から開始
         
         console.log(`[BulkInput] 🆕 新フィールド開始: "${currentField}"`);
+        console.log(`[BulkInput] 📝 初期値: "${fieldValue}"`);
       } else {
-        console.log(`[BulkInput] ⚠️ 未知のフィールド名: "${normalizedFieldName}"`);
+        console.log(`[BulkInput] ⚠️ 未知のフィールド名またはリスト項目: "${normalizedFieldName}"`);
         // 未知のフィールドの場合、継続行として処理
         if (currentField) {
           currentValue += (currentValue ? '\n' : '') + trimmedLine;
-          console.log(`[BulkInput] 継続行として追加: "${trimmedLine}"`);
+          console.log(`[BulkInput] ➕ 継続行として追加: "${trimmedLine}"`);
         }
       }
     } else if (currentField) {
       // 継続行（前のフィールドの続き）
       currentValue += (currentValue ? '\n' : '') + trimmedLine;
-      console.log(`[BulkInput] 行${i + 1}: 継続行として追加 "${trimmedLine}"`);
+      console.log(`[BulkInput] 📝 行${i + 1}: 継続行として追加 "${trimmedLine}"`);
     } else {
-      console.log(`[BulkInput] 行${i + 1}: フィールド未設定のため無視 "${trimmedLine}"`);
+      console.log(`[BulkInput] 🚫 行${i + 1}: フィールド未設定のため無視 "${trimmedLine}"`);
     }
   }
   
@@ -1691,10 +1836,14 @@ function parseTemplateText(text) {
   if (currentField && FIELD_MAPPING[currentField]) {
     const finalValue = currentValue.trim();
     parsed[FIELD_MAPPING[currentField]] = finalValue;
-    console.log(`[BulkInput] ✅ 最終フィールド保存: ${currentField} -> ${FIELD_MAPPING[currentField]} = "${finalValue}"`);
+    console.log(`[BulkInput] 💾 最終フィールド保存: ${currentField} -> ${FIELD_MAPPING[currentField]} = "${finalValue.substring(0, 100)}${finalValue.length > 100 ? '...' : ''}"`);
   }
   
-  console.log('[BulkInput] 🎯 解析結果:', parsed);
+  console.log('[BulkInput] 🎯 解析結果まとめ:');
+  Object.entries(parsed).forEach(([key, value]) => {
+    console.log(`[BulkInput] ✅ ${key}: "${value.substring(0, 100)}${value.length > 100 ? '...' : ''}"`);
+  });
+  
   console.log('[BulkInput] 📋 利用可能フィールド:', Object.keys(FIELD_MAPPING));
   
   return parsed;
@@ -1806,4 +1955,108 @@ function showReconnectionStatus(retryDelay) {
   }, 1000);
   
   console.log(`[App] 再接続カウントダウン開始: ${retrySeconds}秒`);
+}
+
+// 調査種別に応じたアイコンを取得
+function getResearchIcon(researchType) {
+  if (!researchType) return '📊';
+  
+  const iconMap = {
+    '市場規模': '📈',
+    'PESTEL': '🔍',
+    '競合製品': '🏢',
+    '競合経営': '💼',
+    '顧客セグメント': '👥',
+    '顧客感情': '❤️',
+    'プロダクト市場': '🎯',
+    'マーケティング': '📢',
+    'ブランド': '✨',
+    'テクノロジー': '⚙️',
+    'パートナーシップ': '🤝',
+    'リスク': '⚠️',
+    'KPI': '📊',
+    '法務': '⚖️',
+    'リサーチ': '🔬',
+    'PMF': '🚀',
+    '統合': '📋',
+    '初期化': '🔧'
+  };
+  
+  // 部分マッチでアイコンを検索
+  for (const [key, icon] of Object.entries(iconMap)) {
+    if (researchType.includes(key)) {
+      return icon;
+    }
+  }
+  
+  return '📊'; // デフォルト
+}
+
+// 完了サマリー表示（強化版）
+function showCompletionSummary(data) {
+  const endTime = new Date();
+  const duration = appState.startTime ? 
+    Math.round((endTime - appState.startTime) / 1000 / 60) : null;
+  
+  console.log('[App] 調査完了サマリー表示');
+  
+  // 結果セクションに切り替え
+  setTimeout(() => {
+    const progressSection = document.getElementById('progressSection');
+    const resultSection = document.getElementById('resultSection');
+    const resultTitle = document.getElementById('resultTitle');
+    const resultDescription = document.getElementById('resultDescription');
+    
+    if (progressSection) progressSection.classList.add('hidden');
+    if (resultSection) resultSection.classList.remove('hidden');
+    
+    // タイトルと説明を更新
+    if (resultTitle) {
+      resultTitle.innerHTML = `
+        <i class="fas fa-trophy me-2"></i>🎉 市場調査が正常に完了しました！
+      `;
+    }
+    
+    if (resultDescription) {
+      let description = `16種類の専門調査と統合レポートが正常に生成されました。`;
+      if (duration) {
+        description += ` 所要時間: 約${duration}分`;
+      }
+      description += ` 詳細な結果をNotionページでご確認ください。`;
+      resultDescription.textContent = description;
+    }
+    
+    // Notionリンクを設定
+    const notionLink = document.getElementById('notionLink');
+    if (notionLink && appState.notionUrl) {
+      notionLink.href = appState.notionUrl;
+      notionLink.style.display = 'flex';
+    }
+    
+    // スクロール
+    if (resultSection) {
+      resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    
+  }, 500);
+}
+
+// フェーズ情報を取得
+function getPhaseInfo(step) {
+  if (step <= 3) {
+    return {
+      title: 'Phase 1: 事前作成フェーズ',
+      description: '16種類の調査項目をNotionに事前作成し、進行状況の可視化を準備しています'
+    };
+  } else if (step <= 19) {
+    return {
+      title: 'Phase 2: 調査実行フェーズ',
+      description: '16種類の専門的な市場調査を順次実行中です'
+    };
+  } else {
+    return {
+      title: 'Phase 3: 統合レポート生成',
+      description: '全調査結果を統合した包括的なレポートを生成中です'
+    };
+  }
 } 

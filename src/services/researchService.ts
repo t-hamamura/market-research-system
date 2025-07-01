@@ -372,7 +372,7 @@ export class ResearchService {
                 const statusUpdateSuccess = await this.notionService.updatePageStatus(pageInfo.pageId, 'completed');
                 
                 if (!statusUpdateSuccess) {
-                  console.warn(`[ResearchService] ステータス更新失敗（調査は継続）: ${prompt.title}`);
+                  console.warn(`[ResearchService] ステータス更新に失敗: ${prompt.title}`);
                 }
               } else {
                 console.warn(`[ResearchService] コンテンツ更新失敗（調査は継続）: ${prompt.title}`);
