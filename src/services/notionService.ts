@@ -431,7 +431,7 @@ export class NotionService {
   }
 
   /**
-   * マークダウンテキストをNotionブロックに変換（装飾対応強化版）
+   * マークダウンテキストをNotionブロックに変換（Notion API仕様準拠版）
    * @param text マークダウンテキスト
    * @returns Notionブロック配列
    */
@@ -441,20 +441,24 @@ export class NotionService {
     }
 
     const blocks: any[] = [];
-    const lines = text.split('\n').filter(line => line.trim() !== '');
+    const lines = text.split('\n');
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const trimmedLine = line.trim();
 
-      // 🎨 見出し1 (# または ## または ### または ####)
-      if (trimmedLine.match(/^#{1,4}\s+/)) {
+      // 空行はスキップ
+      if (trimmedLine === '') {
+        continue;
+      }
+
+      // 🎨 見出し1-3 (Notionは3レベルまで対応)
+      if (trimmedLine.match(/^#{1,3}\s+/)) {
         const level = (trimmedLine.match(/^#+/) || [''])[0].length;
         const text = trimmedLine.replace(/^#+\s+/, '').trim();
         
         const headingType = level === 1 ? 'heading_1' : 
-                           level === 2 ? 'heading_2' : 
-                           level === 3 ? 'heading_3' : 'heading_3';
+                           level === 2 ? 'heading_2' : 'heading_3';
         
         blocks.push({
           object: 'block',
@@ -466,56 +470,69 @@ export class NotionService {
                 text: { content: text },
                 annotations: {
                   bold: true,
-                  color: 'blue'
+                  color: level === 1 ? 'blue' : level === 2 ? 'purple' : 'green'
                 }
               }
-            ]
+            ],
+            is_toggleable: false
           }
         });
         continue;
       }
 
-      // 🎨 箇条書き (- や * や •)
-      if (trimmedLine.match(/^[\-\*\•]\s+/)) {
-        const text = trimmedLine.replace(/^[\-\*\•]\s+/, '').trim();
+      // 🎨 Calloutブロック (> で始まり、重要な情報を強調)
+      if (trimmedLine.match(/^>\s*[\*\!]?\s*/)) {
+        const content = trimmedLine.replace(/^>\s*[\*\!]?\s*/, '').trim();
+        const isWarning = trimmedLine.includes('!');
+        const isImportant = trimmedLine.includes('*');
+        
         blocks.push({
           object: 'block',
-          type: 'bulleted_list_item',
-          bulleted_list_item: {
-            rich_text: this.parseRichText(text)
+          type: 'callout',
+          callout: {
+            rich_text: this.parseRichText(content),
+            icon: {
+              type: 'emoji',
+              emoji: isWarning ? '⚠️' : isImportant ? '💡' : '📝'
+            },
+            color: isWarning ? 'red_background' : isImportant ? 'yellow_background' : 'blue_background'
           }
         });
         continue;
       }
 
-      // 🎨 番号付きリスト (1. や 2. など)
+      // 🎨 番号付きリスト
       if (trimmedLine.match(/^\d+\.\s+/)) {
         const text = trimmedLine.replace(/^\d+\.\s+/, '').trim();
         blocks.push({
           object: 'block',
           type: 'numbered_list_item',
           numbered_list_item: {
-            rich_text: this.parseRichText(text)
+            rich_text: this.parseRichText(text),
+            color: 'default'
           }
         });
         continue;
       }
 
-      // 🎨 引用 (> で始まる)
-      if (trimmedLine.startsWith('>')) {
-        const text = trimmedLine.replace(/^>\s*/, '').trim();
+      // 🎨 箇条書きリスト
+      if (trimmedLine.match(/^[\-\*\•]\s+/)) {
+        const text = trimmedLine.replace(/^[\-\*\•]\s+/, '').trim();
         blocks.push({
           object: 'block',
-          type: 'quote',
-          quote: {
-            rich_text: this.parseRichText(text)
+          type: 'bulleted_list_item',
+          bulleted_list_item: {
+            rich_text: this.parseRichText(text),
+            color: 'default'
           }
         });
         continue;
       }
 
-      // 🎨 コードブロック (``` で囲まれた部分)
+      // 🎨 コードブロック (言語検出付き)
       if (trimmedLine.startsWith('```')) {
+        const languageMatch = trimmedLine.match(/^```(\w+)?/);
+        const language = languageMatch?.[1] || 'plain_text';
         const codeLines = [];
         i++; // 次の行から開始
         
@@ -525,24 +542,65 @@ export class NotionService {
         }
         
         if (codeLines.length > 0) {
-          blocks.push({
-            object: 'block',
-            type: 'code',
-            code: {
-              language: 'plain_text',
-              rich_text: [
-                {
-                  type: 'text',
-                  text: { content: codeLines.join('\n') }
+          // コードブロックを安全な長さに分割
+          const codeContent = codeLines.join('\n');
+          const maxCodeLength = 1500; // Notionの制限を考慮
+          
+          if (codeContent.length > maxCodeLength) {
+            // 長いコードは複数のブロックに分割
+            const codeChunks = this.splitCodeIntoChunks(codeContent, maxCodeLength);
+            codeChunks.forEach((chunk, index) => {
+              blocks.push({
+                object: 'block',
+                type: 'code',
+                code: {
+                  language: this.mapToNotionLanguage(language),
+                  rich_text: [
+                    {
+                      type: 'text',
+                      text: { content: chunk }
+                    }
+                  ]
                 }
-              ]
-            }
-          });
+              });
+              
+              if (index < codeChunks.length - 1) {
+                // 継続を示すコメント
+                blocks.push({
+                  object: 'block',
+                  type: 'paragraph',
+                  paragraph: {
+                    rich_text: [
+                      {
+                        type: 'text',
+                        text: { content: '（コード続き...）' },
+                        annotations: { italic: true, color: 'gray' }
+                      }
+                    ]
+                  }
+                });
+              }
+            });
+          } else {
+            blocks.push({
+              object: 'block',
+              type: 'code',
+              code: {
+                language: this.mapToNotionLanguage(language),
+                rich_text: [
+                  {
+                    type: 'text',
+                    text: { content: codeContent }
+                  }
+                ]
+              }
+            });
+          }
         }
         continue;
       }
 
-      // 🎨 区切り線 (--- や *** など)
+      // 🎨 区切り線
       if (trimmedLine.match(/^[\-\*]{3,}$/)) {
         blocks.push({
           object: 'block',
@@ -552,39 +610,89 @@ export class NotionService {
         continue;
       }
 
-      // 🎨 表の検出（| で区切られた行）
+      // 🎨 表の検出と構築（Notion API準拠）
       if (trimmedLine.includes('|') && trimmedLine.split('|').length >= 3) {
-        const tableData = this.parseTableData(lines, i);
+        const tableData = this.parseEnhancedTableData(lines, i);
         if (tableData.rows.length > 0) {
-          blocks.push({
+          // Notionテーブルの正確な構造
+          const tableBlock = {
             object: 'block',
             type: 'table',
             table: {
               table_width: tableData.columns,
-              has_column_header: true,
+              has_column_header: tableData.hasHeader,
               has_row_header: false,
-              children: tableData.rows.map((row, index) => ({
+              children: tableData.rows.map((row, rowIndex) => ({
                 object: 'block',
                 type: 'table_row',
                 table_row: {
-                  cells: row.map(cell => [
-                    {
-                      type: 'text',
-                      text: { content: cell.trim() },
-                      annotations: index === 0 ? { bold: true } : {}
-                    }
-                  ])
+                  cells: row.map((cell, cellIndex) => {
+                    const isHeader = rowIndex === 0 && tableData.hasHeader;
+                    return [
+                      {
+                        type: 'text',
+                        text: { content: cell.trim() },
+                        annotations: {
+                          bold: isHeader,
+                          color: isHeader ? 'blue' : 'default'
+                        }
+                      }
+                    ];
+                  })
+                }
+              }))
+            }
+          };
+          
+          blocks.push(tableBlock);
+          i += tableData.lineCount - 1;
+          continue;
+        }
+      }
+
+      // 🎨 Toggleブロック（長いコンテンツ用）
+      if (trimmedLine.match(/^### .+$/)) {
+        const title = trimmedLine.replace(/^### /, '').trim();
+        
+        // 次の見出しまでの内容を収集
+        const toggleContent = [];
+        let j = i + 1;
+        
+        while (j < lines.length && !lines[j].trim().match(/^#{1,3}\s/)) {
+          if (lines[j].trim()) {
+            toggleContent.push(lines[j].trim());
+          }
+          j++;
+        }
+        
+        if (toggleContent.length > 0) {
+          blocks.push({
+            object: 'block',
+            type: 'toggle',
+            toggle: {
+              rich_text: [
+                {
+                  type: 'text',
+                  text: { content: title },
+                  annotations: { bold: true, color: 'green' }
+                }
+              ],
+              children: toggleContent.map(content => ({
+                object: 'block',
+                type: 'paragraph',
+                paragraph: {
+                  rich_text: this.parseRichText(content)
                 }
               }))
             }
           });
           
-          i += tableData.lineCount - 1; // テーブル処理した行数分スキップ
+          i = j - 1; // ループの最後でi++されるため
           continue;
         }
       }
 
-      // 🎨 通常の段落（太字・斜体・リンク対応）
+      // 🎨 通常の段落（強化されたリッチテキスト対応）
       if (trimmedLine.length > 0) {
         blocks.push({
           object: 'block',
@@ -600,124 +708,381 @@ export class NotionService {
   }
 
   /**
-   * リッチテキスト解析（太字・斜体・リンク対応）
+   * コンテンツを安全なチャンクに分割
+   * @param content コンテンツ
+   * @param maxLength 最大長
+   * @returns チャンク配列
+   */
+  private splitCodeIntoChunks(content: string, maxLength: number): string[] {
+    const chunks: string[] = [];
+    let currentChunk = '';
+    const lines = content.split('\n');
+    
+    for (const line of lines) {
+      if (currentChunk.length + line.length + 1 > maxLength) {
+        if (currentChunk) {
+          chunks.push(currentChunk);
+          currentChunk = '';
+        }
+        
+        // 行自体が長すぎる場合は強制分割
+        if (line.length > maxLength) {
+          let remaining = line;
+          while (remaining.length > maxLength) {
+            chunks.push(remaining.substring(0, maxLength));
+            remaining = remaining.substring(maxLength);
+          }
+          currentChunk = remaining;
+        } else {
+          currentChunk = line;
+        }
+      } else {
+        currentChunk += (currentChunk ? '\n' : '') + line;
+      }
+    }
+    
+    if (currentChunk) {
+      chunks.push(currentChunk);
+    }
+    
+    return chunks;
+  }
+
+  /**
+   * 言語名をNotion対応形式にマッピング
+   * @param language 言語名
+   * @returns Notion対応言語名
+   */
+  private mapToNotionLanguage(language: string): string {
+    const languageMap: { [key: string]: string } = {
+      'js': 'javascript',
+      'ts': 'typescript',
+      'py': 'python',
+      'rb': 'ruby',
+      'go': 'go',
+      'rust': 'rust',
+      'cpp': 'c++',
+      'c++': 'c++',
+      'java': 'java',
+      'php': 'php',
+      'sql': 'sql',
+      'html': 'html',
+      'css': 'css',
+      'json': 'json',
+      'yaml': 'yaml',
+      'yml': 'yaml',
+      'xml': 'xml',
+      'bash': 'bash',
+      'shell': 'bash',
+      'sh': 'bash',
+      'powershell': 'powershell',
+      'dockerfile': 'docker',
+      'markdown': 'markdown',
+      'md': 'markdown'
+    };
+    
+    return languageMap[language.toLowerCase()] || 'plain_text';
+  }
+
+  /**
+   * 強化されたテーブルデータ解析
+   * @param lines 全行配列
+   * @param startIndex 開始インデックス
+   * @returns 強化されたテーブルデータ
+   */
+  private parseEnhancedTableData(lines: string[], startIndex: number): { 
+    rows: string[][], 
+    columns: number, 
+    lineCount: number,
+    hasHeader: boolean 
+  } {
+    const tableRows: string[][] = [];
+    let currentIndex = startIndex;
+    let maxColumns = 0;
+    let hasHeader = false;
+    
+    while (currentIndex < lines.length) {
+      const line = lines[currentIndex].trim();
+      
+      if (!line.includes('|')) {
+        break; // 表の終了
+      }
+      
+      // ヘッダー区切り行の検出（|---|---|のような行）
+      if (line.match(/^\|[\s\-\|:]+\|$/)) {
+        hasHeader = true;
+        currentIndex++;
+        continue;
+      }
+      
+      // セルの解析（前後の | を除去）
+      let cells = line.split('|');
+      
+      // 先頭と末尾の空セルを除去
+      if (cells[0].trim() === '') cells.shift();
+      if (cells.length > 0 && cells[cells.length - 1].trim() === '') cells.pop();
+      
+      // セルをクリーンアップ
+      cells = cells.map(cell => cell.trim());
+      
+      if (cells.length > 0) {
+        tableRows.push(cells);
+        maxColumns = Math.max(maxColumns, cells.length);
+      }
+      
+      currentIndex++;
+    }
+    
+    // ヘッダー区切り行がなくても、最初の行が明らかにヘッダーっぽい場合
+    if (!hasHeader && tableRows.length > 1) {
+      const firstRow = tableRows[0];
+      const secondRow = tableRows[1];
+      
+      // 最初の行が全て文字で、2行目に数字が含まれている場合はヘッダーとみなす
+      const firstRowHasNumbers = firstRow.some(cell => /\d/.test(cell));
+      const secondRowHasNumbers = secondRow.some(cell => /\d/.test(cell));
+      
+      if (!firstRowHasNumbers && secondRowHasNumbers) {
+        hasHeader = true;
+      }
+    }
+    
+    return {
+      rows: tableRows,
+      columns: maxColumns,
+      lineCount: currentIndex - startIndex,
+      hasHeader: hasHeader
+    };
+  }
+
+  /**
+   * リッチテキスト解析（Notion API仕様準拠強化版）
    * @param text テキスト
    * @returns リッチテキスト配列
    */
   private parseRichText(text: string): any[] {
+    if (!text || typeof text !== 'string') {
+      return [{ type: 'text', text: { content: '' } }];
+    }
+
+    // 安全な長さに切り詰め
+    const safeText = this.truncateTextSafely(text);
     const richTextElements: any[] = [];
-    let currentText = text;
     
-    // URLパターンの検出とリンク化
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const urlMatches = currentText.match(urlRegex);
-    
-    if (urlMatches) {
-      const parts = currentText.split(urlRegex);
+    // 複雑なパターンマッチングで装飾を解析
+    const patterns = [
+      // **太字**
+      { regex: /\*\*([^*\n]+?)\*\*/g, type: 'bold' },
+      // *斜体*（**と重複しないように）
+      { regex: /(?<!\*)\*([^*\n]+?)\*(?!\*)/g, type: 'italic' },
+      // `インラインコード`
+      { regex: /`([^`\n]+?)`/g, type: 'code' },
+      // [リンクテキスト](URL)
+      { regex: /\[([^\]]+?)\]\(([^)]+?)\)/g, type: 'link' },
+      // ~~取り消し線~~
+      { regex: /~~([^~\n]+?)~~/g, type: 'strikethrough' },
+      // <u>下線</u>
+      { regex: /<u>([^<]+?)<\/u>/g, type: 'underline' },
+      // URL自動検出
+      { regex: /(https?:\/\/[^\s<>\[\]]+)/g, type: 'auto_link' }
+    ];
+
+    let workingText = safeText;
+    const annotations: Array<{
+      start: number,
+      end: number,
+      type: string,
+      content?: string,
+      url?: string,
+      originalLength: number
+    }> = [];
+
+    // 各パターンをマッチング
+    for (const pattern of patterns) {
+      let match;
+      const tempRegex = new RegExp(pattern.regex.source, pattern.regex.flags);
       
-      for (const part of parts) {
-        if (urlMatches.includes(part)) {
-          // URLの場合はリンクとして処理
-          richTextElements.push({
-            type: 'text',
-            text: { content: part, link: { url: part } },
-            annotations: { color: 'blue' }
+      while ((match = tempRegex.exec(workingText)) !== null) {
+        if (pattern.type === 'link') {
+          annotations.push({
+            start: match.index,
+            end: match.index + match[0].length,
+            type: pattern.type,
+            content: match[1], // リンクテキスト
+            url: match[2], // URL
+            originalLength: match[0].length
           });
-        } else if (part.trim()) {
-          // 通常テキストの場合は太字・斜体処理
-          richTextElements.push(...this.parseTextAnnotations(part));
+        } else if (pattern.type === 'auto_link') {
+          annotations.push({
+            start: match.index,
+            end: match.index + match[0].length,
+            type: pattern.type,
+            content: match[1], // URL自体
+            url: match[1], // URL
+            originalLength: match[0].length
+          });
+        } else {
+          annotations.push({
+            start: match.index,
+            end: match.index + match[0].length,
+            type: pattern.type,
+            content: match[1], // 装飾されたテキスト
+            originalLength: match[0].length
+          });
         }
       }
-    } else {
-      // URLがない場合は通常の太字・斜体処理
-      richTextElements.push(...this.parseTextAnnotations(currentText));
     }
+
+    // アノテーションを開始位置でソート
+    annotations.sort((a, b) => a.start - b.start);
+
+    // 重複や入れ子を解決
+    const resolvedAnnotations = this.resolveOverlappingAnnotations(annotations);
+
+    if (resolvedAnnotations.length === 0) {
+      // 装飾なしの通常テキスト
+      return [
+        {
+          type: 'text',
+          text: { content: safeText },
+          annotations: { color: 'default' }
+        }
+      ];
+    }
+
+    // リッチテキスト要素を構築
+    let lastIndex = 0;
     
+    for (const annotation of resolvedAnnotations) {
+      // 前の部分（通常テキスト）
+      if (annotation.start > lastIndex) {
+        const beforeText = workingText.substring(lastIndex, annotation.start);
+        if (beforeText) {
+          richTextElements.push({
+            type: 'text',
+            text: { content: beforeText },
+            annotations: { color: 'default' }
+          });
+        }
+      }
+
+      // 装飾された部分
+      const richTextElement: any = {
+        type: 'text',
+        text: { content: annotation.content || '' },
+        annotations: this.createAnnotations(annotation.type)
+      };
+
+      // リンクの場合はURL情報を追加
+      if (annotation.type === 'link' || annotation.type === 'auto_link') {
+        richTextElement.text.link = { url: annotation.url };
+      }
+
+      richTextElements.push(richTextElement);
+      lastIndex = annotation.end;
+    }
+
+    // 残りの部分
+    if (lastIndex < workingText.length) {
+      const remainingText = workingText.substring(lastIndex);
+      if (remainingText) {
+        richTextElements.push({
+          type: 'text',
+          text: { content: remainingText },
+          annotations: { color: 'default' }
+        });
+      }
+    }
+
     return richTextElements.length > 0 ? richTextElements : [
       {
         type: 'text',
-        text: { content: text }
+        text: { content: safeText },
+        annotations: { color: 'default' }
       }
     ];
   }
 
   /**
-   * テキストアノテーション解析（太字・斜体）
-   * @param text テキスト
-   * @returns リッチテキスト要素配列
+   * 重複するアノテーションを解決
+   * @param annotations アノテーション配列
+   * @returns 解決済みアノテーション配列
    */
-  private parseTextAnnotations(text: string): any[] {
-    // **太字** と *斜体* の処理
-    const boldRegex = /\*\*(.*?)\*\*/g;
-    const italicRegex = /\*(.*?)\*/g;
-    
-    let processedText = text;
-    const annotations: any[] = [];
-    
-    // 太字の処理
-    let match;
-    while ((match = boldRegex.exec(text)) !== null) {
-      annotations.push({
-        start: match.index,
-        end: match.index + match[0].length,
-        type: 'bold',
-        content: match[1]
-      });
-    }
-    
-    // 斜体の処理（太字と重複しない部分のみ）
-    const italicMatches = text.match(italicRegex);
-    if (italicMatches) {
-      // 簡単な実装：アノテーションが複雑になるため、基本的な太字のみ対応
-    }
-    
-    if (annotations.length > 0) {
-      // アノテーション付きテキストとして処理
-      const parts = [];
-      let lastIndex = 0;
-      
-      for (const annotation of annotations) {
-        // 前の部分（通常テキスト）
-        if (annotation.start > lastIndex) {
-          const beforeText = text.substring(lastIndex, annotation.start);
-          if (beforeText) {
-            parts.push({
-              type: 'text',
-              text: { content: beforeText }
-            });
-          }
-        }
-        
-        // アノテーション部分
-        parts.push({
-          type: 'text',
-          text: { content: annotation.content },
-          annotations: { bold: annotation.type === 'bold' }
-        });
-        
-        lastIndex = annotation.end;
-      }
-      
-      // 残りの部分
-      if (lastIndex < text.length) {
-        const remainingText = text.substring(lastIndex);
-        if (remainingText) {
-          parts.push({
-            type: 'text',
-            text: { content: remainingText }
-          });
+  private resolveOverlappingAnnotations(annotations: Array<{
+    start: number,
+    end: number,
+    type: string,
+    content?: string,
+    url?: string,
+    originalLength: number
+  }>): Array<{
+    start: number,
+    end: number,
+    type: string,
+    content?: string,
+    url?: string,
+    originalLength: number
+  }> {
+    if (annotations.length <= 1) return annotations;
+
+    const resolved: typeof annotations = [];
+    let current = annotations[0];
+
+    for (let i = 1; i < annotations.length; i++) {
+      const next = annotations[i];
+
+      // 重複がない場合
+      if (current.end <= next.start) {
+        resolved.push(current);
+        current = next;
+      } else {
+        // 重複がある場合は、より外側（長い）アノテーションを優先
+        if (current.originalLength >= next.originalLength) {
+          // currentを保持
+          continue;
+        } else {
+          // nextを優先
+          current = next;
         }
       }
-      
-      return parts;
     }
-    
-    return [
-      {
-        type: 'text',
-        text: { content: text }
-      }
-    ];
+
+    resolved.push(current);
+    return resolved;
+  }
+
+  /**
+   * アノテーションタイプに基づいてNotionのアノテーションオブジェクトを作成
+   * @param type アノテーションタイプ
+   * @returns Notionアノテーション
+   */
+  private createAnnotations(type: string): any {
+    const baseAnnotations = {
+      bold: false,
+      italic: false,
+      strikethrough: false,
+      underline: false,
+      code: false,
+      color: 'default' as const
+    };
+
+    switch (type) {
+      case 'bold':
+        return { ...baseAnnotations, bold: true, color: 'default' };
+      case 'italic':
+        return { ...baseAnnotations, italic: true, color: 'default' };
+      case 'code':
+        return { ...baseAnnotations, code: true, color: 'red' };
+      case 'strikethrough':
+        return { ...baseAnnotations, strikethrough: true, color: 'gray' };
+      case 'underline':
+        return { ...baseAnnotations, underline: true, color: 'default' };
+      case 'link':
+      case 'auto_link':
+        return { ...baseAnnotations, color: 'blue' };
+      default:
+        return baseAnnotations;
+    }
   }
 
   /**
