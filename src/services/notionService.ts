@@ -431,7 +431,26 @@ export class NotionService {
   }
 
   /**
-   * マークダウンテキストをNotionブロックに変換（Notion API仕様準拠版）
+   * 許可されたNotionカラーに制限
+   * @param color 元のカラー
+   * @param isBackground 背景色かどうか
+   * @returns 制限されたカラー
+   */
+  private restrictColor(color: string, isBackground: boolean = false): string {
+    if (isBackground) {
+      // 背景色は黄色のみ許可
+      return 'yellow_background';
+    } else {
+      // テキスト色は規定と赤色のみ許可
+      if (color === 'red') {
+        return 'red';
+      }
+      return 'default';
+    }
+  }
+
+  /**
+   * マークダウンテキストをNotionブロックに変換（装飾制限対応版）
    * @param text マークダウンテキスト
    * @returns Notionブロック配列
    */
@@ -452,13 +471,17 @@ export class NotionService {
         continue;
       }
 
-      // 🎨 見出し1-3 (Notionは3レベルまで対応)
+      // 🎨 見出し1-3 (制限カラー適用)
       if (trimmedLine.match(/^#{1,3}\s+/)) {
         const level = (trimmedLine.match(/^#+/) || [''])[0].length;
         const text = trimmedLine.replace(/^#+\s+/, '').trim();
         
         const headingType = level === 1 ? 'heading_1' : 
                            level === 2 ? 'heading_2' : 'heading_3';
+        
+        // 見出しレベルに応じた色を制限適用
+        const originalColor = level === 1 ? 'blue' : level === 2 ? 'purple' : 'green';
+        const restrictedColor = this.restrictColor(originalColor);
         
         blocks.push({
           object: 'block',
@@ -470,7 +493,7 @@ export class NotionService {
                 text: { content: text },
                 annotations: {
                   bold: true,
-                  color: level === 1 ? 'blue' : level === 2 ? 'purple' : 'green'
+                  color: restrictedColor
                 }
               }
             ],
@@ -480,7 +503,7 @@ export class NotionService {
         continue;
       }
 
-      // 🎨 Calloutブロック (> で始まり、重要な情報を強調)
+      // 🎨 Calloutブロック (制限カラー適用)
       if (trimmedLine.match(/^>\s*[\*\!]?\s*/)) {
         const content = trimmedLine.replace(/^>\s*[\*\!]?\s*/, '').trim();
         const isWarning = trimmedLine.includes('!');
@@ -495,13 +518,14 @@ export class NotionService {
               type: 'emoji',
               emoji: isWarning ? '⚠️' : isImportant ? '💡' : '📝'
             },
-            color: isWarning ? 'red_background' : isImportant ? 'yellow_background' : 'blue_background'
+            // 背景色は黄色のみ使用
+            color: this.restrictColor('', true)
           }
         });
         continue;
       }
 
-      // 🎨 番号付きリスト
+      // 🎨 番号付きリスト (制限カラー適用)
       if (trimmedLine.match(/^\d+\.\s+/)) {
         const text = trimmedLine.replace(/^\d+\.\s+/, '').trim();
         blocks.push({
@@ -509,13 +533,13 @@ export class NotionService {
           type: 'numbered_list_item',
           numbered_list_item: {
             rich_text: this.parseRichText(text),
-            color: 'default'
+            color: this.restrictColor('default')
           }
         });
         continue;
       }
 
-      // 🎨 箇条書きリスト
+      // 🎨 箇条書きリスト (制限カラー適用)
       if (trimmedLine.match(/^[\-\*\•]\s+/)) {
         const text = trimmedLine.replace(/^[\-\*\•]\s+/, '').trim();
         blocks.push({
@@ -523,13 +547,13 @@ export class NotionService {
           type: 'bulleted_list_item',
           bulleted_list_item: {
             rich_text: this.parseRichText(text),
-            color: 'default'
+            color: this.restrictColor('default')
           }
         });
         continue;
       }
 
-      // 🎨 コードブロック (言語検出付き)
+      // 🎨 コードブロック (言語検出付き、制限カラー適用)
       if (trimmedLine.startsWith('```')) {
         const languageMatch = trimmedLine.match(/^```(\w+)?/);
         const language = languageMatch?.[1] || 'plain_text';
@@ -565,7 +589,7 @@ export class NotionService {
               });
               
               if (index < codeChunks.length - 1) {
-                // 継続を示すコメント
+                // 継続を示すコメント（制限カラー適用）
                 blocks.push({
                   object: 'block',
                   type: 'paragraph',
@@ -574,7 +598,10 @@ export class NotionService {
                       {
                         type: 'text',
                         text: { content: '（コード続き...）' },
-                        annotations: { italic: true, color: 'gray' }
+                        annotations: { 
+                          italic: true, 
+                          color: this.restrictColor('gray') 
+                        }
                       }
                     ]
                   }
@@ -610,11 +637,11 @@ export class NotionService {
         continue;
       }
 
-      // 🎨 表の検出と構築（Notion API準拠）
+      // 🎨 表の検出と構築（制限カラー適用）
       if (trimmedLine.includes('|') && trimmedLine.split('|').length >= 3) {
         const tableData = this.parseEnhancedTableData(lines, i);
         if (tableData.rows.length > 0) {
-          // Notionテーブルの正確な構造
+          // Notionテーブルの正確な構造（制限カラー適用）
           const tableBlock = {
             object: 'block',
             type: 'table',
@@ -634,7 +661,7 @@ export class NotionService {
                         text: { content: cell.trim() },
                         annotations: {
                           bold: isHeader,
-                          color: isHeader ? 'blue' : 'default'
+                          color: isHeader ? this.restrictColor('blue') : this.restrictColor('default')
                         }
                       }
                     ];
@@ -650,7 +677,7 @@ export class NotionService {
         }
       }
 
-      // 🎨 Toggleブロック（長いコンテンツ用）
+      // 🎨 Toggleブロック（制限カラー適用）
       if (trimmedLine.match(/^### .+$/)) {
         const title = trimmedLine.replace(/^### /, '').trim();
         
@@ -674,7 +701,10 @@ export class NotionService {
                 {
                   type: 'text',
                   text: { content: title },
-                  annotations: { bold: true, color: 'green' }
+                  annotations: { 
+                    bold: true, 
+                    color: this.restrictColor('green')
+                  }
                 }
               ],
               children: toggleContent.map(content => ({
@@ -692,7 +722,7 @@ export class NotionService {
         }
       }
 
-      // 🎨 通常の段落（強化されたリッチテキスト対応）
+      // 🎨 通常の段落（制限カラー適用）
       if (trimmedLine.length > 0) {
         blocks.push({
           object: 'block',
@@ -856,13 +886,47 @@ export class NotionService {
   }
 
   /**
-   * リッチテキスト解析（Notion API仕様準拠強化版）
+   * アノテーションタイプに基づいてNotionのアノテーションオブジェクトを作成（色制限版）
+   * @param type アノテーションタイプ
+   * @returns Notionアノテーション
+   */
+  private createAnnotations(type: string): any {
+    const baseAnnotations = {
+      bold: false,
+      italic: false,
+      strikethrough: false,
+      underline: false,
+      code: false,
+      color: 'default' as const
+    };
+
+    switch (type) {
+      case 'bold':
+        return { ...baseAnnotations, bold: true, color: this.restrictColor('default') };
+      case 'italic':
+        return { ...baseAnnotations, italic: true, color: this.restrictColor('default') };
+      case 'code':
+        return { ...baseAnnotations, code: true, color: this.restrictColor('red') };
+      case 'strikethrough':
+        return { ...baseAnnotations, strikethrough: true, color: this.restrictColor('default') };
+      case 'underline':
+        return { ...baseAnnotations, underline: true, color: this.restrictColor('default') };
+      case 'link':
+      case 'auto_link':
+        return { ...baseAnnotations, color: this.restrictColor('red') };
+      default:
+        return { ...baseAnnotations, color: this.restrictColor('default') };
+    }
+  }
+
+  /**
+   * リッチテキスト解析（色制限対応強化版）
    * @param text テキスト
    * @returns リッチテキスト配列
    */
   private parseRichText(text: string): any[] {
     if (!text || typeof text !== 'string') {
-      return [{ type: 'text', text: { content: '' } }];
+      return [{ type: 'text', text: { content: '' }, annotations: { color: this.restrictColor('default') } }];
     }
 
     // 安全な長さに切り詰め
@@ -940,12 +1004,12 @@ export class NotionService {
     const resolvedAnnotations = this.resolveOverlappingAnnotations(annotations);
 
     if (resolvedAnnotations.length === 0) {
-      // 装飾なしの通常テキスト
+      // 装飾なしの通常テキスト（色制限適用）
       return [
         {
           type: 'text',
           text: { content: safeText },
-          annotations: { color: 'default' }
+          annotations: { color: this.restrictColor('default') }
         }
       ];
     }
@@ -961,7 +1025,7 @@ export class NotionService {
           richTextElements.push({
             type: 'text',
             text: { content: beforeText },
-            annotations: { color: 'default' }
+            annotations: { color: this.restrictColor('default') }
           });
         }
       }
@@ -989,7 +1053,7 @@ export class NotionService {
         richTextElements.push({
           type: 'text',
           text: { content: remainingText },
-          annotations: { color: 'default' }
+          annotations: { color: this.restrictColor('default') }
         });
       }
     }
@@ -998,7 +1062,7 @@ export class NotionService {
       {
         type: 'text',
         text: { content: safeText },
-        annotations: { color: 'default' }
+        annotations: { color: this.restrictColor('default') }
       }
     ];
   }
@@ -1049,40 +1113,6 @@ export class NotionService {
 
     resolved.push(current);
     return resolved;
-  }
-
-  /**
-   * アノテーションタイプに基づいてNotionのアノテーションオブジェクトを作成
-   * @param type アノテーションタイプ
-   * @returns Notionアノテーション
-   */
-  private createAnnotations(type: string): any {
-    const baseAnnotations = {
-      bold: false,
-      italic: false,
-      strikethrough: false,
-      underline: false,
-      code: false,
-      color: 'default' as const
-    };
-
-    switch (type) {
-      case 'bold':
-        return { ...baseAnnotations, bold: true, color: 'default' };
-      case 'italic':
-        return { ...baseAnnotations, italic: true, color: 'default' };
-      case 'code':
-        return { ...baseAnnotations, code: true, color: 'red' };
-      case 'strikethrough':
-        return { ...baseAnnotations, strikethrough: true, color: 'gray' };
-      case 'underline':
-        return { ...baseAnnotations, underline: true, color: 'default' };
-      case 'link':
-      case 'auto_link':
-        return { ...baseAnnotations, color: 'blue' };
-      default:
-        return baseAnnotations;
-    }
   }
 
   /**
@@ -2967,7 +2997,7 @@ export class NotionService {
   }
 
   /**
-   * 事業名プロパティを動的に検索（強化版）
+   * 事業名プロパティを動的に検索（「調査レポート」対応強化版）
    * @param properties データベースプロパティ
    * @returns 事業名プロパティ名
    */
@@ -2977,7 +3007,13 @@ export class NotionService {
 
     // 事業名として考えられるプロパティ名のパターン（優先順位付き）
     const businessNamePatterns = [
-      // 正確なマッチ（最優先）
+      // 🎯 最優先：ユーザー指定の「調査レポート」
+      '調査レポート',
+      'Report Title',
+      'report_title',
+      'reportTitle',
+      
+      // 正確なマッチ（高優先）
       'Business Name',
       'business_name', 
       'businessName',
@@ -3017,7 +3053,10 @@ export class NotionService {
       'サービス',
       '商品',
       'プロダクト',
-      'プロジェクト'
+      'プロジェクト',
+      '調査',
+      'レポート',
+      'report'
     ];
 
     // 段階的検索: 完全一致 → 部分一致 → 類似性マッチ
@@ -3062,7 +3101,9 @@ export class NotionService {
       (key.toLowerCase().includes('name') || 
        key.toLowerCase().includes('title') ||
        key.includes('名前') || 
-       key.includes('タイトル'))
+       key.includes('タイトル') ||
+       key.includes('調査') ||
+       key.includes('レポート'))
     );
     
     if (richTextNameProperty) {
