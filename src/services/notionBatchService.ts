@@ -67,6 +67,39 @@ export class NotionBatchService {
         
       } catch (error) {
         console.error(`[NotionBatchService] 調査項目作成エラー: ${prompt.id}. ${prompt.title}`, error);
+        
+        // より詳細なエラー情報を出力
+        if (error instanceof Error) {
+          console.error(`[NotionBatchService] エラーメッセージ: ${error.message}`);
+          console.error(`[NotionBatchService] スタックトレース: ${error.stack}`);
+        }
+        
+        // Notion APIの特定エラーを詳細解析
+        if (error && typeof error === 'object' && 'code' in error) {
+          const errorCode = (error as any).code;
+          console.error(`[NotionBatchService] Notion APIエラーコード: ${errorCode}`);
+          
+          switch (errorCode) {
+            case 'unauthorized':
+              console.error('[NotionBatchService] 認証エラー: Notion Tokenが無効または期限切れです');
+              break;
+            case 'forbidden':
+              console.error('[NotionBatchService] 権限エラー: Integrationがデータベースにアクセスできません');
+              break;
+            case 'object_not_found':
+              console.error('[NotionBatchService] オブジェクト未発見: Database IDが間違っているか、アクセス権限がありません');
+              break;
+            case 'rate_limited':
+              console.error('[NotionBatchService] レート制限: API呼び出し制限に達しました');
+              break;
+            case 'validation_error':
+              console.error('[NotionBatchService] バリデーションエラー: ページプロパティまたはコンテンツに問題があります');
+              break;
+            default:
+              console.error(`[NotionBatchService] その他のAPIエラー: ${errorCode}`);
+          }
+        }
+        
         failedPages.push({
           researchId: prompt.id,
           title: prompt.title,

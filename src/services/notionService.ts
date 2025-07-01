@@ -1200,7 +1200,7 @@ export class NotionService {
   }
 
   /**
-   * Notion API接続テスト
+   * Notion API接続テスト（強化版）
    * @returns 接続成功かどうか
    */
   async testConnection(): Promise<boolean> {
@@ -1216,7 +1216,7 @@ export class NotionService {
         return false;
       }
 
-      if (!this.config.token.startsWith('ntn_')) {
+      if (!this.config.token.startsWith('ntn_') && !this.config.token.startsWith('secret_')) {
         console.error('[NotionService] Notion Tokenの形式が正しくありません:', this.config.token.substring(0, 8) + '...');
         return false;
       }
@@ -1225,12 +1225,110 @@ export class NotionService {
       console.log('[NotionService] Token:', this.config.token.substring(0, 8) + '...');
       console.log('[NotionService] Database ID:', this.config.databaseId.substring(0, 8) + '...');
       
-      // データベース情報を取得してテスト
+      // Step 1: データベース情報を取得してテスト
+      console.log('[NotionService] Step 1: データベース接続テスト');
       const response = await this.notion.databases.retrieve({
         database_id: this.config.databaseId
       });
       
-      console.log('[NotionService] 接続テスト成功, データベース取得OK');
+      console.log('[NotionService] データベース取得成功');
+      // データベース名は複雑な構造のため、IDのみ表示
+      console.log('[NotionService] データベースID:', this.config.databaseId);
+      
+      // Step 2: データベースプロパティ詳細チェック
+      console.log('[NotionService] Step 2: データベースプロパティ詳細チェック');
+      const properties = response.properties || {};
+      console.log('[NotionService] 利用可能なプロパティ:');
+      
+      Object.keys(properties).forEach(key => {
+        const prop = properties[key];
+        console.log(`  - "${key}": ${prop.type}`);
+        if (prop.type === 'select' && prop.select?.options) {
+          console.log(`    選択肢: [${prop.select.options.map((o: any) => `"${o.name}"`).join(', ')}]`);
+        }
+        if (prop.type === 'status' && prop.status?.options) {
+          console.log(`    ステータス選択肢: [${prop.status.options.map((o: any) => `"${o.name}"`).join(', ')}]`);
+        }
+      });
+      
+      // Step 3: テストページ作成権限チェック
+      console.log('[NotionService] Step 3: テストページ作成権限チェック');
+      
+      // タイトルプロパティを特定
+      const titleProperty = this.findTitleProperty(properties);
+      if (!titleProperty) {
+        console.error('[NotionService] タイトルプロパティが見つかりません。データベース構造を確認してください。');
+        return false;
+      }
+      
+      console.log(`[NotionService] タイトルプロパティ: "${titleProperty}"`);
+      
+      // 最小限のテストページを作成してみる
+      try {
+        const testPageProperties: any = {};
+        testPageProperties[titleProperty] = {
+          title: [
+            {
+              text: {
+                content: 'Connection Test - 接続テスト'
+              }
+            }
+          ]
+        };
+        
+        const testPageContent = [
+          {
+            object: 'block',
+            type: 'paragraph',
+            paragraph: {
+              rich_text: [
+                {
+                  type: 'text' as const,
+                  text: {
+                    content: 'これは接続テスト用のページです。削除しても問題ありません。'
+                  }
+                }
+              ]
+            }
+          } as any
+        ];
+        
+        const testResponse = await this.notion.pages.create({
+          parent: {
+            database_id: this.config.databaseId
+          },
+          properties: testPageProperties,
+          children: testPageContent
+        });
+        
+        console.log('[NotionService] テストページ作成成功:', testResponse.id);
+        console.log('[NotionService] テストページURL:', this.generatePageUrl(testResponse.id));
+        
+        // テストページを即座に削除
+        try {
+          await this.notion.blocks.delete({ block_id: testResponse.id });
+          console.log('[NotionService] テストページ削除完了');
+        } catch (deleteError) {
+          console.warn('[NotionService] テストページ削除失敗（手動削除してください）:', deleteError);
+        }
+        
+      } catch (createError) {
+        console.error('[NotionService] テストページ作成エラー:', createError);
+        
+        // より詳細なエラー情報を出力
+        if (createError && typeof createError === 'object') {
+          if ('code' in createError) {
+            console.error('[NotionService] Notion APIエラーコード:', (createError as any).code);
+          }
+          if ('message' in createError) {
+            console.error('[NotionService] Notion APIエラーメッセージ:', (createError as any).message);
+          }
+        }
+        
+        return false;
+      }
+      
+      console.log('[NotionService] ✅ Notion API接続テスト完全成功');
       return true;
       
     } catch (error) {
@@ -1240,6 +1338,30 @@ export class NotionService {
         token: this.config.token ? this.config.token.substring(0, 8) + '...' : 'なし',
         databaseId: this.config.databaseId ? this.config.databaseId.substring(0, 8) + '...' : 'なし'
       });
+      
+      // Notion APIの特定エラーを詳細解析
+      if (error && typeof error === 'object' && 'code' in error) {
+        const errorCode = (error as any).code;
+        console.error('[NotionService] Notion APIエラーコード:', errorCode);
+        
+        switch (errorCode) {
+          case 'unauthorized':
+            console.error('[NotionService] 認証エラー: Notion Tokenが無効または期限切れです');
+            break;
+          case 'forbidden':
+            console.error('[NotionService] 権限エラー: Integrationがデータベースにアクセスできません');
+            break;
+          case 'object_not_found':
+            console.error('[NotionService] オブジェクト未発見: Database IDが間違っているか、アクセス権限がありません');
+            break;
+          case 'rate_limited':
+            console.error('[NotionService] レート制限: API呼び出し制限に達しました');
+            break;
+          default:
+            console.error('[NotionService] その他のAPIエラー:', errorCode);
+        }
+      }
+      
       return false;
     }
   }
