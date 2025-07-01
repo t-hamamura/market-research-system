@@ -265,6 +265,75 @@ export function createResearchRouter(researchService: ResearchService): Router {
     }
   });
 
+  /**
+   * Notionデータベース構造デバッグ
+   * GET /api/research/debug/notion
+   */
+  router.get('/debug/notion', async (req: Request, res: Response) => {
+    try {
+      console.log('[ResearchRouter] Notionデータベース構造デバッグ開始');
+      
+      // NotionServiceの接続テスト
+      const connectionStatus = await researchService.testServices();
+      
+      // データベース構造の詳細情報を取得
+      let databaseInfo = null;
+      let databaseProperties = null;
+      
+      if (connectionStatus.notion) {
+        try {
+          // プライベートメソッドにアクセスするため、一時的にanyでキャスト
+          const notionService = (researchService as any).notionService;
+          databaseInfo = await notionService.getDatabaseProperties();
+          
+          // プロパティの詳細情報を整理
+          databaseProperties = Object.keys(databaseInfo).map(key => {
+            const prop = databaseInfo[key];
+            const propInfo: any = {
+              name: key,
+              type: prop.type
+            };
+            
+            if (prop.type === 'select' && prop.select?.options) {
+              propInfo.options = prop.select.options.map((o: any) => o.name);
+            }
+            
+            if (prop.type === 'status' && prop.status?.options) {
+              propInfo.options = prop.status.options.map((o: any) => o.name);
+            }
+            
+            return propInfo;
+          });
+          
+          console.log('[ResearchRouter] データベース構造取得成功');
+        } catch (dbError) {
+          console.error('[ResearchRouter] データベース構造取得エラー:', dbError);
+        }
+      }
+      
+      return res.json({
+        success: true,
+        data: {
+          connectionStatus,
+          databaseProperties,
+          rawDatabaseInfo: databaseInfo,
+          timestamp: new Date().toISOString()
+        }
+      });
+      
+    } catch (error) {
+      console.error('[ResearchRouter] Notionデバッグエラー:', error);
+      return res.status(500).json({
+        success: false,
+        error: {
+          error: 'DEBUG_ERROR',
+          message: `Notionデバッグエラー: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          timestamp: new Date()
+        }
+      });
+    }
+  });
+
   return router;
 }
 

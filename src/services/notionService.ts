@@ -143,8 +143,10 @@ export class NotionService {
       // デバッグ情報を出力
       console.log('[NotionService] プロパティ設定:', JSON.stringify(properties, null, 2));
       console.log('[NotionService] データベースID:', this.config.databaseId);
+      console.log('[NotionService] Notion Token (先頭8文字):', this.config.token.substring(0, 8) + '...');
 
       // 基本Notionページを作成
+      console.log('[NotionService] Notion APIでページ作成開始...');
       const response = await this.notion.pages.create({
         parent: {
           database_id: this.config.databaseId
@@ -155,6 +157,10 @@ export class NotionService {
 
       const pageId = response.id;
       console.log('[NotionService] 基本ページ作成完了:', pageId);
+      console.log('[NotionService] ページ作成レスポンス:', JSON.stringify({
+        id: response.id,
+        object: response.object
+      }, null, 2));
 
       // コンテンツを段階的に追加
       await this.addContentInBatches(pageId, serviceHypothesis, researchResults, integratedReport);
@@ -1746,23 +1752,42 @@ export class NotionService {
     try {
       console.log(`[NotionService] 既存ページ検索: ${businessName} - ${researchTitle}`);
       
+      // データベース構造を動的に確認
+      const databaseInfo = await this.getDatabaseProperties();
+      const titleProperty = this.findTitleProperty(databaseInfo);
+      const researchTypeProperty = this.findResearchTypeProperty(databaseInfo);
+      
+      if (!titleProperty) {
+        console.warn('[NotionService] タイトルプロパティが見つかりません');
+        return null;
+      }
+      
+      // フィルター条件を動的に構築
+      const filters: any[] = [
+        {
+          property: titleProperty,
+          title: {
+            contains: businessName
+          }
+        }
+      ];
+      
+      // 調査種別プロパティがある場合のみ追加
+      if (researchTypeProperty) {
+        filters.push({
+          property: researchTypeProperty,
+          select: {
+            equals: this.categorizeResearchType(researchTitle)
+          }
+        });
+      }
+      
+      console.log(`[NotionService] 検索フィルター:`, JSON.stringify(filters, null, 2));
+      
       const response = await this.notion.databases.query({
         database_id: this.config.databaseId,
         filter: {
-          and: [
-            {
-              property: '事業名',
-              title: {
-                contains: businessName
-              }
-            },
-            {
-              property: '調査種別',
-              select: {
-                equals: this.categorizeResearchType(researchTitle)
-              }
-            }
-          ]
+          and: filters
         }
       });
 

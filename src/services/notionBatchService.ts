@@ -105,23 +105,42 @@ export class NotionBatchService {
     try {
       console.log(`[NotionBatchService] 既存ページ検索: ${businessName} - ${researchTitle}`);
       
+      // データベース構造を動的に確認
+      const databaseInfo = await this.getDatabaseProperties();
+      const titleProperty = this.findTitleProperty(databaseInfo);
+      const researchTypeProperty = this.findResearchTypeProperty(databaseInfo);
+      
+      if (!titleProperty) {
+        console.warn('[NotionBatchService] タイトルプロパティが見つかりません');
+        return null;
+      }
+      
+      // フィルター条件を動的に構築
+      const filters: any[] = [
+        {
+          property: titleProperty,
+          title: {
+            contains: businessName
+          }
+        }
+      ];
+      
+      // 調査種別プロパティがある場合のみ追加
+      if (researchTypeProperty) {
+        filters.push({
+          property: researchTypeProperty,
+          select: {
+            equals: this.categorizeResearchType(researchTitle)
+          }
+        });
+      }
+      
+      console.log(`[NotionBatchService] 検索フィルター:`, JSON.stringify(filters, null, 2));
+      
       const response = await this.notion.databases.query({
         database_id: this.config.databaseId,
         filter: {
-          and: [
-            {
-              property: '事業名',
-              title: {
-                contains: businessName
-              }
-            },
-            {
-              property: '調査種別',
-              select: {
-                equals: this.categorizeResearchType(researchTitle)
-              }
-            }
-          ]
+          and: filters
         }
       });
 
