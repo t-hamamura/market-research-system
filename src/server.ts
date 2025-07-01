@@ -43,9 +43,9 @@ function createServerConfig(): ServerConfig {
     nodeEnv: process.env.NODE_ENV || 'development',
     gemini: {
       apiKey: process.env.GEMINI_API_KEY || 'dummy-key',
-      model: 'gemini-2.5-flash',
-      temperature: 0.7,
-      maxTokens: 8192
+      model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+      temperature: parseFloat(process.env.GEMINI_TEMPERATURE || '0.7'),
+      maxTokens: parseInt(process.env.GEMINI_MAX_TOKENS || '8192')
     },
     notion: {
       token: process.env.NOTION_TOKEN || 'dummy-token',

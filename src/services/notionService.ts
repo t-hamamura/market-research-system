@@ -459,14 +459,14 @@ export class NotionService {
       return [];
     }
 
-    const blocks: any[] = [];
+      const blocks: any[] = [];
     const lines = text.split('\n');
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const trimmedLine = line.trim();
-
-      // 空行はスキップ
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmedLine = line.trim();
+        
+        // 空行はスキップ
       if (trimmedLine === '') {
         continue;
       }
@@ -500,9 +500,9 @@ export class NotionService {
             is_toggleable: false
           }
         });
-        continue;
-      }
-
+          continue;
+        }
+        
       // 🎨 Calloutブロック (制限カラー適用)
       if (trimmedLine.match(/^>\s*[\*\!]?\s*/)) {
         const content = trimmedLine.replace(/^>\s*[\*\!]?\s*/, '').trim();
@@ -629,11 +629,11 @@ export class NotionService {
 
       // 🎨 区切り線
       if (trimmedLine.match(/^[\-\*]{3,}$/)) {
-        blocks.push({
-          object: 'block',
-          type: 'divider',
-          divider: {}
-        });
+          blocks.push({
+            object: 'block',
+            type: 'divider',
+            divider: {}
+          });
         continue;
       }
 
@@ -1595,146 +1595,117 @@ export class NotionService {
       const databaseInfo = await this.getDatabaseProperties();
       const properties: any = {};
 
-      // タイトルプロパティの設定
+      // 🎯 タイトルプロパティ（調査レポート）の設定
       const titleProperty = this.findTitleProperty(databaseInfo);
       if (titleProperty) {
         properties[titleProperty] = {
           title: [
             {
               text: {
-                content: businessName,
+                content: researchTitle, // 調査名をタイトルに設定
               },
             },
           ],
         };
-        console.log(`[NotionService] タイトルプロパティ設定: ${titleProperty}`);
+        console.log(`[NotionService] ✅ タイトルプロパティ設定: ${titleProperty} = "${researchTitle}"`);
       } else {
-        console.warn('[NotionService] タイトルプロパティが見つかりません');
+        console.warn('[NotionService] ⚠️ タイトルプロパティが見つかりません');
+      }
+
+      // 🏢 事業名プロパティの設定
+      const businessNameProperty = this.findBusinessNameProperty(databaseInfo);
+      if (businessNameProperty) {
+        const businessProp = databaseInfo[businessNameProperty];
+        
+        if (businessProp.type === 'select') {
+          properties[businessNameProperty] = {
+            select: {
+              name: businessName
+            }
+          };
+        } else if (businessProp.type === 'rich_text') {
+          properties[businessNameProperty] = {
+            rich_text: [
+              {
+                text: {
+                  content: businessName
+                }
+              }
+            ]
+          };
+        }
+        console.log(`[NotionService] ✅ 事業名プロパティ設定: ${businessNameProperty} = "${businessName}" (タイプ: ${businessProp.type})`);
+      } else {
+        console.warn('[NotionService] ⚠️ 事業名プロパティが見つかりません');
       }
 
       // ステータスプロパティの設定
       const statusProperty = this.findStatusProperty(databaseInfo);
       if (statusProperty) {
-        const statusOptions = databaseInfo[statusProperty]?.select?.options || [];
-        const completedOption = this.findCompletedOption(statusOptions);
+        const statusProp = databaseInfo[statusProperty];
+        const statusOptions = statusProp?.type === 'select' ? statusProp.select?.options : 
+                             statusProp?.type === 'status' ? statusProp.status?.options : [];
+        const completedOption = this.findCompletedOption(statusOptions || []);
         
         if (completedOption) {
+          // selectとstatusでプロパティ設定方法が異なる
+          if (statusProp?.type === 'select') {
           properties[statusProperty] = {
             select: {
               name: completedOption.name
             }
           };
+          } else if (statusProp?.type === 'status') {
+            properties[statusProperty] = {
+              status: {
+                name: completedOption.name
+              }
+            };
+          }
+          console.log(`[NotionService] ✅ ステータスプロパティ設定: ${statusProperty} = "${completedOption.name}"`);
         }
       }
 
       // 調査種別プロパティの設定（個別調査）
       const researchTypeProperty = this.findResearchTypeProperty(databaseInfo);
       if (researchTypeProperty) {
-        // 調査タイトルから種別を推定
-        const researchCategory = this.categorizeResearchType(researchTitle);
+        const researchCategory = this.categorizeResearchType(researchTitle, researchIndex);
         properties[researchTypeProperty] = {
           select: {
             name: researchCategory
           }
         };
-        console.log(`[NotionService] 個別調査種別設定: ${researchCategory}`);
+        console.log(`[NotionService] ✅ 調査種別プロパティ設定: ${researchTypeProperty} = "${researchCategory}"`);
       }
 
-      // 個別調査ページコンテンツ
-      const pageContent = [
-        {
-          object: 'block',
-          type: 'heading_1',
-          heading_1: {
-            rich_text: [
-              {
-                type: 'text',
-                text: {
-                  content: `${researchIndex}. ${researchTitle}`
-                }
-              }
-            ]
-          }
-        } as any,
-        {
-          object: 'block',
-          type: 'paragraph',
-          paragraph: {
-            rich_text: [
-              {
-                type: 'text',
-                text: {
-                  content: `事業名: ${businessName}`
-                }
-              }
-            ]
-          }
-        } as any,
-        {
-          object: 'block',
-          type: 'paragraph',
-          paragraph: {
-            rich_text: [
-              {
-                type: 'text',
-                text: {
-                  content: `作成日時: ${new Date().toLocaleString('ja-JP')}`
-                }
-              }
-            ]
-          }
-        } as any,
-        {
-          object: 'block',
-          type: 'divider',
-          divider: {}
-        } as any
-      ];
+      console.log(`[NotionService] 📋 プロパティ設定完了:`, Object.keys(properties));
 
-      // 基本ページを作成
-      const response = await this.notion.pages.create({
+      // Notionページを作成
+      const pageResponse = await this.notion.pages.create({
         parent: {
-          database_id: this.config.databaseId
+          type: 'database_id',
+          database_id: this.config.databaseId,
         },
         properties,
-        children: pageContent
+        children: this.createBlocksFromMarkdown(researchResult),
       });
 
-      const pageId = response.id;
-      console.log(`[NotionService] 個別調査基本ページ作成完了: ${pageId}`);
+      const pageId = pageResponse.id;
+      const pageUrl = this.generatePageUrl(pageId);
 
-      // 調査結果コンテンツを追加
-      const resultBlocks = this.createBlocksFromMarkdown(researchResult);
+      console.log(`[NotionService] ✅ 個別調査ページ作成完了: ${researchTitle} - ${pageUrl}`);
+      return { pageId, url: pageUrl };
+
+    } catch (error: any) {
+      console.error(`[NotionService] ❌ 個別調査ページ作成エラー (${researchTitle}):`, error);
       
-      // 調査結果ヘッダーを追加
-      const contentWithHeader = [
-        {
-          object: 'block',
-          type: 'heading_2',
-          heading_2: {
-            rich_text: [
-              {
-                type: 'text',
-                text: {
-                  content: '📋 調査結果'
-                }
-              }
-            ]
-          }
-        } as any,
-        ...resultBlocks
-      ];
-
-      await this.appendBlocks(pageId, contentWithHeader);
-
-      const url = this.generatePageUrl(pageId);
-      console.log(`[NotionService] 個別調査ページ作成完了: ${url}`);
+      // 詳細エラー情報
+      if (error?.code) {
+        console.error(`[NotionService] Notion APIエラーコード: ${error.code}`);
+        console.error(`[NotionService] エラーメッセージ: ${error.message}`);
+      }
       
-      return { pageId, url };
-
-    } catch (error) {
-      console.error(`[NotionService] 個別調査ページ作成エラー (${researchTitle}):`, error);
-      throw new Error(`個別調査ページ作成エラー: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`個別調査ページ作成に失敗しました: ${researchTitle} - ${error.message}`);
     }
   }
 
@@ -1770,21 +1741,53 @@ export class NotionService {
    * @returns タイトルプロパティ名またはnull
    */
   private findTitleProperty(properties: Record<string, any>): string | null {
-    // 複数のパターンをチェック
-    const titleCandidates = ['事業名', 'Name', 'Title', '名前', 'タイトル'];
-    
-    for (const candidate of titleCandidates) {
-      if (properties[candidate] && properties[candidate].type === 'title') {
-        return candidate;
+    console.log('[NotionService] 🔍 タイトルプロパティ検索開始');
+    console.log('[NotionService] 利用可能なプロパティ:', Object.keys(properties));
+
+    // タイトルとして考えられるプロパティ名のパターン（優先順位付き）
+    const titlePatterns = [
+      // 🎯 最優先：ユーザー指定の「調査レポート」
+      '調査レポート',
+      'Report Title',
+      'report_title',
+      'reportTitle',
+      
+      // 正確なマッチ（高優先）
+      'Title',
+      'title',
+      'タイトル',
+      'Name',
+      'name',
+      '名前'
+    ];
+
+    // 段階的検索: 完全一致 → titleタイプ検索
+    for (const pattern of titlePatterns) {
+      // 1. 完全一致検索
+      const exactMatch = Object.keys(properties).find(key => 
+        key.toLowerCase() === pattern.toLowerCase()
+      );
+      
+      if (exactMatch && properties[exactMatch].type === 'title') {
+        console.log(`[NotionService] ✅ タイトルプロパティ（完全一致）: "${exactMatch}"`);
+        return exactMatch;
       }
     }
+
+    // 2. 最初のtitleタイプのプロパティをフォールバック
+    const titleProperty = Object.keys(properties).find(key => 
+      properties[key].type === 'title'
+    );
     
-    // title型のプロパティを探す
-    for (const [propName, propInfo] of Object.entries(properties)) {
-      if (propInfo && (propInfo as any).type === 'title') {
-        return propName;
-      }
+    if (titleProperty) {
+      console.log(`[NotionService] ✅ タイトルプロパティ（titleタイプ）: "${titleProperty}"`);
+      return titleProperty;
     }
+
+    console.warn('[NotionService] ⚠️ タイトルプロパティが見つかりませんでした');
+    console.warn('[NotionService] 📋 利用可能なプロパティ詳細:', 
+      Object.entries(properties).map(([key, prop]) => ({ name: key, type: prop.type }))
+    );
     
     return null;
   }
@@ -2187,18 +2190,48 @@ export class NotionService {
           
           const properties: any = {};
 
-          // タイトルプロパティの設定
+          // 🎯 タイトルプロパティ（調査レポート）の設定
           const titleProperty = this.findTitleProperty(databaseInfo);
           if (titleProperty) {
             properties[titleProperty] = {
               title: [
                 {
                   text: {
-                    content: businessName,
+                    content: prompt.title, // 調査名をタイトルに設定
                   },
                 },
               ],
             };
+            console.log(`[NotionService] ✅ タイトルプロパティ設定: ${titleProperty} = "${prompt.title}"`);
+          } else {
+            console.warn('[NotionService] ⚠️ タイトルプロパティが見つかりません');
+          }
+
+          // 🏢 事業名プロパティの設定
+          const businessNameProperty = this.findBusinessNameProperty(databaseInfo);
+          if (businessNameProperty) {
+            const businessProp = databaseInfo[businessNameProperty];
+            
+            if (businessProp.type === 'select') {
+              properties[businessNameProperty] = {
+                select: {
+                  name: businessName
+                }
+              };
+            } else if (businessProp.type === 'rich_text') {
+              properties[businessNameProperty] = {
+                rich_text: [
+                  {
+                    text: {
+                      content: businessName
+                    }
+                  }
+                ]
+              };
+            }
+            console.log(`[NotionService] ✅ 事業名プロパティ設定: ${businessNameProperty} = "${businessName}" (タイプ: ${businessProp.type})`);
+          } else {
+            console.warn('[NotionService] ⚠️ 事業名プロパティが見つかりません');
           }
 
           // ステータスプロパティの設定（未着手）
@@ -2493,7 +2526,7 @@ export class NotionService {
         console.warn('[NotionService] ステータスプロパティが見つかりません');
         return false;
       }
-      
+
       console.log(`[NotionService] ステータスプロパティ発見: "${statusProperty}"`);
       
       // ステータスプロパティの詳細情報を取得
@@ -2540,27 +2573,27 @@ export class NotionService {
           const optionName = option.name.toLowerCase();
           if (status === 'completed' && (optionName.includes('完了') || optionName.includes('done') || optionName.includes('complete'))) {
             targetStatusName = option.name;
-            break;
+          break;
           } else if (status === 'in-progress' && (optionName.includes('進行') || optionName.includes('progress') || optionName.includes('実行'))) {
             targetStatusName = option.name;
-            break;
+          break;
           } else if (status === 'pending' && (optionName.includes('未着手') || optionName.includes('pending') || optionName.includes('開始前'))) {
             targetStatusName = option.name;
-            break;
+              break;
+            }
           }
-        }
         
         if (targetStatusName) {
           console.log(`[NotionService] フォールバック検索成功: "${status}" -> "${targetStatusName}"`);
         }
       }
-      
+
       if (!targetStatusName) {
         console.error(`[NotionService] ステータス値が見つかりません: "${status}"`);
         console.error(`[NotionService] 利用可能オプション:`, availableOptions?.map((opt: any) => opt.name));
         return false;
       }
-      
+
       // プロパティ更新を実行
       const updateData: any = {
         properties: {}
@@ -2582,18 +2615,18 @@ export class NotionService {
         console.error(`[NotionService] サポートされていないプロパティタイプ: ${propertyType}`);
         return false;
       }
-      
+
       console.log(`[NotionService] ステータス更新実行:`, JSON.stringify(updateData, null, 2));
-      
+
       // Notion APIでページを更新
       await this.notion.pages.update({
         page_id: pageId,
         ...updateData
       });
-      
+
       console.log(`[NotionService] ✅ ページステータス更新完了: ${pageId} -> ${targetStatusName}`);
       return true;
-
+      
     } catch (error: any) {
       console.error(`[NotionService] ページステータス更新エラー (${pageId}):`, error);
       
@@ -2641,18 +2674,48 @@ export class NotionService {
       const databaseInfo = await this.getDatabaseProperties();
       const properties: any = {};
 
-      // タイトルプロパティの設定
+      // 🎯 タイトルプロパティ（調査レポート）の設定 - 統合調査レポート（事業名）
       const titleProperty = this.findTitleProperty(databaseInfo);
       if (titleProperty) {
         properties[titleProperty] = {
           title: [
             {
               text: {
-                content: businessName,
+                content: integratedReportTitle, // 統合調査レポート（事業名）
               },
             },
           ],
         };
+        console.log(`[NotionService] ✅ タイトルプロパティ設定: ${titleProperty} = "${integratedReportTitle}"`);
+      } else {
+        console.warn('[NotionService] ⚠️ タイトルプロパティが見つかりません');
+      }
+
+      // 🏢 事業名プロパティの設定
+      const businessNameProperty = this.findBusinessNameProperty(databaseInfo);
+      if (businessNameProperty) {
+        const businessProp = databaseInfo[businessNameProperty];
+        
+        if (businessProp.type === 'select') {
+          properties[businessNameProperty] = {
+            select: {
+              name: businessName
+            }
+          };
+        } else if (businessProp.type === 'rich_text') {
+          properties[businessNameProperty] = {
+            rich_text: [
+              {
+                text: {
+                  content: businessName
+                }
+              }
+            ]
+          };
+        }
+        console.log(`[NotionService] ✅ 事業名プロパティ設定: ${businessNameProperty} = "${businessName}" (タイプ: ${businessProp.type})`);
+      } else {
+        console.warn('[NotionService] ⚠️ 事業名プロパティが見つかりません');
       }
 
       // ステータスプロパティの設定（未着手）
@@ -3007,17 +3070,13 @@ export class NotionService {
 
     // 事業名として考えられるプロパティ名のパターン（優先順位付き）
     const businessNamePatterns = [
-      // 🎯 最優先：ユーザー指定の「調査レポート」
-      '調査レポート',
-      'Report Title',
-      'report_title',
-      'reportTitle',
-      
-      // 正確なマッチ（高優先）
+      // 🎯 最優先：ユーザー指定の「事業名」
+      '事業名',
       'Business Name',
       'business_name', 
       'businessName',
-      '事業名',
+      
+      // 正確なマッチ（高優先）
       'Company Name',
       'company_name',
       'companyName',
@@ -3037,37 +3096,18 @@ export class NotionService {
       'プロジェクト名',
       '名前',
       'Name',
-      'name',
-      'Title',
-      'title',
-      'タイトル',
-      
-      // 部分マッチパターン
-      'business',
-      'company', 
-      'service',
-      'product',
-      'project',
-      '事業',
-      '会社',
-      'サービス',
-      '商品',
-      'プロダクト',
-      'プロジェクト',
-      '調査',
-      'レポート',
-      'report'
+      'name'
     ];
 
     // 段階的検索: 完全一致 → 部分一致 → 類似性マッチ
     for (const pattern of businessNamePatterns) {
-      // 1. 完全一致検索
+      // 1. 完全一致検索（select/rich_textタイプ）
       const exactMatch = Object.keys(properties).find(key => 
         key.toLowerCase() === pattern.toLowerCase()
       );
       
-      if (exactMatch && properties[exactMatch].type === 'title') {
-        console.log(`[NotionService] ✅ 事業名プロパティ（完全一致）: "${exactMatch}"`);
+      if (exactMatch && (properties[exactMatch].type === 'select' || properties[exactMatch].type === 'rich_text')) {
+        console.log(`[NotionService] ✅ 事業名プロパティ（完全一致）: "${exactMatch}" (タイプ: ${properties[exactMatch].type})`);
         return exactMatch;
       }
     }
@@ -3076,39 +3116,23 @@ export class NotionService {
     for (const pattern of businessNamePatterns) {
       const partialMatch = Object.keys(properties).find(key => 
         key.toLowerCase().includes(pattern.toLowerCase()) && 
-        properties[key].type === 'title'
+        (properties[key].type === 'select' || properties[key].type === 'rich_text')
       );
       
       if (partialMatch) {
-        console.log(`[NotionService] ✅ 事業名プロパティ（部分一致）: "${partialMatch}"`);
+        console.log(`[NotionService] ✅ 事業名プロパティ（部分一致）: "${partialMatch}" (タイプ: ${properties[partialMatch].type})`);
         return partialMatch;
       }
     }
 
-    // 3. 最初のtitleタイプのプロパティをフォールバック
-    const titleProperty = Object.keys(properties).find(key => 
-      properties[key].type === 'title'
+    // 3. 最初のselectタイプのプロパティをフォールバック
+    const selectProperty = Object.keys(properties).find(key => 
+      properties[key].type === 'select'
     );
     
-    if (titleProperty) {
-      console.log(`[NotionService] ✅ 事業名プロパティ（titleタイプ）: "${titleProperty}"`);
-      return titleProperty;
-    }
-
-    // 4. 最後の手段: リッチテキストタイプで名前系のプロパティ
-    const richTextNameProperty = Object.keys(properties).find(key => 
-      properties[key].type === 'rich_text' && 
-      (key.toLowerCase().includes('name') || 
-       key.toLowerCase().includes('title') ||
-       key.includes('名前') || 
-       key.includes('タイトル') ||
-       key.includes('調査') ||
-       key.includes('レポート'))
-    );
-    
-    if (richTextNameProperty) {
-      console.log(`[NotionService] ✅ 事業名プロパティ（リッチテキスト）: "${richTextNameProperty}"`);
-      return richTextNameProperty;
+    if (selectProperty) {
+      console.log(`[NotionService] ✅ 事業名プロパティ（selectタイプ）: "${selectProperty}"`);
+      return selectProperty;
     }
 
     console.warn('[NotionService] ⚠️ 事業名プロパティが見つかりませんでした');

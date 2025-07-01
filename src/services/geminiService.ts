@@ -145,7 +145,13 @@ ${notionVisualPrompt}
 
       console.log(`[GeminiService] Notion視覚化強化プロンプト送信 (${enhancedPrompt.length}文字)`);
       
-      const model = this.genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+      const model = this.genAI.getGenerativeModel({ 
+        model: this.config.model || 'gemini-2.5-flash',
+        generationConfig: {
+          temperature: this.config.temperature || 0.7,
+          maxOutputTokens: this.config.maxTokens || 8192,
+        }
+      });
       const result = await model.generateContent(enhancedPrompt);
       const response = await result.response;
       const resultText = response.text();
@@ -191,7 +197,13 @@ ${notionVisualPrompt}
         const fallbackPrompt = `${prompt}\n\n${this.formatServiceHypothesis(serviceHypothesis)}\n\n**Notion向けMarkdown形式で構造化して出力してください。見出し（##）、太字（**）、表（|）、リスト（-）、Callout（>）を活用してください。**`;
         
         try {
-          const model = this.genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+          const model = this.genAI.getGenerativeModel({ 
+            model: this.config.model || 'gemini-2.5-flash',
+            generationConfig: {
+              temperature: this.config.temperature || 0.7,
+              maxOutputTokens: this.config.maxTokens || 8192,
+            }
+          });
           const retryResult = await model.generateContent(fallbackPrompt);
           const retryResponse = await retryResult.response;
           return retryResponse.text();

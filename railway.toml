@@ -11,6 +11,21 @@ restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
 
 # 必要な環境変数はRailway UIで設定
+# 
+# ===== 必須環境変数 =====
 # GEMINI_API_KEY=your_gemini_api_key
 # NOTION_TOKEN=your_notion_token  
 # NOTION_DATABASE_ID=your_notion_database_id
+#
+# ===== Gemini AI設定（一括管理）=====
+# GEMINI_MODEL=gemini-2.5-flash
+# GEMINI_TEMPERATURE=0.7
+# GEMINI_MAX_TOKENS=8192
+#
+# ===== パフォーマンス最適化 =====
+# PARALLEL_BATCH_SIZE=4
+# BATCH_INTERVAL=2000
+# RESEARCH_INTERVAL=2000
+#
+# PORT=3000
+# NODE_ENV=production

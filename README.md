@@ -155,6 +155,11 @@ Gemini AIとNotion APIを活用して、専門的な市場調査を並列実行�
     NODE_ENV="production"
     PORT=3000
 
+    # Gemini AI設定（一括管理）
+    GEMINI_MODEL="gemini-2.5-flash"
+    GEMINI_TEMPERATURE=0.7
+    GEMINI_MAX_TOKENS=8192
+
     # パフォーマンス最適化（任意）
     PARALLEL_BATCH_SIZE=4
     BATCH_INTERVAL=2000
@@ -339,4 +344,44 @@ This project is licensed under the MIT License.
 
 ## 📞 サポート
 
-ご質問やサポートが必要な場合は、[Issues](https://github.com/t-hamamura/market-research-system/issues)またはメールでお気軽にお問い合わせください。 
+ご質問やサポートが必要な場合は、[Issues](https://github.com/t-hamamura/market-research-system/issues)またはメールでお気軽にお問い合わせください。
+
+---
+
+## 🔧 環境変数設定詳細
+
+### 必須環境変数
+
+| 変数名 | 説明 | 例 |
+|:---|:---|:---|
+| `GEMINI_API_KEY` | Google Gemini API キー | `AIza...` |
+| `NOTION_TOKEN` | Notion Integration Token | `secret_...` |
+| `NOTION_DATABASE_ID` | Notion データベース ID | `20cd3748...` |
+
+### Gemini AI設定（一括管理）
+
+| 変数名 | 説明 | デフォルト値 | 設定例 |
+|:---|:---|:---|:---|
+| `GEMINI_MODEL` | 使用するGeminiモデル | `gemini-2.5-flash` | `gemini-2.0-flash-exp`, `gemini-1.5-flash` |
+| `GEMINI_TEMPERATURE` | AI応答の創造性 (0.0-2.0) | `0.7` | `0.3` (保守的), `1.0` (創造的) |
+| `GEMINI_MAX_TOKENS` | 最大出力トークン数 | `8192` | `4096`, `16384` |
+
+### パフォーマンス最適化
+
+| 変数名 | 説明 | デフォルト値 | 推奨範囲 |
+|:---|:---|:---|:---|
+| `PARALLEL_BATCH_SIZE` | 並列実行数 | `4` | `1-8` |
+| `BATCH_INTERVAL` | バッチ間隔 (ms) | `2000` | `1000-5000` |
+| `RESEARCH_INTERVAL` | 調査間隔 (ms) | `2000` | `1500-3000` |
+
+### 🎯 Geminiモデル選択ガイド
+
+- **gemini-2.5-flash** (推奨): 最新モデル、高品質で高速
+- **gemini-2.0-flash-exp**: 実験版、新機能テスト用
+- **gemini-1.5-flash**: 安定版、レート制限が緩い場合に適用
+
+### 💡 設定のベストプラクティス
+
+1. **開発環境**: `GEMINI_TEMPERATURE=1.0`で創造的な結果を取得
+2. **本番環境**: `GEMINI_TEMPERATURE=0.7`で安定した結果
+3. **高負荷環境**: `PARALLEL_BATCH_SIZE=2`, `RESEARCH_INTERVAL=3000` 

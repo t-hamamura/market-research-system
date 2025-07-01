@@ -362,7 +362,7 @@ ${deepResult}
     const fallbackErrorMsg = fallbackError instanceof Error ? fallbackError.message : 'Unknown error';
     
     return `
-# システムエラー対応 - 調査フレームワーク
+# 代替調査フレームワーク - 手動実行ガイド
 
 **調査項目**: ${prompt.substring(0, 100)}...
 **エラー状況**: Deep Research及び基本調査でエラーが発生
