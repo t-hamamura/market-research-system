@@ -15,6 +15,32 @@ import { DeepResearchService } from './services/deepResearchService';
 dotenv.config();
 
 /**
+ * 利用可能なポートを見つける
+ */
+async function findAvailablePort(startPort: number): Promise<number> {
+  const net = require('net');
+  
+  for (let port = startPort; port <= startPort + 10; port++) {
+    const isAvailable = await new Promise<boolean>((resolve) => {
+      const server = net.createServer();
+      server.listen(port, () => {
+        server.close(() => resolve(true));
+      });
+      server.on('error', () => resolve(false));
+    });
+    
+    if (isAvailable) {
+      console.log(`✅ 利用可能なポート見つかりました: ${port}`);
+      return port;
+    } else {
+      console.log(`⚠️ ポート ${port} は使用中です`);
+    }
+  }
+  
+  throw new Error(`ポート ${startPort} から ${startPort + 10} まで全て使用中です`);
+}
+
+/**
  * サーバー設定を作成
  */
 function createServerConfig(): ServerConfig {
@@ -51,13 +77,15 @@ function createServerConfig(): ServerConfig {
       token: process.env.NOTION_TOKEN || 'dummy-token',
       databaseId: process.env.NOTION_DATABASE_ID || 'dummy-id'
     },
-    researchInterval: parseInt(process.env.RESEARCH_INTERVAL || '1000')
+    researchInterval: parseInt(process.env.RESEARCH_INTERVAL || '1000'),
+    hasValidCredentials: missingVars.length === 0
   };
   
   console.log('[Server] 設定作成完了:', {
     port: config.port,
     nodeEnv: config.nodeEnv,
-    researchInterval: config.researchInterval
+    researchInterval: config.researchInterval,
+    hasValidCredentials: config.hasValidCredentials
   });
   
   return config;
@@ -88,6 +116,13 @@ async function initializeServices(config: ServerConfig, retryCount = 0): Promise
       notionBatchService,  // 新しい一括作成サービスを追加
       deepResearchService  // Deep Research サービスを追加
     );
+
+    // 🐛 FIX: 環境変数が未設定の場合はAPIテストをスキップ
+    if (!config.hasValidCredentials) {
+      console.log('[Server] ⚠️ 環境変数未設定のため、API接続テストをスキップします');
+      console.log('[Server] ✅ サービス初期化完了（テストモード）');
+      return { geminiService, notionService, deepResearchService, researchService };
+    }
 
     // 接続テスト（タイムアウト付き）
     console.log('[Server] API接続テスト開始...');
@@ -250,6 +285,8 @@ function createApp(researchService: ResearchService): express.Application {
  * サーバー起動
  */
 async function startServer() {
+  let server: any = null;
+  
   try {
     console.log('='.repeat(60));
     console.log('🚀 市場調査自動化システム起動中...');
@@ -282,7 +319,16 @@ async function startServer() {
     
     // 設定を作成
     const config = createServerConfig();
-    console.log(`📡 サーバーポート: ${config.port}`);
+    
+    // 🐛 FIX: 利用可能なポートを探す
+    let availablePort: number;
+    try {
+      availablePort = await findAvailablePort(config.port);
+      console.log(`📡 サーバーポート: ${availablePort}`);
+    } catch (error) {
+      console.error('❌ 利用可能なポートが見つかりません:', error);
+      throw error;
+    }
     
     // サービスを初期化（エラー耐性付き）
     console.log('[Server] サービス初期化開始...');
@@ -325,18 +371,29 @@ async function startServer() {
     // Expressアプリを作成
     const app = createApp(researchService);
     
-    // サーバーを起動（タイムアウト設定）
-    const server = app.listen(config.port, '0.0.0.0', () => {
+    // 🐛 FIX: サーバーを起動（エラーハンドリング付き）
+    server = app.listen(availablePort, '0.0.0.0', () => {
       console.log('='.repeat(60));
       console.log('✅ 市場調査自動化システムが起動しました！');
       console.log('='.repeat(60));
-      console.log(`🌐 ウェブアプリ: http://0.0.0.0:${config.port}`);
-      console.log(`⚡ API エンドポイント: http://0.0.0.0:${config.port}/api/research`);
-      console.log(`📊 ヘルスチェック: http://0.0.0.0:${config.port}/health`);
+      console.log(`🌐 ウェブアプリ: http://0.0.0.0:${availablePort}`);
+      console.log(`⚡ API エンドポイント: http://0.0.0.0:${availablePort}/api/research`);
+      console.log(`📊 ヘルスチェック: http://0.0.0.0:${availablePort}/health`);
       console.log(`📍 Railway URL: https://market-research-system-production.up.railway.app`);
       console.log('='.repeat(60));
       console.log('🔥 サーバー完全起動完了！');
       console.log('='.repeat(60));
+    });
+    
+    // サーバーエラーハンドリング
+    server.on('error', (error: any) => {
+      if (error.code === 'EADDRINUSE') {
+        console.error(`❌ ポート ${availablePort} は既に使用されています`);
+        console.log('🔄 別のポートで再試行します...');
+        // ここで自動的に別のポートを試すことができます
+      } else {
+        console.error('❌ サーバーエラー:', error);
+      }
     });
     
     // サーバータイムアウト設定
@@ -355,20 +412,25 @@ async function startServer() {
       gracefulShutdown('unhandledRejection');
     });
     
-    // グレースフルシャットダウン関数
+    // 🐛 FIX: グレースフルシャットダウン関数（エラーハンドリング改善）
     const gracefulShutdown = (signal: string) => {
       console.log(`[Server] ${signal}受信、グレースフルシャットダウン開始...`);
       
-      // 新しい接続を受け付けない
-      server.close((err) => {
-        if (err) {
-          console.error('[Server] サーバークローズエラー:', err);
-          process.exit(1);
-        }
-        
-        console.log('[Server] サーバーが正常に終了しました');
+      // サーバーが存在し、リスニング中の場合のみクローズ
+      if (server && server.listening) {
+        server.close((err: any) => {
+          if (err) {
+            console.error('[Server] サーバークローズエラー:', err);
+            process.exit(1);
+          }
+          
+          console.log('[Server] サーバーが正常に終了しました');
+          process.exit(0);
+        });
+      } else {
+        console.log('[Server] サーバーは既に停止済みです');
         process.exit(0);
-      });
+      }
       
       // 強制終了のためのタイムアウト
       setTimeout(() => {

@@ -97,6 +97,7 @@ export interface ServerConfig {
   gemini: GeminiConfig;
   notion: NotionConfig;
   researchInterval: number;
+  hasValidCredentials: boolean;
 }
 
 // リクエストバリデーションエラーの型定義
