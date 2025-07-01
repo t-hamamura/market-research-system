@@ -25,124 +25,101 @@ export class GeminiService {
   }
 
   /**
-   * 市場調査を実行（リトライ・レート制限対応）
+   * 市場調査を実行（Markdown出力強化版）
    * @param prompt 調査プロンプト
    * @param serviceHypothesis サービス仮説
    * @returns 調査結果
    */
   async conductResearch(prompt: string, serviceHypothesis: ServiceHypothesis): Promise<string> {
-    const maxRetries = 3;
-    let lastError: Error | null = null;
+    try {
+      // サービス仮説情報をフォーマット
+      const hypothesisContext = this.formatServiceHypothesis(serviceHypothesis);
+      
+      // Markdown出力を強制するための拡張プロンプト
+      const enhancedPrompt = `
+${prompt}
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        // レート制限対策: 前回のリクエストから最低限の間隔を確保
-        await this.enforceRateLimit();
+【サービス仮説情報】
+${hypothesisContext}
 
-        // サービス仮説を文字列に変換
-        const hypothesisText = this.formatServiceHypothesis(serviceHypothesis);
-        
-        // 完全なプロンプトを構築
-        const fullPrompt = `${prompt}\n\n【サービス仮説】\n${hypothesisText}`;
+🎯 **出力形式の指示（重要）**:
+- **必ずMarkdown形式で出力してください**
+- 見出しは ## や ### を使用（例：## 市場概要、### 主要プレイヤー）
+- 重要なポイントは **太字** で強調
+- リストは - または 1. を使用して箇条書き
+- 表形式のデータは | で区切った表として作成
+- 引用は > を使用
+- コードやデータは \`\`\` で囲む
+- URLがある場合は [タイトル](URL) 形式でリンク化
+- 区切り線は --- を使用
 
-        console.log(`[GeminiService] 調査実行開始 (試行${attempt}/${maxRetries}): ${prompt.substring(0, 50)}...`);
-        
-        // Gemini APIに問い合わせ（タイムアウト付き）
-        const requestPromise = this.model.generateContent(fullPrompt);
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Gemini APIリクエストがタイムアウトしました (90秒)')), 90000);
-        });
-        
-        const result = await Promise.race([requestPromise, timeoutPromise]) as any;
-        
-        // レスポンスオブジェクトの詳細チェック
-        if (!result) {
-          throw new Error('Gemini APIからnullレスポンスオブジェクトが返されました');
-        }
-        
-        const response = await result.response;
-        
-        // レスポンス詳細ログ（デバッグ用）
-        console.log(`[GeminiService] レスポンス取得成功 (試行${attempt})`);
-        
-        // レスポンスオブジェクトの検証
-        if (!response) {
-          throw new Error('Gemini APIからnullレスポンスが返されました');
-        }
-        
-        // text()関数の存在確認
-        if (typeof response.text !== 'function') {
-          console.error('[GeminiService] レスポンスオブジェクト詳細:', response);
-          throw new Error('レスポンスオブジェクトにtext()メソッドがありません');
-        }
-        
-        let text: string;
-        try {
-          text = response.text();
-        } catch (textError) {
-          console.error('[GeminiService] text()関数エラー:', textError);
-          throw new Error(`レスポンステキスト取得エラー: ${textError instanceof Error ? textError.message : 'Unknown'}`);
-        }
-        
-        // 空レスポンスのより詳細なチェック
-        if (text === null || text === undefined) {
-          throw new Error('Gemini APIから null/undefined テキストが返されました');
-        }
-        
-        if (typeof text !== 'string') {
-          console.error('[GeminiService] 予期しないテキスト型:', typeof text, text);
-          throw new Error(`予期しないレスポンス型: ${typeof text}`);
-        }
-        
-        const trimmedText = text.trim();
-        if (trimmedText.length === 0) {
-          throw new Error('Gemini APIから空文字列レスポンスが返されました');
-        }
-        
-        if (trimmedText.length < 10) {
-          console.warn(`[GeminiService] 非常に短いレスポンス (${trimmedText.length}文字): "${trimmedText}"`);
-          // 接続テストや明らかに意味のある短いレスポンスは除外
-          const validShortResponses = ['接続成功', 'OK', 'Success', 'Connected', 'Test successful'];
-          const isValidShortResponse = validShortResponses.some(valid => 
-            trimmedText.includes(valid) || valid.includes(trimmedText)
-          );
-          
-          if (!isValidShortResponse) {
-            // 意味のない短いレスポンスのみリトライ対象とする
-            throw new Error(`レスポンスが短すぎます (${trimmedText.length}文字): "${trimmedText}"`);
-          }
-        }
+🔍 **必須要素**:
+1. **エグゼクティブサマリー**: 主要発見事項を3-5点で要約
+2. **詳細分析**: 構造化された分析内容
+3. **データと根拠**: 具体的な数値やソース情報
+4. **アクションアイテム**: 次のステップの提案
+5. **参考情報**: 関連するURLや資料（可能な場合）
 
-        console.log(`[GeminiService] 調査完了 (試行${attempt}): ${trimmedText.length}文字の結果を取得`);
-        return trimmedText;
+📊 **視覚化の工夫**:
+- 比較データは表形式で整理
+- プロセスや手順は番号付きリスト
+- 要点は箇条書きで明確化
+- 重要な警告や注意点は > 引用形式
 
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error('Unknown error');
-        console.error(`[GeminiService] 調査実行エラー (試行${attempt}/${maxRetries}):`, lastError.message);
-        
-        // API制限エラーかどうかを判定
-        if (this.isRateLimitError(lastError)) {
-          const backoffTime = this.calculateBackoffTime(attempt);
-          console.log(`[GeminiService] API制限エラー検出、${backoffTime}ms後にリトライします...`);
-          await this.sleep(backoffTime);
-          continue;
-        }
-        
-        // API制限以外のエラーで、まだリトライ回数が残っている場合
-        if (attempt < maxRetries) {
-          const retryDelay = 2000 * attempt; // 2秒、4秒、6秒
-          console.log(`[GeminiService] ${retryDelay}ms後にリトライします...`);
-          await this.sleep(retryDelay);
-          continue;
-        }
-        
-        // 最終試行でもエラーの場合、エラーを投げる
-        break;
+上記の形式に従って、読みやすく構造化されたMarkdown形式で調査結果を出力してください。
+      `;
+
+      console.log(`[GeminiService] Markdown強化プロンプト送信 (${enhancedPrompt.length}文字)`);
+      
+      const model = this.genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+      const result = await model.generateContent(enhancedPrompt);
+      const response = await result.response;
+      const resultText = response.text();
+      
+      console.log(`[GeminiService] Gemini APIレスポンス受信: ${resultText.length}文字`);
+      console.log(`[GeminiService] Markdown要素確認:`, {
+        hasHeadings: /^#{1,6}\s/.test(resultText),
+        hasBold: /\*\*[^*]+\*\*/.test(resultText),
+        hasLists: /^[\-\*]\s/.test(resultText),
+        hasTables: /\|/.test(resultText),
+        hasCodeBlocks: /```/.test(resultText)
+      });
+      
+      // 結果の検証
+      if (!resultText || resultText.length < 50) {
+        throw new Error('Gemini APIからの応答が短すぎるか、空です。');
       }
-    }
+      
+      // Markdown形式が含まれていない場合の警告
+      if (!resultText.includes('#') && !resultText.includes('**') && !resultText.includes('-')) {
+        console.warn(`[GeminiService] ⚠️ Markdown要素が検出されませんでした。プレーンテキストの可能性があります。`);
+      }
+      
+      return resultText;
 
-    // すべてのリトライが失敗した場合
-    throw new Error(`Gemini API調査エラー (${maxRetries}回試行後失敗): ${lastError?.message || 'Unknown error'}`);
+    } catch (error: any) {
+      console.error('[GeminiService] 調査実行エラー:', error);
+      
+      if (error?.message?.includes('RATE_LIMIT_EXCEEDED')) {
+        console.warn('[GeminiService] API制限エラー、1秒待機後リトライ');
+        await this.sleep(1000);
+        
+                 // 短縮版プロンプトでリトライ
+         const fallbackPrompt = `${prompt}\n\n${this.formatServiceHypothesis(serviceHypothesis)}\n\n**Markdown形式で構造化して出力してください。見出し、太字、リストを活用してください。**`;
+        
+        try {
+          const model = this.genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+          const retryResult = await model.generateContent(fallbackPrompt);
+          const retryResponse = await retryResult.response;
+          return retryResponse.text();
+        } catch (retryError) {
+          console.error('[GeminiService] リトライも失敗:', retryError);
+          throw new Error(`Gemini API調査エラー (リトライ後): ${retryError instanceof Error ? retryError.message : 'Unknown error'}`);
+        }
+      }
+      
+      throw new Error(`Gemini API調査エラー: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   /**
@@ -341,40 +318,83 @@ export class GeminiService {
         throw new Error('有効な調査結果が見つかりません。個別調査が正常に完了していない可能性があります。');
       }
       
-      // 各調査結果を要約して結合（長すぎるプロンプトを避ける）
-      const summarizedResults = validResults.map(r => {
-        const summary = r.result.length > 1000 ? r.result.substring(0, 1000) + '...' : r.result;
-        return `## ${r.title}\n${summary}`;
+      // 各調査結果のサマリーを作成（統合レポート内で参照用）
+      const detailedSummaries = validResults.map((r, index) => {
+        const summary = r.result.length > 800 ? r.result.substring(0, 800) + '...' : r.result;
+        return `### ${r.title}
+**調査ID**: ${r.id}
+**要約**: ${summary}
+
+---`;
       }).join('\n\n');
       
-      console.log(`[GeminiService] 統合プロンプト長: ${summarizedResults.length}文字`);
+      console.log(`[GeminiService] 統合プロンプト長: ${detailedSummaries.length}文字`);
       
       const integrationPrompt = `
-以下の市場調査結果を分析し、事業成功に向けた包括的な戦略提言を作成してください。
+以下の16種類の市場調査結果を分析し、事業成功に向けた包括的な戦略提言を作成してください。
 
-【調査結果】
-${summarizedResults}
+## 📊 個別調査結果の詳細
+${detailedSummaries}
 
-【要求事項】
-1. **エグゼクティブサマリー**: 主要な発見事項を3点以内で要約
-2. **市場機会の分析**: 市場規模、成長性、参入機会の評価
-3. **競合環境の評価**: 競合他社の強み・弱み、差別化のポイント
-4. **顧客インサイト**: ターゲット顧客の特性、ニーズ、購買行動
-5. **事業リスクの特定**: 主要なリスク要因と対策案
-6. **戦略的提言**: 具体的なアクションプラン（優先順位付き）
-7. **KPI設計**: 成功指標と測定方法の提案
-8. **実行ロードマップ**: 短期・中期・長期の実行計画
+## 🎯 統合分析の要求事項
 
-【サービス仮説】
+### 1. **🔍 エグゼクティブサマリー**
+- 主要な発見事項を3-5点で要約
+- 事業機会の評価（High/Medium/Low）
+- 推奨される次のアクション
+
+### 2. **📈 市場機会の総合分析**
+- 市場規模と成長性の統合評価
+- PESTEL分析からの環境要因まとめ
+- 参入タイミングの推奨
+
+### 3. **🏢 競合環境の戦略的評価**
+- 競合他社の強み・弱み比較表
+- 差別化のポイントと競争優位性
+- 市場ポジショニング戦略
+
+### 4. **👥 顧客インサイトの統合**
+- ターゲット顧客の特性・ニーズまとめ
+- 購買行動と意思決定プロセス
+- 感情的ニーズと機能的ニーズの整理
+
+### 5. **⚠️ 事業リスクの総合評価**
+- 高・中・低リスクの分類と対策
+- シナリオ分析の結果統合
+- 法務・コンプライアンスの注意点
+
+### 6. **🚀 戦略的提言（具体的アクションプラン）**
+- 短期（3ヶ月）・中期（6-12ヶ月）・長期（1-3年）の戦略
+- 優先順位付きアクションアイテム
+- 必要なリソースと予算概算
+
+### 7. **📊 KPI設計と測定体制**
+- 成功指標の統合設計
+- 測定方法と頻度
+- ダッシュボード構成案
+
+### 8. **🔗 個別調査レポートへのリンク**
+- 各調査の詳細確認用リンク案内
+- 補足情報の参照方法
+
+### 9. **📚 参考情報・エビデンス**
+- 調査で参考にした情報源
+- 追加調査推奨項目
+- 業界レポートやデータソース
+
+## 💼 事業仮説情報
 ${this.formatServiceHypothesis(serviceHypothesis)}
 
-**出力形式**: 
-- 見出しは ## や ### を使用してMarkdown形式で構造化
-- 重要なポイントは箇条書きで整理
-- 数値データがある場合は具体的に記載
-- 実用的で具体的な内容にすること
+## 📋 出力形式の指示
+- **必ずMarkdown形式で構造化**
+- 見出し（##, ###）で階層化
+- 重要なポイントは **太字** で強調
+- 箇条書き（-）や番号付きリスト（1.）を活用
+- 表形式データは | で区切り
+- 区切り線（---）で セクション分離
+- 具体的な数値やデータを含める
 
-上記要件に基づいて、事業判断に直接活用できる統合レポートを作成してください。
+上記要件に基づいて、実用的で具体的な統合レポートを作成してください。各個別調査の内容を活用し、戦略的な意思決定に直接役立つ内容にしてください。
       `;
 
       console.log('[GeminiService] Gemini APIで統合レポート生成開始...');
@@ -403,7 +423,7 @@ ${this.formatServiceHypothesis(serviceHypothesis)}
   }
 
   /**
-   * フォールバック統合レポート生成
+   * フォールバック統合レポートを生成
    * @param results 個別調査結果
    * @param serviceHypothesis サービス仮説
    * @returns 基本的な統合レポート
@@ -412,79 +432,115 @@ ${this.formatServiceHypothesis(serviceHypothesis)}
     results: Array<{ id: number; title: string; result: string }>,
     serviceHypothesis: ServiceHypothesis
   ): string {
-    const validResults = results.filter(r => r.result && r.result.trim().length > 10);
+    console.log('[GeminiService] フォールバック統合レポート生成中...');
     
-    return `# 📊 統合市場調査レポート
+    // 調査結果のカテゴリ分類
+    const marketResults = results.filter(r => r.title.includes('市場') || r.title.includes('PESTEL'));
+    const competitorResults = results.filter(r => r.title.includes('競合'));
+    const customerResults = results.filter(r => r.title.includes('顧客') || r.title.includes('セグメント'));
+    const strategyResults = results.filter(r => 
+      r.title.includes('戦略') || r.title.includes('マーケティング') || r.title.includes('ブランド')
+    );
+    const riskResults = results.filter(r => 
+      r.title.includes('リスク') || r.title.includes('法務') || r.title.includes('コンプライアンス')
+    );
+    const otherResults = results.filter(r => 
+      !marketResults.includes(r) && !competitorResults.includes(r) && 
+      !customerResults.includes(r) && !strategyResults.includes(r) && !riskResults.includes(r)
+    );
+    
+    const fallbackReport = `# 🎯 市場調査統合レポート
 
-## 🎯 エグゼクティブサマリー
+## 📊 エグゼクティブサマリー
 
-本調査では${validResults.length}種類の専門的な市場分析を実行し、以下の主要な発見事項を得ました：
+この統合レポートは、${results.length}件の個別市場調査結果を分析し、事業成功に向けた戦略的提言をまとめたものです。
 
-### 重要な発見事項
-- **市場機会**: ${serviceHypothesis.targetIndustry}において、${serviceHypothesis.concept}のコンセプトは十分な市場機会を有している
-- **顧客ニーズ**: ${serviceHypothesis.customerProblem}に対する解決策への需要が確認された
-- **競合環境**: ${serviceHypothesis.competitors}との差別化が重要な成功要因
-
-## 📈 調査結果の概要
-
-${validResults.map((result, index) => 
-  `### ${index + 1}. ${result.title}\n${result.result.substring(0, 300)}${result.result.length > 300 ? '...' : ''}`
-).join('\n\n')}
-
-## 🎯 戦略的提言
-
-### 短期的アクション（3ヶ月以内）
-1. **MVP開発**: 最小実行可能プロダクトの開発と初期ユーザーテスト
-2. **市場検証**: ${serviceHypothesis.targetUsers}をターゲットとした仮説検証
-3. **パートナー探索**: 初期段階での戦略的パートナーシップ構築
-
-### 中期的戦略（6-12ヶ月）
-1. **本格展開**: 検証済みプロダクトの市場投入
-2. **収益モデル最適化**: ${serviceHypothesis.revenueModel || '設定された収益モデル'}の実装と改善
-3. **チーム拡充**: 事業成長に必要な人材の確保
-
-### 長期的ビジョン（1-3年）
-1. **市場シェア拡大**: ${serviceHypothesis.targetIndustry}での確固たる地位確立
-2. **新市場開拓**: 隣接市場への展開可能性の検討
-3. **エコシステム構築**: パートナー企業との協業体制強化
-
-## ⚠️ 主要リスクと対策
-
-### 事業リスク
-- **競合激化**: 既存プレイヤーからの反応への対策
-- **技術変化**: 技術トレンドの変化への適応力強化
-- **規制変更**: ${serviceHypothesis.regulatoryTechPrereqs || '関連規制'}の動向監視
-
-### 推奨対策
-- 継続的な市場監視と戦略調整
-- 技術的優位性の維持・向上
-- コンプライアンス体制の整備
-
-## 📊 成功指標（KPI）設計
-
-### 初期段階のKPI
-- ユーザー獲得数とアクティブ率
-- 顧客満足度（NPS）
-- 初回→継続利用率
-
-### 成長段階のKPI
-- 月次売上成長率（MRR）
-- 顧客獲得コスト（CAC）対生涯価値（LTV）比率
-- 市場シェア
-
-## 📅 実行ロードマップ
-
-**第1四半期**: 基盤構築・MVP開発
-**第2四半期**: 市場検証・初期ユーザー獲得
-**第3四半期**: 本格展開・収益化開始
-**第4四半期**: 成長加速・次期戦略策定
+### 🔍 調査対象事業
+- **事業名**: ${serviceHypothesis.concept || '未設定'}
+- **対象業界**: ${serviceHypothesis.targetIndustry || '未設定'}
+- **ターゲット**: ${serviceHypothesis.targetUsers || '未設定'}
 
 ---
 
-**注記**: この統合レポートは${validResults.length}種類の専門調査結果に基づいて作成されています。詳細な分析内容については、各個別調査レポートをご参照ください。
+## 📈 市場環境分析
+${marketResults.length > 0 ? `
+### 主要発見事項
+${marketResults.map(r => `- **${r.title}**: ${r.result.substring(0, 200)}...`).join('\n')}
+` : '市場環境に関する詳細データは個別調査レポートをご確認ください。'}
 
-**作成日時**: ${new Date().toLocaleString('ja-JP')}
+---
+
+## 🏢 競合環境評価
+${competitorResults.length > 0 ? `
+### 競合分析サマリー
+${competitorResults.map(r => `- **${r.title}**: ${r.result.substring(0, 200)}...`).join('\n')}
+` : '競合環境に関する詳細データは個別調査レポートをご確認ください。'}
+
+---
+
+## 👥 顧客インサイト
+${customerResults.length > 0 ? `
+### 顧客分析の要点
+${customerResults.map(r => `- **${r.title}**: ${r.result.substring(0, 200)}...`).join('\n')}
+` : '顧客インサイトに関する詳細データは個別調査レポートをご確認ください。'}
+
+---
+
+## 🚀 戦略的提言
+${strategyResults.length > 0 ? `
+### 戦略・マーケティング分析
+${strategyResults.map(r => `- **${r.title}**: ${r.result.substring(0, 200)}...`).join('\n')}
+` : '戦略・マーケティングに関する詳細データは個別調査レポートをご確認ください。'}
+
+---
+
+## ⚠️ リスク評価
+${riskResults.length > 0 ? `
+### リスク・コンプライアンス分析
+${riskResults.map(r => `- **${r.title}**: ${r.result.substring(0, 200)}...`).join('\n')}
+` : 'リスク評価に関する詳細データは個別調査レポートをご確認ください。'}
+
+---
+
+## 📊 その他の調査項目
+${otherResults.length > 0 ? `
+### 追加調査結果
+${otherResults.map(r => `- **${r.title}**: ${r.result.substring(0, 150)}...`).join('\n')}
+` : ''}
+
+---
+
+## 🔗 個別調査レポート一覧
+
+以下の個別調査レポートで詳細な分析結果を確認できます：
+
+${results.map((r, index) => `${index + 1}. **${r.title}** (調査ID: ${r.id})`).join('\n')}
+
+---
+
+## 📝 次のステップ
+
+### 🎯 即座に実施すべきアクション
+1. **詳細な個別調査結果の確認**: 各調査レポートの詳細内容を精査
+2. **優先順位の設定**: 事業への影響度に基づく施策の優先順位決定
+3. **詳細な実行計画策定**: 具体的なタイムライン・リソース計画の作成
+
+### 📅 推奨タイムライン
+- **短期 (1-3ヶ月)**: 個別調査結果の詳細分析と戦略の詳細化
+- **中期 (3-6ヶ月)**: 優先施策の実行開始
+- **長期 (6-12ヶ月)**: 成果測定と戦略の見直し
+
+---
+
+## ⚡ 注意事項
+
+この統合レポートは基本的なサマリーです。より詳細な分析と戦略的提言については、各個別調査レポートを必ずご確認ください。
+
+**生成日時**: ${new Date().toLocaleString('ja-JP')}
+**調査対象**: ${results.length}件の個別市場調査
 `;
+
+    return fallbackReport;
   }
 
   /**

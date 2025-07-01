@@ -431,524 +431,337 @@ export class NotionService {
   }
 
   /**
-   * マークダウンテキストをNotionブロックに変換（JSON対応版）
-   * @param markdownText Geminiから受け取ったMarkdown文字列またはJSON
+   * マークダウンテキストをNotionブロックに変換（装飾対応強化版）
+   * @param text マークダウンテキスト
    * @returns Notionブロック配列
    */
-  private createBlocksFromMarkdown(markdownText: string): any[] {
-    try {
-      if (!markdownText || markdownText.trim().length === 0) {
-        return [this.createParagraphBlock('AIからの応答が空でした。')];
-      }
-
-      console.log(`[NotionService] コンテンツ変換開始: ${markdownText.length}文字`);
-      
-      // JSONレスポンスの検出と処理
-      const trimmedText = markdownText.trim();
-      
-      // JSON配列形式の検出（開始が[、終了が]）
-      if (trimmedText.startsWith('[') && trimmedText.endsWith(']')) {
-        console.log('[NotionService] JSON配列形式を検出、Notionブロックに変換中...');
-        return this.convertJsonArrayToNotionBlocks(trimmedText);
-      }
-      
-      // JSONオブジェクト形式の検出（開始が{、終了が}）
-      if (trimmedText.startsWith('{') && trimmedText.endsWith('}')) {
-        console.log('[NotionService] JSONオブジェクト形式を検出、Notionブロックに変換中...');
-        try {
-          const jsonObject = JSON.parse(trimmedText);
-          return this.convertJsonObjectToNotionBlocks(jsonObject);
-        } catch (parseError) {
-          console.warn('[NotionService] JSONオブジェクトパースエラー、Markdownとして処理:', parseError);
-        }
-      }
-      
-      // ```json コードブロック形式の処理
-      const jsonCodeBlockMatch = trimmedText.match(/```json\s*([\s\S]*?)\s*```/);
-      if (jsonCodeBlockMatch) {
-        console.log('[NotionService] JSONコードブロック形式を検出');
-        try {
-          const jsonContent = jsonCodeBlockMatch[1].trim();
-          if (jsonContent.startsWith('[')) {
-            return this.convertJsonArrayToNotionBlocks(jsonContent);
-          }
-        } catch (parseError) {
-          console.warn('[NotionService] JSONコードブロックパースエラー:', parseError);
-        }
-      }
-      
-      // 通常のMarkdown処理
-      console.log('[NotionService] 通常のMarkdown形式として処理');
-      return this.convertMarkdownToNotionBlocks(trimmedText);
-      
-    } catch (error) {
-      console.error('[NotionService] コンテンツ変換エラー:', error);
-      return [
-        this.createParagraphBlock('⚠️ コンテンツの変換中にエラーが発生しました。'),
-        this.createParagraphBlock(`元のテキスト: ${markdownText.substring(0, 500)}...`)
-      ];
+  private createBlocksFromMarkdown(text: string): any[] {
+    if (!text || typeof text !== 'string') {
+      return [];
     }
-  }
 
-  /**
-   * JSON配列をNotionブロックに変換
-   * @param jsonString JSON配列文字列
-   * @returns Notionブロック配列
-   */
-  private convertJsonArrayToNotionBlocks(jsonString: string): any[] {
-    try {
-      console.log('[NotionService] JSON配列パース開始');
-      const jsonArray = JSON.parse(jsonString);
-      
-      if (!Array.isArray(jsonArray)) {
-        console.warn('[NotionService] JSON配列ではありません、Markdownとして処理');
-        return this.convertMarkdownToNotionBlocks(jsonString);
-      }
-      
-      const notionBlocks: any[] = [];
-      
-      for (const item of jsonArray) {
-        if (!item || typeof item !== 'object' || !item.type || !item.content) {
-          console.warn('[NotionService] 無効なJSON項目をスキップ:', item);
-          continue;
-        }
-        
-        const block = this.convertJsonItemToNotionBlock(item);
-        if (block) {
-          notionBlocks.push(block);
-        }
-      }
-      
-      console.log(`[NotionService] JSON配列変換完了: ${notionBlocks.length}ブロック`);
-      return notionBlocks.length > 0 ? notionBlocks : [
-        this.createParagraphBlock('⚠️ 有効なコンテンツが見つかりませんでした。')
-      ];
-      
-    } catch (error) {
-      console.error('[NotionService] JSON配列パースエラー:', error);
-      return [
-        this.createParagraphBlock('⚠️ JSON形式の解析に失敗しました。'),
-        this.createParagraphBlock(`元のJSON: ${jsonString.substring(0, 300)}...`)
-      ];
-    }
-  }
-
-  /**
-   * JSON項目をNotionブロックに変換
-   * @param item JSON項目
-   * @returns Notionブロック
-   */
-  private convertJsonItemToNotionBlock(item: any): any | null {
-    try {
-      const { type, content, icon, children } = item;
-      
-      switch (type) {
-        case 'heading_1':
-          return {
-            object: 'block',
-            type: 'heading_1',
-            heading_1: {
-              rich_text: [
-                {
-                  type: 'text',
-                  text: {
-                    content: this.truncateTextForRichText(content)
-                  }
-                }
-              ]
-            }
-          };
-          
-        case 'heading_2':
-          return {
-            object: 'block',
-            type: 'heading_2',
-            heading_2: {
-              rich_text: [
-                {
-                  type: 'text',
-                  text: {
-                    content: this.truncateTextForRichText(content)
-                  }
-                }
-              ]
-            }
-          };
-          
-        case 'heading_3':
-          return {
-            object: 'block',
-            type: 'heading_3',
-            heading_3: {
-              rich_text: [
-                {
-                  type: 'text',
-                  text: {
-                    content: this.truncateTextForRichText(content)
-                  }
-                }
-              ]
-            }
-          };
-          
-        case 'paragraph':
-          return {
-            object: 'block',
-            type: 'paragraph',
-            paragraph: {
-              rich_text: this.parseTextToRichText(content)
-            }
-          };
-          
-        case 'bulleted_list_item':
-          return {
-            object: 'block',
-            type: 'bulleted_list_item',
-            bulleted_list_item: {
-              rich_text: this.parseTextToRichText(content)
-            }
-          };
-          
-        case 'callout':
-          return {
-            object: 'block',
-            type: 'callout',
-            callout: {
-              rich_text: this.parseTextToRichText(content),
-              icon: icon ? { emoji: icon } : { emoji: '💡' },
-              color: 'blue_background'
-            }
-          };
-          
-        case 'toggle':
-          const toggleChildren = children ? 
-            children.map((child: any) => this.convertJsonItemToNotionBlock(child)).filter(Boolean) : 
-            [];
-          return {
-            object: 'block',
-            type: 'toggle',
-            toggle: {
-              rich_text: this.parseTextToRichText(content),
-              children: toggleChildren
-            }
-          };
-          
-        case 'divider':
-          return {
-            object: 'block',
-            type: 'divider',
-            divider: {}
-          };
-          
-        default:
-          console.warn(`[NotionService] 未対応のブロックタイプ: ${type}`);
-          return {
-            object: 'block',
-            type: 'paragraph',
-            paragraph: {
-              rich_text: this.parseTextToRichText(content || `未対応タイプ: ${type}`)
-            }
-          };
-      }
-    } catch (error) {
-      console.error('[NotionService] JSON項目変換エラー:', error);
-      return null;
-    }
-  }
-
-  /**
-   * JSONオブジェクトをNotionブロックに変換
-   * @param jsonObject JSONオブジェクト
-   * @returns Notionブロック配列
-   */
-  private convertJsonObjectToNotionBlocks(jsonObject: any): any[] {
-    console.log('[NotionService] JSONオブジェクト変換開始');
-    
     const blocks: any[] = [];
-    
-    // オブジェクトのキーと値をNotionブロックに変換
-    Object.entries(jsonObject).forEach(([key, value]) => {
-      // キーを見出しとして追加
-      blocks.push({
-        object: 'block',
-        type: 'heading_3',
-        heading_3: {
-          rich_text: [
-            {
-              type: 'text',
-              text: {
-                content: this.truncateTextForRichText(key)
-              }
-            }
-          ]
-        }
-      });
-      
-      // 値をパラグラフとして追加
-      const valueText = typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
-      blocks.push({
-        object: 'block',
-        type: 'paragraph',
-        paragraph: {
-          rich_text: this.parseTextToRichText(valueText)
-        }
-      });
-    });
-    
-    return blocks;
-  }
+    const lines = text.split('\n').filter(line => line.trim() !== '');
 
-  /**
-   * 通常のMarkdownをNotionブロックに変換
-   * @param markdownText Markdownテキスト
-   * @returns Notionブロック配列
-   */
-  private convertMarkdownToNotionBlocks(markdownText: string): any[] {
-    // 既存のMarkdown変換ロジックを使用
-    const lines = markdownText.split('\n');
-    const blocks: any[] = [];
-    
-    let currentListItems: any[] = [];
-    
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const trimmedLine = line.trim();
-      
-      // 空行はスキップ
-      if (trimmedLine.length === 0) {
-        // リストが終了した場合の処理
-        if (currentListItems.length > 0) {
-          blocks.push(...currentListItems);
-          currentListItems = [];
+
+      // 🎨 見出し1 (# または ## または ### または ####)
+      if (trimmedLine.match(/^#{1,4}\s+/)) {
+        const level = (trimmedLine.match(/^#+/) || [''])[0].length;
+        const text = trimmedLine.replace(/^#+\s+/, '').trim();
+        
+        const headingType = level === 1 ? 'heading_1' : 
+                           level === 2 ? 'heading_2' : 
+                           level === 3 ? 'heading_3' : 'heading_3';
+        
+        blocks.push({
+          object: 'block',
+          type: headingType,
+          [headingType]: {
+            rich_text: [
+              {
+                type: 'text',
+                text: { content: text },
+                annotations: {
+                  bold: true,
+                  color: 'blue'
+                }
+              }
+            ]
+          }
+        });
+        continue;
+      }
+
+      // 🎨 箇条書き (- や * や •)
+      if (trimmedLine.match(/^[\-\*\•]\s+/)) {
+        const text = trimmedLine.replace(/^[\-\*\•]\s+/, '').trim();
+        blocks.push({
+          object: 'block',
+          type: 'bulleted_list_item',
+          bulleted_list_item: {
+            rich_text: this.parseRichText(text)
+          }
+        });
+        continue;
+      }
+
+      // 🎨 番号付きリスト (1. や 2. など)
+      if (trimmedLine.match(/^\d+\.\s+/)) {
+        const text = trimmedLine.replace(/^\d+\.\s+/, '').trim();
+        blocks.push({
+          object: 'block',
+          type: 'numbered_list_item',
+          numbered_list_item: {
+            rich_text: this.parseRichText(text)
+          }
+        });
+        continue;
+      }
+
+      // 🎨 引用 (> で始まる)
+      if (trimmedLine.startsWith('>')) {
+        const text = trimmedLine.replace(/^>\s*/, '').trim();
+        blocks.push({
+          object: 'block',
+          type: 'quote',
+          quote: {
+            rich_text: this.parseRichText(text)
+          }
+        });
+        continue;
+      }
+
+      // 🎨 コードブロック (``` で囲まれた部分)
+      if (trimmedLine.startsWith('```')) {
+        const codeLines = [];
+        i++; // 次の行から開始
+        
+        while (i < lines.length && !lines[i].trim().startsWith('```')) {
+          codeLines.push(lines[i]);
+          i++;
+        }
+        
+        if (codeLines.length > 0) {
+          blocks.push({
+            object: 'block',
+            type: 'code',
+            code: {
+              language: 'plain_text',
+              rich_text: [
+                {
+                  type: 'text',
+                  text: { content: codeLines.join('\n') }
+                }
+              ]
+            }
+          });
         }
         continue;
       }
-      
-      // H1 見出し (# )
-      if (trimmedLine.startsWith('# ')) {
-        // リスト終了処理
-        if (currentListItems.length > 0) {
-          blocks.push(...currentListItems);
-          currentListItems = [];
-        }
-        blocks.push(this.createHeading1Block(trimmedLine.substring(2).trim()));
-      }
-      // H2 見出し (## )
-      else if (trimmedLine.startsWith('## ')) {
-        // リスト終了処理
-        if (currentListItems.length > 0) {
-          blocks.push(...currentListItems);
-          currentListItems = [];
-        }
-        blocks.push(this.createHeading2Block(trimmedLine.substring(3).trim()));
-      }
-      // H3 見出し (### )
-      else if (trimmedLine.startsWith('### ')) {
-        // リスト終了処理
-        if (currentListItems.length > 0) {
-          blocks.push(...currentListItems);
-          currentListItems = [];
-        }
-        blocks.push(this.createHeading3Block(trimmedLine.substring(4).trim()));
-      }
-      // 箇条書きリスト (- または * で始まる)
-      else if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
-        const listContent = trimmedLine.substring(2).trim();
-        currentListItems.push(this.createBulletedListItemBlock(listContent));
-      }
-      // 区切り線
-      else if (trimmedLine === '---' || trimmedLine === '***') {
-        // リスト終了処理
-        if (currentListItems.length > 0) {
-          blocks.push(...currentListItems);
-          currentListItems = [];
-        }
+
+      // 🎨 区切り線 (--- や *** など)
+      if (trimmedLine.match(/^[\-\*]{3,}$/)) {
         blocks.push({
           object: 'block',
           type: 'divider',
           divider: {}
         });
+        continue;
       }
-      // 通常のパラグラフ
-      else {
-        // リスト終了処理
-        if (currentListItems.length > 0) {
-          blocks.push(...currentListItems);
-          currentListItems = [];
+
+      // 🎨 表の検出（| で区切られた行）
+      if (trimmedLine.includes('|') && trimmedLine.split('|').length >= 3) {
+        const tableData = this.parseTableData(lines, i);
+        if (tableData.rows.length > 0) {
+          blocks.push({
+            object: 'block',
+            type: 'table',
+            table: {
+              table_width: tableData.columns,
+              has_column_header: true,
+              has_row_header: false,
+              children: tableData.rows.map((row, index) => ({
+                object: 'block',
+                type: 'table_row',
+                table_row: {
+                  cells: row.map(cell => [
+                    {
+                      type: 'text',
+                      text: { content: cell.trim() },
+                      annotations: index === 0 ? { bold: true } : {}
+                    }
+                  ])
+                }
+              }))
+            }
+          });
+          
+          i += tableData.lineCount - 1; // テーブル処理した行数分スキップ
+          continue;
         }
-        blocks.push(this.createParagraphBlock(trimmedLine));
+      }
+
+      // 🎨 通常の段落（太字・斜体・リンク対応）
+      if (trimmedLine.length > 0) {
+        blocks.push({
+          object: 'block',
+          type: 'paragraph',
+          paragraph: {
+            rich_text: this.parseRichText(trimmedLine)
+          }
+        });
       }
     }
-    
-    // 最後にリストが残っている場合の処理
-    if (currentListItems.length > 0) {
-      blocks.push(...currentListItems);
-    }
-    
+
     return blocks;
   }
 
   /**
-   * 再帰的にブロックを生成
-   * @param blocksContent ブロック定義の配列
-   * @returns Notionブロック配列
+   * リッチテキスト解析（太字・斜体・リンク対応）
+   * @param text テキスト
+   * @returns リッチテキスト配列
    */
-  private createBlocksRecursive(blocksContent: any[]): any[] {
-    const notionBlocks: any[] = [];
-    for (const block of blocksContent) {
-      if (!block || !block.type) continue;
+  private parseRichText(text: string): any[] {
+    const richTextElements: any[] = [];
+    let currentText = text;
+    
+    // URLパターンの検出とリンク化
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const urlMatches = currentText.match(urlRegex);
+    
+    if (urlMatches) {
+      const parts = currentText.split(urlRegex);
       
-      let createdBlock: any | any[] = null;
-      const content = block.content || '';
-
-      switch (block.type) {
-        case 'heading_2':
-          createdBlock = this.createHeading2Block(content);
-          break;
-        case 'heading_3':
-          createdBlock = this.createHeading3Block(content);
-          break;
-        case 'paragraph':
-          createdBlock = this.createParagraphBlock(content);
-          break;
-        case 'bulleted_list_item':
-          createdBlock = this.createBulletedListItemBlock(content);
-          break;
-        case 'toggle':
-          const children = block.children && Array.isArray(block.children)
-            ? this.createBlocksRecursive(block.children)
-            : [];
-          createdBlock = this.createToggleBlock(content, children);
-          break;
-        case 'callout':
-          createdBlock = this.createCalloutBlock(content, '', block.icon || 'ℹ️');
-          break;
-        case 'divider':
-          createdBlock = { object: 'block', type: 'divider', divider: {} };
-          break;
-        default:
-          console.warn(`[NotionService] 未知のブロックタイプ: ${block.type}`);
-          createdBlock = this.createParagraphBlock(`[未知のタイプ: ${block.type}] ${content}`);
-      }
-      
-      if (createdBlock) {
-        if (Array.isArray(createdBlock)) {
-          notionBlocks.push(...createdBlock);
-        } else {
-          notionBlocks.push(createdBlock);
+      for (const part of parts) {
+        if (urlMatches.includes(part)) {
+          // URLの場合はリンクとして処理
+          richTextElements.push({
+            type: 'text',
+            text: { content: part, link: { url: part } },
+            annotations: { color: 'blue' }
+          });
+        } else if (part.trim()) {
+          // 通常テキストの場合は太字・斜体処理
+          richTextElements.push(...this.parseTextAnnotations(part));
         }
       }
+    } else {
+      // URLがない場合は通常の太字・斜体処理
+      richTextElements.push(...this.parseTextAnnotations(currentText));
     }
-    return notionBlocks;
-  }
-  
-  /**
-   * Geminiからの応答からJSON文字列をクリーンアップ
-   * @param jsonString 
-   * @returns 
-   */
-  private cleanupJsonString(jsonString: string): string {
-    // 前後の```jsonと```を削除
-    let cleaned = jsonString.trim().replace(/^```json\s*/, '').replace(/```$/, '').trim();
-    // 時々含まれる不正なエスケープを修正
-    cleaned = cleaned.replace(/\\"/g, '"').replace(/\\n/g, '\n');
-    return cleaned;
-  }
-
-  /**
-   * 行がJSON形式データかどうかを判定
-   * @param line 判定する行
-   * @returns JSON形式データの場合true
-   */
-  private isJsonData(line: string): boolean {
-    // JSON形式の典型的なパターンを検出
-    const jsonPatterns = [
-      /^\s*\{\s*"type"\s*:\s*"[^"]+"\s*,/,  // {"type": "...
-      /^\s*\[\s*\{\s*"type"\s*:\s*"[^"]+"/,  // [{"type": "...
-      /^\s*"type"\s*:\s*"[^"]+"\s*,/,       // "type": "...
-      /^\s*\{\s*"object"\s*:\s*"block"/,    // {"object": "block"
-      /^\s*\],?\s*$/,                       // 配列終了
-      /^\s*\},?\s*$/                        // オブジェクト終了
-    ];
-
-    return jsonPatterns.some(pattern => pattern.test(line));
-  }
-
-  /**
-   * JSON形式データから有用なコンテンツを抽出
-   * @param jsonLine JSON形式の行
-   * @returns 抽出されたコンテンツまたはnull
-   */
-  private extractContentFromJson(jsonLine: string): string | null {
-    try {
-      // コンテンツフィールドを抽出するパターン
-      const contentMatches = [
-        /"content"\s*:\s*"([^"]+)"/,          // "content": "テキスト"
-        /"text"\s*:\s*"([^"]+)"/,             // "text": "テキスト"  
-        /"title"\s*:\s*"([^"]+)"/             // "title": "テキスト"
-      ];
-
-      for (const pattern of contentMatches) {
-        const match = jsonLine.match(pattern);
-        if (match && match[1]) {
-          return match[1];
-        }
+    
+    return richTextElements.length > 0 ? richTextElements : [
+      {
+        type: 'text',
+        text: { content: text }
       }
+    ];
+  }
 
-      // ブロックタイプに基づく処理
-      const typeMatch = jsonLine.match(/"type"\s*:\s*"([^"]+)"/);
-      if (typeMatch) {
-        const blockType = typeMatch[1];
-        const content = this.extractContentFromJson(jsonLine.replace(/"type"\s*:\s*"[^"]+"\s*,?/, ''));
-        
-        if (content) {
-          switch (blockType) {
-            case 'heading_1':
-              return `# ${content}`;
-            case 'heading_2':
-              return `## ${content}`;
-            case 'heading_3':
-              return `### ${content}`;
-            case 'bulleted_list_item':
-              return `- ${content}`;
-            case 'callout':
-              return `💡 ${content}`;
-            default:
-              return content;
+  /**
+   * テキストアノテーション解析（太字・斜体）
+   * @param text テキスト
+   * @returns リッチテキスト要素配列
+   */
+  private parseTextAnnotations(text: string): any[] {
+    // **太字** と *斜体* の処理
+    const boldRegex = /\*\*(.*?)\*\*/g;
+    const italicRegex = /\*(.*?)\*/g;
+    
+    let processedText = text;
+    const annotations: any[] = [];
+    
+    // 太字の処理
+    let match;
+    while ((match = boldRegex.exec(text)) !== null) {
+      annotations.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        type: 'bold',
+        content: match[1]
+      });
+    }
+    
+    // 斜体の処理（太字と重複しない部分のみ）
+    const italicMatches = text.match(italicRegex);
+    if (italicMatches) {
+      // 簡単な実装：アノテーションが複雑になるため、基本的な太字のみ対応
+    }
+    
+    if (annotations.length > 0) {
+      // アノテーション付きテキストとして処理
+      const parts = [];
+      let lastIndex = 0;
+      
+      for (const annotation of annotations) {
+        // 前の部分（通常テキスト）
+        if (annotation.start > lastIndex) {
+          const beforeText = text.substring(lastIndex, annotation.start);
+          if (beforeText) {
+            parts.push({
+              type: 'text',
+              text: { content: beforeText }
+            });
           }
         }
+        
+        // アノテーション部分
+        parts.push({
+          type: 'text',
+          text: { content: annotation.content },
+          annotations: { bold: annotation.type === 'bold' }
+        });
+        
+        lastIndex = annotation.end;
       }
-
-      return null;
-    } catch (error) {
-      console.warn('[NotionService] JSON内容抽出エラー:', error);
-      return null;
+      
+      // 残りの部分
+      if (lastIndex < text.length) {
+        const remainingText = text.substring(lastIndex);
+        if (remainingText) {
+          parts.push({
+            type: 'text',
+            text: { content: remainingText }
+          });
+        }
+      }
+      
+      return parts;
     }
+    
+    return [
+      {
+        type: 'text',
+        text: { content: text }
+      }
+    ];
   }
 
   /**
-   * 段落ブロックを作成（文章装飾対応版）
-   * @param text テキスト
-   * @returns Notionブロック
+   * 表データの解析
+   * @param lines 全行配列
+   * @param startIndex 開始インデックス
+   * @returns 表データと処理行数
    */
-  private createParagraphBlock(text: string): any {
-    // Notion Rich Text用に安全に短縮
-    const truncatedText = this.truncateTextSafely(text);
+  private parseTableData(lines: string[], startIndex: number): { rows: string[][], columns: number, lineCount: number } {
+    const tableRows: string[][] = [];
+    let currentIndex = startIndex;
+    let maxColumns = 0;
     
-    // マークダウン形式の装飾を解析してRichTextに変換
-    const richText = this.parseTextToRichText(truncatedText);
+    while (currentIndex < lines.length) {
+      const line = lines[currentIndex].trim();
+      
+      if (!line.includes('|')) {
+        break; // 表の終了
+      }
+      
+      // ヘッダー区切り行をスキップ（|---|---|のような行）
+      if (line.match(/^\|[\s\-\|:]+\|$/)) {
+        currentIndex++;
+        continue;
+      }
+      
+      const cells = line.split('|').map(cell => cell.trim()).filter(cell => cell !== '');
+      if (cells.length > 0) {
+        tableRows.push(cells);
+        maxColumns = Math.max(maxColumns, cells.length);
+      }
+      
+      currentIndex++;
+    }
     
     return {
-      object: 'block',
-      type: 'paragraph',
-      paragraph: {
-        rich_text: richText
-      }
-    } as any;
+      rows: tableRows,
+      columns: maxColumns,
+      lineCount: currentIndex - startIndex
+    };
   }
 
   /**
-   * テキストをRichText形式に変換（装飾対応強化版）
+   * テキストをRich Text形式に変換（装飾対応強化版）
    * @param text プレーンテキスト
    * @returns RichText配列
    */
@@ -2412,10 +2225,13 @@ export class NotionService {
     try {
       console.log(`[NotionService] 統合レポートページ事前作成開始: ${businessName}`);
 
+      // 統合レポートのタイトルを事業名入りにカスタマイズ
+      const integratedReportTitle = `統合調査レポート（${businessName}）`;
+
       // 🔍 重複チェック: 既存の統合レポートを検索
       const existingIntegratedReport = await this.findExistingResearchPage(
         businessName, 
-        '統合調査レポート'
+        integratedReportTitle
       );
       
       if (existingIntegratedReport) {
@@ -2783,5 +2599,220 @@ export class NotionService {
       
       return false;
     }
+  }
+
+  /**
+   * 事業名プロパティを動的に検索（強化版）
+   * @param properties データベースプロパティ
+   * @returns 事業名プロパティ名
+   */
+  private findBusinessNameProperty(properties: Record<string, any>): string | null {
+    console.log('[NotionService] 🔍 事業名プロパティ検索開始');
+    console.log('[NotionService] 利用可能なプロパティ:', Object.keys(properties));
+
+    // 事業名として考えられるプロパティ名のパターン（優先順位付き）
+    const businessNamePatterns = [
+      // 正確なマッチ（最優先）
+      'Business Name',
+      'business_name', 
+      'businessName',
+      '事業名',
+      'Company Name',
+      'company_name',
+      'companyName',
+      '会社名',
+      'Service Name',
+      'service_name',
+      'serviceName',
+      'サービス名',
+      'Product Name',
+      'product_name',
+      'productName',
+      '商品名',
+      'プロダクト名',
+      'Project Name',
+      'project_name',
+      'projectName',
+      'プロジェクト名',
+      '名前',
+      'Name',
+      'name',
+      'Title',
+      'title',
+      'タイトル',
+      
+      // 部分マッチパターン
+      'business',
+      'company', 
+      'service',
+      'product',
+      'project',
+      '事業',
+      '会社',
+      'サービス',
+      '商品',
+      'プロダクト',
+      'プロジェクト'
+    ];
+
+    // 段階的検索: 完全一致 → 部分一致 → 類似性マッチ
+    for (const pattern of businessNamePatterns) {
+      // 1. 完全一致検索
+      const exactMatch = Object.keys(properties).find(key => 
+        key.toLowerCase() === pattern.toLowerCase()
+      );
+      
+      if (exactMatch && properties[exactMatch].type === 'title') {
+        console.log(`[NotionService] ✅ 事業名プロパティ（完全一致）: "${exactMatch}"`);
+        return exactMatch;
+      }
+    }
+
+    // 2. 部分一致検索（含む）
+    for (const pattern of businessNamePatterns) {
+      const partialMatch = Object.keys(properties).find(key => 
+        key.toLowerCase().includes(pattern.toLowerCase()) && 
+        properties[key].type === 'title'
+      );
+      
+      if (partialMatch) {
+        console.log(`[NotionService] ✅ 事業名プロパティ（部分一致）: "${partialMatch}"`);
+        return partialMatch;
+      }
+    }
+
+    // 3. 最初のtitleタイプのプロパティをフォールバック
+    const titleProperty = Object.keys(properties).find(key => 
+      properties[key].type === 'title'
+    );
+    
+    if (titleProperty) {
+      console.log(`[NotionService] ✅ 事業名プロパティ（titleタイプ）: "${titleProperty}"`);
+      return titleProperty;
+    }
+
+    // 4. 最後の手段: リッチテキストタイプで名前系のプロパティ
+    const richTextNameProperty = Object.keys(properties).find(key => 
+      properties[key].type === 'rich_text' && 
+      (key.toLowerCase().includes('name') || 
+       key.toLowerCase().includes('title') ||
+       key.includes('名前') || 
+       key.includes('タイトル'))
+    );
+    
+    if (richTextNameProperty) {
+      console.log(`[NotionService] ✅ 事業名プロパティ（リッチテキスト）: "${richTextNameProperty}"`);
+      return richTextNameProperty;
+    }
+
+    console.warn('[NotionService] ⚠️ 事業名プロパティが見つかりませんでした');
+    console.warn('[NotionService] 📋 利用可能なプロパティ詳細:', 
+      Object.entries(properties).map(([key, prop]) => ({ name: key, type: prop.type }))
+    );
+    
+    return null;
+  }
+
+  /**
+   * サービス仮説の各フィールドに対応するNotionプロパティを動的検索
+   * @param properties データベースプロパティ
+   * @returns フィールドマッピング
+   */
+  private createDynamicFieldMapping(properties: Record<string, any>): Record<string, string> {
+    console.log('[NotionService] 🔍 動的フィールドマッピング作成開始');
+    
+    const mapping: Record<string, string> = {};
+    const propertyNames = Object.keys(properties);
+    
+    // サービス仮説フィールドと対応する可能なプロパティ名のパターン
+    const fieldPatterns = {
+      concept: [
+        'concept', 'Concept', 'コンセプト', 'サービスコンセプト', 'プロダクトコンセプト',
+        'service_concept', 'product_concept', 'idea', 'アイデア'
+      ],
+      customerProblem: [
+        'customer_problem', 'customerProblem', 'Customer Problem', '顧客課題', '解決したい顧客課題',
+        'problem', 'issue', '課題', '問題', 'customer_issue', 'pain_point', 'ペインポイント'
+      ],
+      targetIndustry: [
+        'target_industry', 'targetIndustry', 'Target Industry', '業界', '業種', 'industry',
+        '狙っている業種・業界', '対象業界', 'target_market', 'market'
+      ],
+      targetUsers: [
+        'target_users', 'targetUsers', 'Target Users', 'ターゲット', 'ユーザー', '利用者層',
+        '想定される利用者層', 'target_customer', 'customer_segment', 'users'
+      ],
+      competitors: [
+        'competitors', 'Competitors', '競合', '競合他社', 'competition', '直接競合・間接競合',
+        'competitor_analysis', 'competitive_landscape'
+      ],
+      revenueModel: [
+        'revenue_model', 'revenueModel', 'Revenue Model', '課金モデル', '収益モデル',
+        'business_model', 'monetization', 'pricing_model'
+      ],
+      pricingDirection: [
+        'pricing_direction', 'pricingDirection', 'Pricing Direction', '価格設定', '価格戦略',
+        '価格帯・価格設定の方向性', 'pricing_strategy', 'price_range'
+      ],
+      uvp: [
+        'uvp', 'UVP', 'Unique Value Proposition', '暫定UVP', '暫定 UVP',
+        '暫定UVP（Unique Value Proposition）', '暫定 UVP（Unique Value Proposition）',
+        'value_proposition', '価値提案', '独自価値提案'
+      ],
+      initialKpi: [
+        'initial_kpi', 'initialKpi', 'Initial KPI', 'KPI', '初期KPI', '初期 KPI',
+        'success_metrics', '成功指標', '目標指標', 'key_metrics'
+      ],
+      acquisitionChannels: [
+        'acquisition_channels', 'acquisitionChannels', 'Acquisition Channels',
+        '獲得チャネル仮説', '獲得チャネル', 'marketing_channels', 'channel_strategy'
+      ],
+      regulatoryTechPrereqs: [
+        'regulatory_tech_prereqs', 'regulatoryTechPrereqs', 'Regulatory Tech Prerequisites',
+        '規制・技術前提', '技術前提', '規制要件', 'compliance', 'tech_requirements'
+      ],
+      costStructure: [
+        'cost_structure', 'costStructure', 'Cost Structure', 'コスト構造', '想定コスト構造',
+        'cost_model', 'expenses', '費用構造'
+      ]
+    };
+
+    // 各サービス仮説フィールドに対して最適なNotionプロパティを検索
+    for (const [serviceField, patterns] of Object.entries(fieldPatterns)) {
+      let foundProperty: string | null = null;
+
+      // パターンごとに検索（優先順位順）
+      for (const pattern of patterns) {
+        // 完全一致検索
+        const exactMatch = propertyNames.find(prop => 
+          prop.toLowerCase() === pattern.toLowerCase()
+        );
+        
+        if (exactMatch) {
+          foundProperty = exactMatch;
+          break;
+        }
+
+        // 部分一致検索
+        const partialMatch = propertyNames.find(prop => 
+          prop.toLowerCase().includes(pattern.toLowerCase()) ||
+          pattern.toLowerCase().includes(prop.toLowerCase())
+        );
+        
+        if (partialMatch && !foundProperty) {
+          foundProperty = partialMatch;
+        }
+      }
+
+      if (foundProperty) {
+        mapping[serviceField] = foundProperty;
+        console.log(`[NotionService] ✅ マッピング: ${serviceField} -> "${foundProperty}"`);
+      } else {
+        console.warn(`[NotionService] ⚠️ プロパティ未発見: ${serviceField}`);
+      }
+    }
+
+    console.log(`[NotionService] 🎯 動的マッピング完了: ${Object.keys(mapping).length}/${Object.keys(fieldPatterns).length} フィールド対応`);
+    return mapping;
   }
 }

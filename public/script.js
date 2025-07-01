@@ -1479,17 +1479,21 @@ const TEMPLATE_TEXT = `コンセプト：
 規制・技術前提：
 想定コスト構造：`;
 
-// フィールドマッピング（複数の表記に対応・拡張版）
+// フィールドマッピング（空白対応版 - 完全対応）
 const FIELD_MAPPING = {
     // 基本的なフィールド名
     'コンセプト': 'concept',
     'Concept': 'concept',
     'concept': 'concept',
+    'サービスコンセプト': 'concept',
+    'プロダクトコンセプト': 'concept',
     
     '解決したい顧客課題': 'customerProblem',
     '顧客課題': 'customerProblem',
     'customerProblem': 'customerProblem',
     'Customer Problem': 'customerProblem',
+    '課題': 'customerProblem',
+    '解決課題': 'customerProblem',
     
     '狙っている業種・業界': 'targetIndustry',
     '業種・業界': 'targetIndustry',
@@ -1497,20 +1501,27 @@ const FIELD_MAPPING = {
     '業界': 'targetIndustry',
     'targetIndustry': 'targetIndustry',
     'Target Industry': 'targetIndustry',
+    'ターゲット業界': 'targetIndustry',
     
     '想定される利用者層': 'targetUsers',
     '利用者層': 'targetUsers',
     'targetUsers': 'targetUsers',
     'Target Users': 'targetUsers',
+    'ターゲットユーザー': 'targetUsers',
+    'ユーザー層': 'targetUsers',
     
     '直接競合・間接競合': 'competitors',
     '競合': 'competitors',
     'competitors': 'competitors',
     'Competitors': 'competitors',
+    '競合他社': 'competitors',
+    '競合分析': 'competitors',
     
     '課金モデル': 'revenueModel',
     'revenueModel': 'revenueModel',
     'Revenue Model': 'revenueModel',
+    '収益モデル': 'revenueModel',
+    'ビジネスモデル': 'revenueModel',
     
     '価格帯・価格設定の方向性': 'pricingDirection',
     '価格設定': 'pricingDirection',
@@ -1518,40 +1529,52 @@ const FIELD_MAPPING = {
     '価格帯': 'pricingDirection',
     'pricingDirection': 'pricingDirection',
     'Pricing Direction': 'pricingDirection',
+    'プライシング': 'pricingDirection',
     
+    // 🔥 空白対応版 UVP関連
     '暫定UVP（Unique Value Proposition）': 'uvp',
     '暫定UVP': 'uvp',
+    '暫定 UVP（Unique Value Proposition）': 'uvp',  // 空白あり
+    '暫定 UVP': 'uvp',  // 空白あり
     'UVP': 'uvp',
     'uvp': 'uvp',
     '独自価値提案': 'uvp',
     'Unique Value Proposition': 'uvp',
+    '価値提案': 'uvp',
     
+    // 🔥 空白対応版 KPI関連
     '初期KPI': 'initialKpi',
+    '初期 KPI': 'initialKpi',  // 空白あり
     'KPI': 'initialKpi',
     'initialKpi': 'initialKpi',
     'Initial KPI': 'initialKpi',
     '目標指標': 'initialKpi',
+    '成功指標': 'initialKpi',
     
     '獲得チャネル仮説': 'acquisitionChannels',
     '獲得チャネル': 'acquisitionChannels',
     'acquisitionChannels': 'acquisitionChannels',
     'Acquisition Channels': 'acquisitionChannels',
     'チャネル戦略': 'acquisitionChannels',
+    'マーケティングチャネル': 'acquisitionChannels',
     
     '規制・技術前提': 'regulatoryTechPrereqs',
     '技術前提': 'regulatoryTechPrereqs',
     '規制要件': 'regulatoryTechPrereqs',
     'regulatoryTechPrereqs': 'regulatoryTechPrereqs',
     'Regulatory Tech Prerequisites': 'regulatoryTechPrereqs',
+    '規制': 'regulatoryTechPrereqs',
+    '技術要件': 'regulatoryTechPrereqs',
     
     '想定コスト構造': 'costStructure',
     'コスト構造': 'costStructure',
     'コスト': 'costStructure',
     'costStructure': 'costStructure',
-    'Cost Structure': 'costStructure'
+    'Cost Structure': 'costStructure',
+    '費用構造': 'costStructure'
 };
 
-// フィールド名の正規化関数（強化版・デバッグ改善）
+// フィールド名の正規化関数（空白対応強化版）
 function normalizeFieldName(fieldName) {
   console.log(`[BulkInput] 🔍 正規化前: "${fieldName}"`);
   
@@ -1572,14 +1595,45 @@ function normalizeFieldName(fieldName) {
   
   console.log(`[BulkInput] ✨ 正規化後: "${normalized}"`);
   
-  // 6. フィールドマッピングを確認
-  const mappedField = FIELD_MAPPING[normalized];
+  // 6. 直接マッピングを確認
+  let mappedField = FIELD_MAPPING[normalized];
+  
   if (mappedField) {
-    console.log(`[BulkInput] ✅ マッピング発見: "${normalized}" -> "${mappedField}"`);
-  } else {
-    console.log(`[BulkInput] ❌ マッピング未発見: "${normalized}"`);
-    console.log(`[BulkInput] 📋 利用可能なマッピング:`, Object.keys(FIELD_MAPPING));
+    console.log(`[BulkInput] ✅ 直接マッピング発見: "${normalized}" -> "${mappedField}"`);
+    return normalized;
   }
+  
+  // 7. 🔥 空白バリエーション対応: 空白なし版も試行
+  const withoutSpaces = normalized.replace(/\s/g, '');
+  mappedField = FIELD_MAPPING[withoutSpaces];
+  
+  if (mappedField) {
+    console.log(`[BulkInput] ✅ 空白なし版マッピング発見: "${withoutSpaces}" -> "${mappedField}"`);
+    return withoutSpaces;
+  }
+  
+  // 8. 🔥 逆パターン: 空白を追加したバージョンも試行
+  const spaceVariations = [
+    normalized.replace(/UVP/g, ' UVP'),
+    normalized.replace(/KPI/g, ' KPI'),
+    normalized.replace(/暫定UVP/g, '暫定 UVP'),
+    normalized.replace(/初期KPI/g, '初期 KPI')
+  ];
+  
+  for (const variation of spaceVariations) {
+    const cleanVariation = variation.replace(/\s+/g, ' ').trim();
+    mappedField = FIELD_MAPPING[cleanVariation];
+    
+    if (mappedField) {
+      console.log(`[BulkInput] ✅ 空白バリエーションマッピング発見: "${cleanVariation}" -> "${mappedField}"`);
+      return cleanVariation;
+    }
+  }
+  
+  // 9. マッピング失敗時の詳細ログ
+  console.log(`[BulkInput] ❌ マッピング未発見: "${normalized}"`);
+  console.log(`[BulkInput] 📋 利用可能なマッピング（UVP/KPI関連）:`, 
+    Object.keys(FIELD_MAPPING).filter(key => key.includes('UVP') || key.includes('KPI')));
   
   return normalized;
 }

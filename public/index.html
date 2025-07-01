@@ -76,7 +76,7 @@
                             事業名・サービス名 <span class="required-mark">*</span>
                         </label>
                         <input type="text" id="businessName" name="businessName" class="form-input" 
-                               placeholder="例: TalkLabel" required>
+                               placeholder="例: AI Market Research System" required>
                         <p class="form-hint">Notionページのタイトルとして使用されます</p>
                     </div>
 
@@ -125,7 +125,7 @@
                                 コンセプト <span class="required-mark">*</span>
                             </label>
                             <textarea id="concept" name="concept" class="form-textarea" rows="3" 
-                                      placeholder="例: LINE公式上で「友だち獲得→シナリオ配信→LINE内決済→リピート購買」までをノーコードで自動化し、運用工数を 1/3、ブロック率を半減、平均 LTV を 1.5 倍に高めるフルファネル MA。例：スマホ操作だけで 30 分以内に初回シナリオが完成し、翌日から売上が立つ"導入が速く成果が見える CRM"。" required></textarea>
+                                      placeholder="例: 新規事業や投資検討で最初に必要となる「市場規模推計・競合マッピング・ターゲットペルソナ・価格帯分析・PESTEL・リスクシナリオ」など 15 項目超の基礎調査を、フォームに仮説を 1 行入力するだけで自動生成する SaaS。バックエンドで Gemini、Claude、GPT-4o を使い分け、最適な LLM とスクレイピングデータを組み合わせて要点を抽出。アウトプットは Notion API 経由で指定データベースに書き込まれ、ページ・カンバン・タイムラインで即活用できる。これにより従来 3～5 営業日かかっていた机上調査を平均 15 分に短縮し、アイデア検証とピボットを高速化する。" required></textarea>
                         </div>
 
                         <div class="form-group">
@@ -133,7 +133,7 @@
                                 解決したい顧客課題 <span class="required-mark">*</span>
                             </label>
                             <textarea id="customerProblem" name="customerProblem" class="form-textarea" rows="3" 
-                                      placeholder="例: 一斉配信依存でブロック率 8％超／CTR 1％台、広告・店頭・ EC が分断して ROI が読めない、HTML や SQL が書けず AB テストが回らない、決済リンク遷移で CVR が落ちる――こうした現場のボトルネックをワンツールで同時に解消したい。" required></textarea>
+                                      placeholder="例: ・新規事業チームが 1 案件あたり平均 20 時間かけている基礎リサーチを自動化したい・情報源（レポート PDF、統計サイト、ニュース）が散在し、担当者ごとにスライドや Excel で管理しているためナレッジが属人化している・同じテーマでも担当者ごとに AI プロンプトやフォーマットがばらつき、比較や再利用がしづらい・調査資料をドキュメントに整形するまでにさらに 2～3 時間追加工数が発生している" required></textarea>
                         </div>
 
                         <div class="form-group">
@@ -141,7 +141,7 @@
                                 狙っている業種・業界 <span class="required-mark">*</span>
                             </label>
                             <textarea id="targetIndustry" name="targetIndustry" class="form-textarea" rows="2" 
-                                      placeholder="例: 美容・健康 D2C（定期購入比率が高い）、飲食チェーンやサロン FC（クーポン来店とテイクアウトの両立）、フィットネス・クリニック（予約と継続課金）、オンライン講座や BtoB SaaS（無料トライアル後のナーチャリング）など、LTV ドリブンで継続率が収益を左右する領域。" required></textarea>
+                                      placeholder="例: ・スタートアップスタジオや CVC：年間数十件の PoC を並行進行するため、定型調査を高速化したい・コンサルティングファームのリサーチ部門：プロジェクトキックオフ時の一次デスクリサーチを内製で賄いたい・大手 IT・製造業の事業開発部：社内提案書の「市場背景」パートを素早く埋めたい・ベンチャーキャピタル／PE ファンド：投資検討メモ作成の初期ファクトを自動で取得したい・大学・研究機関の産学連携センター：技術シーズを事業化する際のマーケット適合性を簡易診断したい" required></textarea>
                         </div>
 
                         <div class="form-group">
@@ -149,7 +149,7 @@
                                 想定される利用者層 <span class="required-mark">*</span>
                             </label>
                             <textarea id="targetUsers" name="targetUsers" class="form-textarea" rows="3" 
-                                      placeholder="例: 月商 500 万～ 5 億規模の EC／店舗事業責任者、エクセルと LINE の手作業運用に限界を感じる非エンジニアのマーケ担当、複数クライアントを抱える制作・広告代理店の CS 担当など、「コードを書かずに成果を伸ばしたい現場担当者」が中心。" required></textarea>
+                                      placeholder="例: ・CPO、CSO、事業開発マネージャー、コンサルタント（戦略～IT）・VC / PE のアナリスト・プリンシパル・MBA・経営大学院の学生チーム・リサーチアシスタントやインターンなど、非エンジニアで文献検索中心の業務に従事する職種" required></textarea>
                         </div>
 
                         <div class="form-group">
@@ -157,7 +157,7 @@
                                 直接競合・間接競合 <span class="required-mark">*</span>
                             </label>
                             <textarea id="competitors" name="competitors" class="form-textarea" rows="3" 
-                                      placeholder="例: 直接競合＝ Liny（大企業向け高単価）／エルメ（低価格だが機能限定）／ KUZEN for LINE（チャットボット主軸）などの LINE 特化 MA。間接競合＝ HubSpot・Braze などマルチチャネル MA、Shopify Flow×メールツール、スプレッドシートと LINE 公式の無料機能を組み合わせた自前運用。" required></textarea>
+                                      placeholder="例: ・直接競合：Writerly Research（GPT4 ベースの自動レポート生成）／Perplexity Enterprise（企業向けリサーチチャット）／AlphaResearch（金融調査 AI）など、生成 AI を前提にしたリサーチ SaaS・間接競合：CB Insights、Crunchbase、Similarweb のサブスクデータベース、Statista や Euromonitor の有料レポート、人力で実施する従来型 desk research（派遣リサーチャー・外注フリーランス）" required></textarea>
                         </div>
                     </div>
 
@@ -169,43 +169,43 @@
                         <div class="form-group">
                             <label for="revenueModel" class="form-label">課金モデル</label>
                             <textarea id="revenueModel" name="revenueModel" class="form-textarea" rows="2" 
-                                      placeholder="例: 友だち数とメッセージ通数で 4 段階の月額ライセンス、上限超過分は 1 通 2～5 円の従量課金。LINE 内決済トランザクション 0.5％、外部 CRM 連携・ SMS 配信・運用代行はアドオン課金。代理店には売上の 20～30％を収益シェア。"></textarea>
+                                      placeholder="例: ・ワークスペース単位で月額サブスクリプションを課金・プラン内に含まれる「生成クレジット（トークン）」を超えた分は 1 円／1 K トークンの従量課金・メンバー追加は 1 席ごとに月額 1,500 円（Starter は 2 席目から）・オプション：自社データソース接続（API）月額 9,800 円、監査ログ 4,800 円"></textarea>
                         </div>
 
                         <div class="form-group">
                             <label for="pricingDirection" class="form-label">価格帯・価格設定の方向性</label>
                             <textarea id="pricingDirection" name="pricingDirection" class="form-textarea" rows="2" 
-                                      placeholder="例: スターター 3,000 円／ 5,000 通、スタンダード 18,000 円／ 30,000 通、プロ 29,800 円／ 50,000 通、エンタープライズ 49,800 円～／ 100,000 通～。競合平均より 30～50％低価格に設定し「まず試し → 機能拡張で利用拡大」を狙う段階課金を採用。"></textarea>
+                                      placeholder="例: Starter 9,800 円／月（1 ユーザー・月 100 K トークン・Notion DB は 1 本）Team 39,800 円／月（5 ユーザー・月 500 K トークン・DB 3 本・Webhook 連携）Pro 99,800 円／月（15 ユーザー・月 2 M トークン・DB 無制限・SAML SSO）Enterprise 見積り（ユーザー数無制限・オンプレ VPN・専属 CS・SLA 99.9 %）※プランあたりの月額人件費（仮 5,000 円 /h × 20 h 削減）と比較し、ROI 10 倍以上が出る価格帯に設定。"></textarea>
                         </div>
 
                         <div class="form-group">
                             <label for="uvp" class="form-label">暫定UVP（独自価値提案）</label>
                             <textarea id="uvp" name="uvp" class="form-textarea" rows="3" 
-                                      placeholder="例: 業界別 90 種テンプレですぐに導入、タグ付け・シナリオ・決済が 1 画面で完結、LINE 内定期課金で CVR を最大化、広告～来店～購買までを 1 枚の ROI ダッシュボードに集約、日本語 UI と有人チャットで平均 5 分以内にサポート回答。"></textarea>
+                                      placeholder="例: 1：調査カテゴリ別に用意した 30 種のテンプレートをプルダウンで選ぶだけで、高品質プロンプトが自動挿入される 2：Gemini、Claude、GPT-4o の 3 モデルを質問内容・言語・長文要約の難易度で自動ルーティングし、コストと精度を最適化 3：生成結果は YAML で構造化 → Notion API でデータベースに書き込み、カード、表、タイムラインのビューが即時更新される 4：生成レポート上のチャット欄に「競合の資金調達履歴も追記して」と入力すると、同じ DB レコードをパッチ更新して追記"></textarea>
                         </div>
 
                         <div class="form-group">
                             <label for="initialKpi" class="form-label">初期KPI</label>
                             <textarea id="initialKpi" name="initialKpi" class="form-textarea" rows="2" 
-                                      placeholder="例: 社内目標＝ MRR 1 億円（ 18 か月後）／ ARPA 18,000 円／ロゴチャーン ≤ 1.5％／ DAU／ MAU ≥ 55％。顧客成果＝導入 6 か月でブロック率 30％削減、メッセージ CTR 25％向上、初回→再購入率 20％アップ、LINE 経由売上比率を＋ 20 ポイント。"></textarea>
+                                      placeholder="例: ・有料アクティブワークスペース 300（ローンチから 6 ヶ月）・1 ワークスペースあたり月間調査ジョブ 16 件、全体で 5,000 件・月次継続率（Logo Retention）90 % 以上・顧客アンケートで「調査時間が何時間短縮できたか？」平均 70 % 以上"></textarea>
                         </div>
 
                         <div class="form-group">
                             <label for="acquisitionChannels" class="form-label">獲得チャネル仮説</label>
                             <textarea id="acquisitionChannels" name="acquisitionChannels" class="form-textarea" rows="2" 
-                                      placeholder="例: SEO 記事とホワイトペーパーで月 1,000 MQL → Shopify・ GMO などと月 4 回共催ウェビナーで SQL 化 → 代理店リセラー制度（ 1,000 社）で拡販 → 製品内リファラルで既存顧客が紹介 → 年 3 回の展示会出展でオフライン認知も獲得。"></textarea>
+                                      placeholder="例: ・SEO：キーワード「市場調査 AI」「競合分析 自動化」「新規事業 リサーチ」を軸にブログと LP で自然流入を獲得・ウェビナー：生成 AI・事業開発コミュニティと月 4 回共催し、デモと実ケース紹介で SQL 生成・VC・アクセラレーター向けプログラム：採択スタートアップに 6 か月無償クーポンを配布し、プロダクトレッドグロースを狙う・SNS / オウンドメディア：note や LinkedIn で「AI に 15 分で作らせた市場分析」を連載し具体例を拡散"></textarea>
                         </div>
 
                         <div class="form-group">
                             <label for="regulatoryTechPrereqs" class="form-label">規制・技術前提</label>
                             <textarea id="regulatoryTechPrereqs" name="regulatoryTechPrereqs" class="form-textarea" rows="2" 
-                                      placeholder="例: LINE Messaging API／ Official Accounts API 利用規約、改正個人情報保護法の同意取得・第三者提供管理、特定商取引法のサブスク表示、電気通信事業法ガイドライン、 PCI-DSS 準拠トークン決済、 AWS 東京リージョンで AES-256 暗号化と WAF 運用。"></textarea>
+                                      placeholder="例: ・Gemini / Claude / OpenAI 各社の API 利用規約を遵守し、入力データと出力データの取り扱いを明示・Web スクレイピングは対象サイトの ToS を確認し、RobotExclusion と RateLimit を順守・個人情報保護法：API ログを 30 日でマスキングし、ユーザー固有 ID をハッシュ化・Notion API：1 分間のレート制限（約 3 リクエスト／秒）を考慮したバッチ処理設計・インフラ：Google Cloud Run＋Firestore、東京リージョン、TLS 1.3、データ保存は AES-256 で暗号化"></textarea>
                         </div>
 
                         <div class="form-group">
                             <label for="costStructure" class="form-label">想定コスト構造</label>
                             <textarea id="costStructure" name="costStructure" class="form-textarea" rows="2" 
-                                      placeholder="例: 固定費＝開発 8 名（ TypeScript＋ NestJS＋ React）、 CS 3 名、マーケティング＆セールス 4 名、バックオフィスや監視。可変費＝ LINE メッセージ原価、 AWS（ EC2／ RDS／ S3／ CloudFront）、決済ゲートウェイ手数料、代理店歩合。粗利率 60％以上を維持し、 LTV が CAC の 3 倍を超える設計を目指す。"></textarea>
+                                      placeholder="例: ・可変費：LLM API 使用料（平均 0.002 USD／1 K トークン）、GCP 料金（Cloud Run 実行秒課金＋ Firestore）、有料データソース API（例：Statista など）・固定費：開発者 4 名（年俸 700 万）、プロダクトマネージャー 1 名、CS 2 名、マーケ広告（SEM・SNS）月 40 万、監視・バックアップ 5 万・目標粗利率：60 % 以上、LTV／CAC を 3.0 以上に保つため、オンボーディングを自動化し CS 工数を最小化する"></textarea>
                         </div>
                     </div>
 
