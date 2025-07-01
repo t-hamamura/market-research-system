@@ -374,38 +374,85 @@ export class NotionBatchService {
    * @returns 調査種別名
    */
   private categorizeResearchType(researchTitle: string): string {
-    // 調査IDベースの分類
-    if (researchTitle.includes('市場規模')) return '1.市場規模と成長性';
-    if (researchTitle.includes('顧客セグメント')) return '2.顧客セグメント・意思決定分析';
-    if (researchTitle.includes('競合製品')) return '3.競合製品・戦略分析';
-    if (researchTitle.includes('競合経営')) return '4.競合経営戦略・離脱分析';
-    if (researchTitle.includes('技術動向')) return '5.技術動向・差別化要因';
-    if (researchTitle.includes('顧客感情')) return '6.顧客感情・潜在ニーズ分析';
-    if (researchTitle.includes('プロダクト市場適合性')) return '7.プロダクト市場適合性・価格戦略';
-    if (researchTitle.includes('マーケティング戦術')) return '8.マーケティング戦術分析';
-    if (researchTitle.includes('流通チャネル')) return '9.流通チャネル・販売戦略';
-    if (researchTitle.includes('ブランドポジショニング')) return '10.ブランドポジショニング';
-    if (researchTitle.includes('テクノロジー')) return '11.テクノロジー・セキュリティ分析';
-    if (researchTitle.includes('パートナーシップ')) return '12.パートナーシップ戦略';
-    if (researchTitle.includes('リスク')) return '13.リスク・シナリオ分析';
-    if (researchTitle.includes('KPI')) return '14.KPI・測定方法設計';
-    if (researchTitle.includes('法務')) return '15.法務・コンプライアンス分析';
-    if (researchTitle.includes('効果的リサーチ')) return '16.効果的リサーチ手法提案';
-    if (researchTitle.includes('PMF')) return '17.PMF前特化リサーチ設計';
+    console.log(`[NotionBatchService] 調査種別分類: "${researchTitle}"`);
     
-    // 統合調査レポート
-    if (researchTitle.includes('統合') || researchTitle.includes('総合')) return '統合調査レポート';
-    
-    // デフォルト（番号ベース）
+    // 番号ベースの分類（最優先）
     const match = researchTitle.match(/^(\d+)\./);
     if (match) {
       const num = parseInt(match[1]);
-      if (num >= 1 && num <= 17) {
-        return `${num}.${researchTitle.replace(/^\d+\./, '').trim()}`;
+      const categoryMap: { [key: number]: string } = {
+        1: '1.市場規模と成長性',
+        2: '2.PESTEL分析',
+        3: '3.競合製品・戦略分析',
+        4: '4.競合経営戦略・離脱分析',
+        5: '5.顧客セグメント・意思決定分析',
+        6: '6.顧客感情・潜在ニーズ分析',
+        7: '7.プロダクト市場適合性・価格戦略',
+        8: '8.マーケティング戦術分析',
+        9: '9.ブランドポジショニング',
+        10: '10.テクノロジー・セキュリティ分析',
+        11: '11.パートナーシップ戦略',
+        12: '12.リスク・シナリオ分析',
+        13: '13.KPI・測定方法設計',
+        14: '14.法務・コンプライアンス分析',
+        15: '15.効果的リサーチ手法提案',
+        16: '16.PMF前特化リサーチ設計'
+      };
+      
+      if (categoryMap[num]) {
+        console.log(`[NotionBatchService] 番号ベース分類成功: ${num} -> ${categoryMap[num]}`);
+        return categoryMap[num];
       }
     }
     
-    return '個別調査項目';
+    // キーワードベースの分類（フォールバック）
+    const keywordMap: { [key: string]: string } = {
+      '市場規模': '1.市場規模と成長性',
+      'PESTEL': '2.PESTEL分析', 
+      '競合製品': '3.競合製品・戦略分析',
+      '競合の製品': '3.競合製品・戦略分析',
+      '競合経営': '4.競合経営戦略・離脱分析',
+      '競合の経営': '4.競合経営戦略・離脱分析',
+      '顧客セグメント': '5.顧客セグメント・意思決定分析',
+      '意思決定': '5.顧客セグメント・意思決定分析',
+      '顧客感情': '6.顧客感情・潜在ニーズ分析',
+      '潜在ニーズ': '6.顧客感情・潜在ニーズ分析',
+      'プロダクト市場適合性': '7.プロダクト市場適合性・価格戦略',
+      '価格戦略': '7.プロダクト市場適合性・価格戦略',
+      'マーケティング戦術': '8.マーケティング戦術分析',
+      'ブランドポジショニング': '9.ブランドポジショニング',
+      'テクノロジー': '10.テクノロジー・セキュリティ分析',
+      'セキュリティ': '10.テクノロジー・セキュリティ分析',
+      'パートナーシップ': '11.パートナーシップ戦略',
+      'リスク': '12.リスク・シナリオ分析',
+      'シナリオ': '12.リスク・シナリオ分析',
+      'KPI': '13.KPI・測定方法設計',
+      '測定方法': '13.KPI・測定方法設計',
+      '法務': '14.法務・コンプライアンス分析',
+      'コンプライアンス': '14.法務・コンプライアンス分析',
+      'リサーチ手法': '15.効果的リサーチ手法提案',
+      'PMF': '16.PMF前特化リサーチ設計'
+    };
+    
+    for (const [keyword, category] of Object.entries(keywordMap)) {
+      if (researchTitle.includes(keyword)) {
+        console.log(`[NotionBatchService] キーワードベース分類成功: "${keyword}" -> ${category}`);
+        return category;
+      }
+    }
+    
+    // 統合調査レポートの判定
+    if (researchTitle.includes('統合') || researchTitle.includes('総合')) {
+      console.log(`[NotionBatchService] 統合レポート判定: ${researchTitle}`);
+      return '統合調査レポート';
+    }
+    
+    // どれにも該当しない場合のログ出力と適切なフォールバック
+    console.warn(`[NotionBatchService] ⚠️ 調査種別の分類に失敗: "${researchTitle}"`);
+    console.warn(`[NotionBatchService] 利用可能なキーワード: ${Object.keys(keywordMap).join(', ')}`);
+    
+    // 「個別調査項目」ではなく、より適切なフォールバックを提供
+    return '統合調査レポート';
   }
 
   /**
