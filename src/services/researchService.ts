@@ -429,30 +429,30 @@ export class ResearchService {
           
           if (this.deepResearchService) {
             try {
-              // Deep Research機能を試行（タイムアウト制御強化）
-              console.log(`[ResearchService] Deep Research実行: ${prompt.title}`);
+              // Deep Research機能を試行（Railway環境対応・タイムアウト延長）
+              console.log(`[ResearchService] Deep Research実行（Railway対応）: ${prompt.title}`);
               result = await this.executeWithTimeout(
                 () => this.deepResearchService!.conductEnhancedResearch(prompt.prompt, request.serviceHypothesis),
-                180000, // 3分のタイムアウト
+                240000, // 4分のタイムアウト（Railway対応）
                 `Deep Research: ${prompt.title}`
               );
               console.log(`[ResearchService] Deep Research成功: ${prompt.title} (${result.length}文字)`);
             } catch (deepError) {
               console.warn(`[ResearchService] Deep Research失敗、標準調査にフォールバック: ${prompt.title}`, deepError);
-              // フォールバック: 標準Gemini調査
+              // フォールバック: 標準Gemini調査（Railway対応延長）
               result = await this.executeWithTimeout(
                 () => this.geminiService.conductResearch(prompt.prompt, request.serviceHypothesis),
-                120000, // 2分のタイムアウト
+                180000, // 3分のタイムアウト（Railway対応延長）
                 `標準調査: ${prompt.title}`
               );
               console.log(`[ResearchService] 標準調査成功: ${prompt.title} (${result.length}文字)`);
             }
           } else {
-            // Deep Research機能が利用できない場合は標準調査
-            console.log(`[ResearchService] 標準調査実行: ${prompt.title}`);
+            // Deep Research機能が利用できない場合は標準調査（Railway対応延長）
+            console.log(`[ResearchService] 標準調査実行（Railway対応）: ${prompt.title}`);
             result = await this.executeWithTimeout(
               () => this.geminiService.conductResearch(prompt.prompt, request.serviceHypothesis),
-              120000, // 2分のタイムアウト
+              180000, // 3分のタイムアウト（Railway対応延長）
               `標準調査: ${prompt.title}`
             );
           }
@@ -557,10 +557,14 @@ export class ResearchService {
         researchType: '統合分析'
       });
 
-      console.log('[ResearchService] Phase 3: 統合レポート生成開始');
-      const integratedReport = await this.geminiService.generateIntegratedReport(
-        researchResults,
-        request.serviceHypothesis
+      console.log('[ResearchService] Phase 3: 統合レポート生成開始（Railway対応）');
+      const integratedReport = await this.executeWithTimeout(
+        () => this.geminiService.generateIntegratedReport(
+          researchResults,
+          request.serviceHypothesis
+        ),
+        300000, // 5分のタイムアウト（Railway対応延長）
+        '統合レポート生成'
       );
       console.log('[ResearchService] 統合レポート生成完了');
 

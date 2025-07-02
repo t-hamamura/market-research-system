@@ -1595,19 +1595,20 @@ export class NotionService {
       const databaseInfo = await this.getDatabaseProperties();
       const properties: any = {};
 
-      // 🎯 タイトルプロパティ（調査レポート）の設定
+      // 🎯 タイトルプロパティ（調査レポート）の設定 - 「調査名称：事業名」形式
       const titleProperty = this.findTitleProperty(databaseInfo);
       if (titleProperty) {
+        const formattedTitle = `${researchTitle}：${businessName}`;  // 「調査名称：事業名」形式
         properties[titleProperty] = {
           title: [
             {
               text: {
-                content: researchTitle, // 調査名をタイトルに設定
+                content: formattedTitle,
               },
             },
           ],
         };
-        console.log(`[NotionService] ✅ タイトルプロパティ設定: ${titleProperty} = "${researchTitle}"`);
+        console.log(`[NotionService] ✅ タイトルプロパティ設定: ${titleProperty} = "${formattedTitle}"`);
       } else {
         console.warn('[NotionService] ⚠️ タイトルプロパティが見つかりません');
       }
@@ -2020,7 +2021,7 @@ export class NotionService {
       }
     }
 
-    // フォールバック: タイトルからキーワード推定
+    // フォールバック: タイトルからキーワード推定（重複回避強化版）
     const keywordMap: { [key: string]: string } = {
       '市場規模': '1.市場規模と成長性',
       'PESTEL': '2.PESTEL分析',
@@ -2033,9 +2034,11 @@ export class NotionService {
       'ブランドポジショニング': '9.ブランドポジショニング',
       'テクノロジートレンド': '10.テクノロジー・セキュリティ分析',
       'パートナーシップ': '11.パートナーシップ戦略',
-      'リスク': '12.リスク・シナリオ分析',
+      'リスク・シナリオ分析': '12.リスク・シナリオ分析',  // 正確なマッチ優先
+      'シナリオ分析': '12.リスク・シナリオ分析',
       'KPI': '13.KPI・測定方法設計',
-      '法務': '14.法務・コンプライアンス分析',
+      '法務・コンプライアンス': '14.法務・コンプライアンス分析',  // 正確なマッチ優先
+      'コンプライアンス': '14.法務・コンプライアンス分析',
       'リサーチ手法': '15.効果的リサーチ手法提案',
       'PMF': '16.PMF前特化リサーチ設計'
     };
@@ -2190,19 +2193,20 @@ export class NotionService {
           
           const properties: any = {};
 
-          // 🎯 タイトルプロパティ（調査レポート）の設定
+          // 🎯 タイトルプロパティ（調査レポート）の設定 - 「調査名称：事業名」形式
           const titleProperty = this.findTitleProperty(databaseInfo);
           if (titleProperty) {
+            const formattedTitle = `${prompt.title}：${businessName}`;  // 「調査名称：事業名」形式
             properties[titleProperty] = {
               title: [
                 {
                   text: {
-                    content: prompt.title, // 調査名をタイトルに設定
+                    content: formattedTitle,
                   },
                 },
               ],
             };
-            console.log(`[NotionService] ✅ タイトルプロパティ設定: ${titleProperty} = "${prompt.title}"`);
+            console.log(`[NotionService] ✅ タイトルプロパティ設定: ${titleProperty} = "${formattedTitle}"`);
           } else {
             console.warn('[NotionService] ⚠️ タイトルプロパティが見つかりません');
           }
@@ -2653,8 +2657,8 @@ export class NotionService {
     try {
       console.log(`[NotionService] 統合レポートページ事前作成開始: ${businessName}`);
 
-      // 統合レポートのタイトルを事業名入りにカスタマイズ
-      const integratedReportTitle = `統合調査レポート（${businessName}）`;
+      // 統合レポートのタイトルを事業名入りにカスタマイズ - 「統合調査レポート：事業名」形式
+      const integratedReportTitle = `統合調査レポート：${businessName}`;
 
       // 🔍 重複チェック: 既存の統合レポートを厳密検索
       const existingIntegratedReport = await this.findExistingIntegratedReport(businessName);
@@ -3170,8 +3174,9 @@ export class NotionService {
       
       // 1. 統合調査レポートのタイトル検索（複数パターン）
       const possibleTitles = [
-        `統合調査レポート（${businessName}）`,
-        `統合調査レポート (${businessName})`,
+        `統合調査レポート：${businessName}`,        // 新形式（優先）
+        `統合調査レポート（${businessName}）`,      // 旧形式（互換性）
+        `統合調査レポート (${businessName})`,      // 半角括弧版
         `${businessName} - 総合市場調査レポート`,
         `統合調査レポート`,
         businessName
