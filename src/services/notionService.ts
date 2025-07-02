@@ -2656,19 +2656,19 @@ export class NotionService {
       // 統合レポートのタイトルを事業名入りにカスタマイズ
       const integratedReportTitle = `統合調査レポート（${businessName}）`;
 
-      // 🔍 重複チェック: 既存の統合レポートを検索
-      const existingIntegratedReport = await this.findExistingResearchPage(
-        businessName, 
-        integratedReportTitle
-      );
+      // 🔍 重複チェック: 既存の統合レポートを厳密検索
+      const existingIntegratedReport = await this.findExistingIntegratedReport(businessName);
       
       if (existingIntegratedReport) {
-        console.log(`[NotionService] 既存の統合レポート発見、重複作成をスキップ: ${existingIntegratedReport.url}`);
+        console.log(`[NotionService] 🚫 既存の統合レポート発見、重複作成をスキップ: ${existingIntegratedReport.url}`);
+        console.log(`[NotionService] 📋 既存ページID: ${existingIntegratedReport.pageId}`);
         return {
           pageId: existingIntegratedReport.pageId,
           url: existingIntegratedReport.url
         };
       }
+      
+      console.log(`[NotionService] ✅ 統合レポート重複なし、新規作成を開始: ${integratedReportTitle}`);
 
       // データベース構造を確認
       const databaseInfo = await this.getDatabaseProperties();
@@ -3141,6 +3141,117 @@ export class NotionService {
     );
     
     return null;
+  }
+
+  /**
+   * 統合調査レポートの重複チェック（強化版）
+   * @param businessName 事業名
+   * @returns 既存統合レポートページ情報またはnull
+   */
+  async findExistingIntegratedReport(businessName: string): Promise<{ pageId: string; url: string } | null> {
+    try {
+      console.log(`[NotionService] 🔍 統合レポート重複チェック開始: ${businessName}`);
+      
+      // データベース構造を動的に確認
+      const databaseInfo = await this.getDatabaseProperties();
+      const titleProperty = this.findTitleProperty(databaseInfo);
+      const researchTypeProperty = this.findResearchTypeProperty(databaseInfo);
+      const businessNameProperty = this.findBusinessNameProperty(databaseInfo);
+      
+      if (!titleProperty) {
+        console.warn('[NotionService] タイトルプロパティが見つかりません');
+        return null;
+      }
+      
+      console.log(`[NotionService] 📋 検索条件: title="${titleProperty}", researchType="${researchTypeProperty}", businessName="${businessNameProperty}"`);
+      
+      // 複数条件での厳密な検索
+      const filterConditions: any[] = [];
+      
+      // 1. 統合調査レポートのタイトル検索（複数パターン）
+      const possibleTitles = [
+        `統合調査レポート（${businessName}）`,
+        `統合調査レポート (${businessName})`,
+        `${businessName} - 総合市場調査レポート`,
+        `統合調査レポート`,
+        businessName
+      ];
+      
+      const titleFilters = possibleTitles.map(title => ({
+        property: titleProperty,
+        title: { contains: title }
+      }));
+      
+      // 2. 調査種別による絞り込み
+      if (researchTypeProperty) {
+        filterConditions.push({
+          and: [
+            { or: titleFilters },
+            {
+              property: researchTypeProperty,
+              select: { equals: '統合調査レポート' }
+            }
+          ]
+        });
+      } else {
+        filterConditions.push({ or: titleFilters });
+      }
+      
+      // 3. 事業名による絞り込み（可能な場合）
+      if (businessNameProperty) {
+        filterConditions.push({
+          property: businessNameProperty,
+          [databaseInfo[businessNameProperty].type === 'select' ? 'select' : 'rich_text']: 
+            databaseInfo[businessNameProperty].type === 'select' 
+              ? { equals: businessName }
+              : { contains: businessName }
+        });
+      }
+      
+      console.log(`[NotionService] 🔎 統合レポート検索フィルター数: ${filterConditions.length}`);
+      
+      // フィルター条件を順次試行
+      for (let i = 0; i < filterConditions.length; i++) {
+        const filter = filterConditions[i];
+        console.log(`[NotionService] 🔍 フィルター ${i + 1}/${filterConditions.length} を実行...`);
+        
+        try {
+          const response = await this.notion.databases.query({
+            database_id: this.config.databaseId,
+            filter: filter,
+            sorts: [
+              {
+                property: 'created_time',
+                direction: 'descending'
+              }
+            ],
+            page_size: 10
+          });
+          
+          if (response.results.length > 0) {
+            // 最新の統合レポートを取得
+            const latestReport = response.results[0];
+            const pageId = latestReport.id;
+            const url = this.generatePageUrl(pageId);
+            
+            console.log(`[NotionService] ✅ 統合レポート発見 (フィルター${i + 1}): ${url}`);
+            console.log(`[NotionService] 📊 発見件数: ${response.results.length}件`);
+            
+            return { pageId, url };
+          }
+        } catch (queryError) {
+          console.warn(`[NotionService] フィルター ${i + 1} でクエリエラー:`, queryError);
+          continue;
+        }
+      }
+      
+      console.log(`[NotionService] ✅ 統合レポート重複なし: ${businessName}`);
+      return null;
+      
+    } catch (error) {
+      console.error(`[NotionService] 統合レポート重複チェックエラー (${businessName}):`, error);
+      return null;
+    }
   }
 
   /**

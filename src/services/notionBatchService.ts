@@ -215,12 +215,12 @@ export class NotionBatchService {
       
       // プロパティを構築（事業名と調査種別を入れ替え）
       const properties: any = {
-        // タイトルプロパティ: 調査種別をタイトルとして使用
+        // タイトルプロパティ: 事業名と調査種別を含む明確なタイトル
         [this.findTitleProperty(databaseInfo)]: {
           title: [
             {
               text: {
-                content: researchTitle
+                content: `${businessName} - ${researchTitle}`
               }
             }
           ]
@@ -554,6 +554,10 @@ export class NotionBatchService {
       'リーガル': '14.法務・コンプライアンス分析',
       '法律': '14.法務・コンプライアンス分析',
       'リスク分析': '14.法務・コンプライアンス分析',
+      '法務・コンプライアンス': '14.法務・コンプライアンス分析',
+      '法務・コンプライアンスリスク': '14.法務・コンプライアンス分析',
+      'legal': '14.法務・コンプライアンス分析',
+      'compliance': '14.法務・コンプライアンス分析',
       'リサーチ手法': '15.効果的リサーチ手法提案',
       'PMF': '16.PMF前特化リサーチ設計'
     };

@@ -40,47 +40,80 @@ export class ResearchService {
    * @returns 調査プロンプト配列
    */
   private initializeResearchPrompts(): ResearchPrompt[] {
-    const jsonInstruction = `
-【重要】必ずJSON配列形式で回答してください。マークダウンやテキスト形式は一切使用しないでください。
+    const markdownInstruction = `
 
-## 厳格な回答形式指定
+## 🎨 出力形式指示（重要）
 
-**✅ 正しい回答開始**: [ で始まり ] で終わる
-**❌ 禁止される回答**: \`\`\`json や ## などで始まる形式、通常のテキスト形式
+**必ずMarkdown形式で出力し、以下の装飾を活用してください：**
 
-## 必須JSONスキーマ
-[
-  {
-    "type": "heading_2" | "heading_3" | "paragraph" | "bulleted_list_item" | "toggle" | "callout" | "divider",
-    "content": "string", // dividerの場合は空文字列
-    "icon"?: "string", // calloutの場合のみ絵文字
-    "children"?: array // toggleの場合のみ
-  }
-]
+### 📋 必須要素
+1. **見出し**: ## メインタイトル、### サブタイトル
+2. **表形式データ**: | 項目 | 数値 | 備考 | で整理
+3. **太字強調**: **重要な数値・結論**
+4. **箇条書き**: - または * で要点整理
+5. **Callout**: > 💡 重要ポイント: 内容
+6. **区切り線**: --- でセクション分離
 
-## 具体的回答例
-[
-  {"type": "heading_2", "content": "市場規模分析結果"},
-  {"type": "paragraph", "content": "**総市場規模**: 376億円（2024年）→680億円（2029年予測）"},
-  {"type": "bulleted_list_item", "content": "**CAGR**: 12.6%の成長率"},
-  {"type": "callout", "content": "**重要**: LINE特化型MA市場は急成長中", "icon": "📈"},
-  {"type": "toggle", "content": "詳細データ", "children": [
-    {"type": "paragraph", "content": "詳細な分析内容..."}
-  ]},
-  {"type": "divider", "content": ""}
-]
+### 📊 必須コンテンツ構造
+1. **## 📊 エグゼクティブサマリー**
+   - **主要発見事項** (3-5点、太字で強調)
+   - **重要な数値データ** (表形式)
+   - **戦略的提言** (箇条書き)
 
-## 絶対に守る規則
-1. 回答の最初の文字は必ず [ である
-2. 回答の最後の文字は必ず ] である
-3. マークダウンのコードブロック（\`\`\`）は使用禁止
-4. 通常のテキスト文章は使用禁止
-5. 全ての内容をJSON配列の要素として記述する
-6. content内で太字は **テキスト** 形式で表現可能
-7. 最上位の要素は heading_2 で開始する
+2. **## 📈 詳細分析**
+   - 具体的なデータと根拠
+   - 表形式での比較・分析
+   - 出典・参考情報の明記
 
-この指示に従わない場合、システムエラーが発生します。必ずJSON配列形式で回答してください。
-`;
+3. **## 🎯 アクションプラン**
+   - 短期・中期・長期の具体的ステップ
+   - 優先度付きの推奨事項
+
+ 4. **## 📚 参考情報・エビデンス（必須）**
+    - **参考文献**: [タイトル](URL) 形式でリンク機能付き
+    - **調査データ出典**: 具体的なソース明記
+    - **脚注**: [1] 形式で番号付け、本文内に対応する数値
+    - **ソースURL**: 必ず末尾に全参照先のタイトルとURLを記載
+
+ ### ⚠️ 重要な注意事項（厳守）
+ - **数値は具体的に**: 「多い」ではなく「300%増加」
+ - **出典を明記**: 全ての数値・情報にソースを記載
+ - **エビデンス重視**: 参照した情報源を必ず記録
+ - **実用性重視**: 実行可能な具体的提案
+ - **脚注の徹底**: 本文に[1], [2]等を挿入し、末尾で対応するソース情報
+ - **リンク機能**: URLは [タイトル](URL) 形式で機能するリンクとして記載
+
+ **出力例**:
+ ## 📊 市場規模分析結果
+ 
+ **総市場規模**: 376億円（2024年）→680億円（2029年予測）[1]
+ 
+ | 年度 | 市場規模 | 成長率 | 備考 |
+ |------|----------|--------|------|
+ | 2024年 | 376億円 | - | 基準年[1] |
+ | 2029年 | 680億円 | 12.6% | 予測値[1] |
+ 
+ **重要な発見事項**:
+ 1. **市場成長率**: CAGR 12.6%の高成長[1]
+ 2. **競合状況**: 主要3社でシェア60%を占有[2]
+ 3. **技術トレンド**: AI活用が急速に普及[3]
+ 
+ **推奨アクション**:
+ 1. **短期（3ヶ月）**: MVP開発とテストユーザー獲得[4]
+ 2. **中期（6-12ヶ月）**: 本格的な市場参入[4]
+ 3. **長期（1-3年）**: 市場リーダー地位の確立[4]
+ 
+ > 💡 **重要**: LINE特化型MA市場は急成長中で、投資機会が大きい[1]
+ 
+ ---
+ 
+ ### 📚 参考情報・エビデンス
+ [1] [デジタルマーケティング市場調査2024](https://example.com/report) - 市場規模・成長予測データ
+ [2] [競合分析レポート2024](https://example.com/competitors) - 競合シェア分析
+ [3] [AI技術トレンド調査](https://example.com/ai-trends) - 技術動向データ
+ [4] [スタートアップ戦略ガイド](https://example.com/startup-guide) - 戦略提言根拠
+
+`;  
 
     const prompts: { id: number; title: string; prompt: string }[] = [
       {
@@ -170,7 +203,7 @@ export class ResearchService {
 
     return prompts.map((p) => ({
       ...p,
-      prompt: `${p.prompt}\n<サービス仮説を文末に添付>\n\n${jsonInstruction}`,
+      prompt: `${p.prompt}\n<サービス仮説を文末に添付>\n\n${markdownInstruction}`,
     }));
   }
 
@@ -269,17 +302,74 @@ export class ResearchService {
           throw new Error(`調査項目事前作成エラー: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       } else {
-        console.log('[ResearchService] ===== 再開モード: 事前作成スキップ =====');
-        console.log('[ResearchService] 再開時は事前作成をスキップし、既存のページIDを取得（簡易実装）');
-        // 再開時は事前作成をスキップし、既存のページIDを取得（簡易実装）
-        createdPages = this.researchPrompts.map(prompt => ({
-          pageId: 'resumed',
-          url: 'resumed',
-          researchId: prompt.id,
-          title: prompt.title
-        }));
-        integratedReportPageId = 'resumed';
-        console.log(`[ResearchService] 再開用仮ページ情報作成完了: ${createdPages.length}件`);
+        console.log('[ResearchService] ===== 再開モード: 既存ページID取得 =====');
+        console.log('[ResearchService] 再開時は既存ページを検索して、正確なページIDを取得');
+        
+        try {
+          // 既存の統合レポートページIDを検索・取得
+          console.log('[ResearchService] 🔍 既存統合レポートページIDを検索中...');
+          const existingIntegratedReport = await this.notionService.findExistingIntegratedReport(request.businessName);
+          
+          if (existingIntegratedReport) {
+            integratedReportPageId = existingIntegratedReport.pageId;
+            console.log(`[ResearchService] ✅ 既存統合レポートページID取得成功: ${integratedReportPageId.substring(0, 8)}...`);
+            console.log(`[ResearchService] 📋 既存統合レポートURL: ${existingIntegratedReport.url}`);
+          } else {
+            console.warn('[ResearchService] ⚠️ 既存統合レポートページが見つかりません、新規作成に切り替え');
+            // 統合レポートページを新規作成
+            const integratedReportPage = await this.notionService.createIntegratedReportPage(
+              request.businessName,
+              request.serviceHypothesis
+            );
+            integratedReportPageId = integratedReportPage.pageId;
+            console.log(`[ResearchService] ✅ 再開時統合レポート新規作成完了: ${integratedReportPage.url}`);
+          }
+          
+          // 既存の個別調査ページIDを取得（簡易実装）
+          console.log('[ResearchService] 🔍 既存の個別調査ページIDを検索中...');
+          createdPages = [];
+          
+          for (const prompt of this.researchPrompts) {
+            const existingPage = await this.notionService.findExistingResearchPage(
+              request.businessName,
+              prompt.title
+            );
+            
+            if (existingPage) {
+              createdPages.push({
+                pageId: existingPage.pageId,
+                url: existingPage.url,
+                researchId: prompt.id,
+                title: prompt.title
+              });
+              console.log(`[ResearchService] ✅ 既存ページ発見: ${prompt.title} - ${existingPage.pageId.substring(0, 8)}...`);
+            } else {
+              // 既存ページが見つからない場合は仮IDを設定
+              createdPages.push({
+                pageId: 'resumed-not-found',
+                url: 'resumed-not-found',
+                researchId: prompt.id,
+                title: prompt.title
+              });
+              console.warn(`[ResearchService] ⚠️ 既存ページ未発見: ${prompt.title}`);
+            }
+          }
+          
+          const foundPages = createdPages.filter(p => p.pageId !== 'resumed-not-found').length;
+          console.log(`[ResearchService] 📊 再開モード ページID取得結果: ${foundPages}/${createdPages.length} 件発見`);
+          
+        } catch (resumeError) {
+          console.error('[ResearchService] 再開モードでページID取得エラー:', resumeError);
+          // エラー時は従来の仮ID方式にフォールバック
+          createdPages = this.researchPrompts.map(prompt => ({
+            pageId: 'resumed-fallback',
+            url: 'resumed-fallback',
+            researchId: prompt.id,
+            title: prompt.title
+          }));
+          integratedReportPageId = 'resumed-fallback';
+          console.log(`[ResearchService] 🔄 フォールバック: 仮ページ情報を使用: ${createdPages.length}件`);
+        }
       }
       
       // 初期化メッセージ
@@ -320,9 +410,17 @@ export class ResearchService {
             researchType: prompt.title
           });
 
-          if (pageInfo.pageId !== 'resumed') {
+          // 仮IDかどうかをチェック
+          const isTemporaryPageId = !pageInfo.pageId || 
+                                   pageInfo.pageId === 'resumed' || 
+                                   pageInfo.pageId === 'resumed-fallback' || 
+                                   pageInfo.pageId === 'resumed-not-found';
+          
+          if (!isTemporaryPageId) {
             console.log(`[ResearchService] ステータス更新（進行中）: ${prompt.title}`);
             await this.notionService.updatePageStatus(pageInfo.pageId, 'in-progress');
+          } else {
+            console.log(`[ResearchService] 🔄 仮ID検出、ステータス更新スキップ: ${prompt.title} (${pageInfo.pageId})`);
           }
           
           // Step 2: 実際の調査を実行（Deep Research機能改善版）
@@ -362,7 +460,7 @@ export class ResearchService {
           console.log(`[ResearchService] 調査完了: ${prompt.title} (${result.length}文字)`);
 
           // Step 3: ステータスを「完了」に更新し、コンテンツを追加
-          if (pageInfo.pageId !== 'resumed') {
+          if (!isTemporaryPageId) {
             try {
               console.log(`[ResearchService] コンテンツ更新中: ${prompt.title}`);
               const contentUpdateSuccess = await this.notionService.updatePageContent(pageInfo.pageId, result);
@@ -417,7 +515,12 @@ export class ResearchService {
           console.error(`[ResearchService] 調査${globalIndex + 1}でエラー:`, error);
           
           // エラー発生時もステータスを「失敗」に更新を試行
-          if (pageInfo.pageId !== 'resumed') {
+          const isTemporaryPageIdForError = !pageInfo.pageId || 
+                                           pageInfo.pageId === 'resumed' || 
+                                           pageInfo.pageId === 'resumed-fallback' || 
+                                           pageInfo.pageId === 'resumed-not-found';
+          
+          if (!isTemporaryPageIdForError) {
             try {
               await this.notionService.updatePageStatus(pageInfo.pageId, 'failed');
               console.log(`[ResearchService] エラー時のステータス更新（失敗）完了: ${prompt.title}`);
@@ -465,7 +568,15 @@ export class ResearchService {
       console.log('[ResearchService] 統合レポートページ更新開始');
       let notionResult;
       
-      if (integratedReportPageId && integratedReportPageId !== 'resumed') {
+      // 仮IDかどうかをチェック
+      const isTemporaryId = !integratedReportPageId || 
+                           integratedReportPageId === 'resumed' || 
+                           integratedReportPageId === 'resumed-fallback' || 
+                           integratedReportPageId === 'resumed-not-found';
+      
+      console.log(`[ResearchService] 📋 統合レポートページID状態: ${integratedReportPageId}, 仮ID判定: ${isTemporaryId}`);
+      
+      if (integratedReportPageId && !isTemporaryId) {
         try {
           // 事前作成したページの内容を更新
           console.log('[ResearchService] 統合レポートコンテンツ更新中...');
